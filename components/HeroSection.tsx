@@ -12,13 +12,14 @@ export default function HeroSection() {
       className="relative overflow-hidden"
       style={{ minHeight: "calc(100svh - 68px)" }}
     >
-      {/* ── Bottle — right edge, full bleed ── */}
+      {/* ── Bottle — flush right edge ── */}
       <div
-        className="absolute right-0 pointer-events-none"
+        className="absolute pointer-events-none"
         style={{
-          top: "-10%",
-          bottom: "10%",
-          width: "65%",
+          top: "-8%",
+          bottom: "8%",
+          right: "-4%",
+          width: "72%",
           animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
           animationDelay: "0.08s",
         }}
@@ -33,8 +34,8 @@ export default function HeroSection() {
             priority
             onError={() => setImgError(true)}
             className="object-contain"
-            style={{ objectPosition: "right center", filter: "brightness(1.08) contrast(1.04)" }}
-            sizes="65vw"
+            style={{ objectPosition: "right center", filter: "brightness(1.12) contrast(1.05)" }}
+            sizes="72vw"
           />
         )}
         <div className="absolute bottom-0 right-0 w-72 h-72 bg-[#7A2030]/12 rounded-full blur-3xl" />
