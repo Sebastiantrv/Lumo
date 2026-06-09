@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export default function Navbar() {
+export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [closing, setClosing] = useState(false);
+  const isDark = theme === "dark";
 
   function openMenu() {
     setMenuOpen(true);
@@ -26,12 +27,19 @@ export default function Navbar() {
   return (
     <>
       <nav
-        className="fixed top-0 left-0 right-0 md:top-4 md:left-5 md:right-5 z-40 flex items-center justify-between px-6 py-[18px] md:px-7 md:py-4 md:rounded-2xl glass-strong"
-        style={{ animation: "navbarDrop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}
+        className="fixed top-0 left-0 right-0 md:top-4 md:left-5 md:right-5 z-40 flex items-center justify-between px-6 py-[18px] md:px-7 md:py-4 md:rounded-2xl"
+        style={{
+          animation: "navbarDrop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+          background: isDark ? "rgba(255,255,255,0.06)" : "rgba(244,239,231,0.85)",
+          backdropFilter: "blur(32px) saturate(180%)",
+          WebkitBackdropFilter: "blur(32px) saturate(180%)",
+          borderBottom: isDark ? "1px solid rgba(255,255,255,0.08)" : "1px solid rgba(0,0,0,0.08)",
+        }}
       >
         <Link
           href="/"
-          className="font-cormorant text-lg md:text-xl tracking-[0.35em] font-semibold text-[#F5F0E8] spring-press"
+          className="font-cormorant text-lg md:text-xl tracking-[0.35em] font-semibold spring-press"
+          style={{ color: isDark ? "#F5F0E8" : "#1A1A1A" }}
           aria-label="LUMO inicio"
         >
           L U M O
@@ -43,8 +51,8 @@ export default function Navbar() {
           aria-label="Abrir menú"
           aria-expanded={menuOpen}
         >
-          <span className="block w-5 h-[1.5px] bg-[#F5F0E8]" />
-          <span className="block w-5 h-[1.5px] bg-[#F5F0E8]" />
+          <span className="block w-5 h-[1.5px]" style={{ backgroundColor: isDark ? "#F5F0E8" : "#1A1A1A" }} />
+          <span className="block w-5 h-[1.5px]" style={{ backgroundColor: isDark ? "#F5F0E8" : "#1A1A1A" }} />
         </button>
       </nav>
 
@@ -58,7 +66,7 @@ export default function Navbar() {
             backdropFilter: "blur(40px) saturate(180%)",
             WebkitBackdropFilter: "blur(40px) saturate(180%)",
             animation: closing
-              ? "overlayIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) reverse both"
+              ? "overlayOut 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both"
               : "overlayIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
           }}
           onAnimationEnd={handleAnimationEnd}

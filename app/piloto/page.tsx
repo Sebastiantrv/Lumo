@@ -5,7 +5,7 @@ export default function PilotoPage() {
   return (
     <main style={{ background: "#F4EFE7", minHeight: "100svh" }}>
       <header>
-        <Navbar />
+        <Navbar theme="light" />
       </header>
       <WaitlistSection />
     </main>
