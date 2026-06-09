@@ -5,6 +5,7 @@ import { useState } from "react";
 
 export default function HeroSection() {
   const [imgError, setImgError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   return (
     <section
@@ -18,6 +19,9 @@ export default function HeroSection() {
           src="/bottle-hero.png"
           alt="LUMO Rojo Vital — jugo prensado en frío"
           onError={() => setImgError(true)}
+          onLoad={() => setLoaded(true)}
+          fetchPriority="high"
+          decoding="async"
           className="absolute pointer-events-none"
           style={{
             top: "-4%",
@@ -25,8 +29,8 @@ export default function HeroSection() {
             width: "62%",
             maxWidth: "none",
             filter: "brightness(1.10) contrast(1.05)",
-            animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
-            animationDelay: "0.08s",
+            opacity: loaded ? undefined : 0,
+            animation: loaded ? "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both" : "none",
           }}
         />
       ) : (

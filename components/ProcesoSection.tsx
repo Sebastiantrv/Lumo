@@ -11,6 +11,7 @@ const steps = [
 
 export default function ProcesoSection() {
   const [imgError, setImgError] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
   return (
     <section
@@ -28,12 +29,15 @@ export default function ProcesoSection() {
             src="/bottle-proceso.png"
             alt="LUMO Verde — proceso de prensado en frío"
             onError={() => setImgError(true)}
+            onLoad={() => setLoaded(true)}
+            fetchPriority="high"
+            decoding="async"
             style={{
               width: "100%",
               display: "block",
               filter: "brightness(1.18) contrast(1.03)",
-              animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
-              animationDelay: "0.08s",
+              opacity: loaded ? undefined : 0,
+              animation: loaded ? "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both" : "none",
             }}
           />
         ) : (
