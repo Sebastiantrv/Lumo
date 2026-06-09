@@ -21,8 +21,8 @@ export default function HeroSection() {
           className="absolute pointer-events-none"
           style={{
             top: "-4%",
-            right: "-16%",
-            width: "92%",
+            right: "0",
+            width: "62%",
             maxWidth: "none",
             filter: "brightness(1.28) contrast(1.02)",
             animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
