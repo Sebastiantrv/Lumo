@@ -1,11 +1,15 @@
 "use client";
 
-import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function HeroSection() {
   const [imgError, setImgError] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    if (imgRef.current?.complete) setLoaded(true);
+  }, []);
 
   return (
     <section
@@ -16,6 +20,7 @@ export default function HeroSection() {
       {/* ── Bottle — flush right edge ── */}
       {!imgError ? (
         <img
+          ref={imgRef}
           src="/bottle-hero.png"
           alt="LUMO Rojo Vital — jugo prensado en frío"
           onError={() => setImgError(true)}
