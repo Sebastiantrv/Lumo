@@ -48,7 +48,7 @@ export default function HeroSection() {
 
       {/* ── Content ── */}
       <div
-        className="relative z-10 flex flex-col justify-between px-6 py-8"
+        className="relative z-10 flex flex-col justify-between px-6 py-8 gap-10"
         style={{ minHeight: "calc(100svh - 68px)" }}
       >
         {/* Top: heading + divider + body */}
