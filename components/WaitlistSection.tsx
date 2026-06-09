@@ -21,6 +21,24 @@ const FORMULAS = [
   { id: "sorpresa", label: "Sorpréndeme",        color: "#8A8A8A" },
 ];
 
+const INGREDIENTES_POR_FORMULA = [
+  {
+    formula: "Verde Fresco",
+    color: "#4A5E3A",
+    ingredientes: ["Pepino", "Apio", "Manzana verde", "Limón", "Espinaca", "Jengibre"],
+  },
+  {
+    formula: "Rojo Vital",
+    color: "#7A2030",
+    ingredientes: ["Betabel", "Zanahoria", "Manzana", "Limón", "Jengibre", "Pepino"],
+  },
+  {
+    formula: "Tropical Hydrate",
+    color: "#B8860B",
+    ingredientes: ["Piña", "Pepino", "Limón", "Jengibre"],
+  },
+];
+
 const PREFERENCIAS = [
   { id: "fresco",      label: "Más fresco / ligero" },
   { id: "dulce",       label: "Más dulce / frutal" },
@@ -38,6 +56,7 @@ export default function WaitlistSection() {
     formula: "", preferencia: "", restricciones: "",
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
+  const [evitar, setEvitar] = useState<string[]>([]);
 
   function goTo(next: number, dir: "forward" | "backward") {
     setDirection(dir);
@@ -71,6 +90,7 @@ export default function WaitlistSection() {
   async function submit() {
     const payload = {
       ...data,
+      restricciones: evitar.length > 0 ? evitar.join(", ") : "Ninguno",
       timestamp: new Date().toLocaleString("es-MX", {
         timeZone: "America/Mexico_City",
         year: "numeric", month: "long", day: "numeric",
@@ -256,21 +276,58 @@ export default function WaitlistSection() {
             </StepShell>
           )}
 
-          {/* ── 6: Restricciones ── */}
+          {/* ── 6: Restricciones por ingrediente ── */}
           {step === 6 && (
             <StepShell
               label="¿Hay algún ingrediente que prefieras evitar?"
+              sublabel="Opcional — toca los que no te gusten."
               onNext={submit}
               onBack={back}
               nextLabel="Enviar solicitud →"
             >
-              <GlassTextarea
-                placeholder="Opcional — escribe aquí si hay algo que prefieras evitar"
-                value={data.restricciones}
-                onChange={v => setData(d => ({ ...d, restricciones: v }))}
-                autoFocus
-              />
-              <p className="font-inter text-[#8A8A8A]/50 text-xs mt-1">Campo opcional.</p>
+              <div className="flex flex-col gap-5">
+                {INGREDIENTES_POR_FORMULA.map((grupo) => (
+                  <div key={grupo.formula} className="flex flex-col gap-2.5">
+                    <p
+                      className="font-inter font-medium tracking-widest uppercase"
+                      style={{ fontSize: "0.65rem", color: grupo.color }}
+                    >
+                      {grupo.formula}
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {grupo.ingredientes.map((ing) => {
+                        const sel = evitar.includes(ing);
+                        return (
+                          <button
+                            key={ing}
+                            type="button"
+                            onClick={() =>
+                              setEvitar(prev =>
+                                sel ? prev.filter(x => x !== ing) : [...prev, ing]
+                              )
+                            }
+                            className="px-3 py-1.5 rounded-full font-inter spring-press"
+                            style={{
+                              fontSize: "clamp(0.78rem, 3vw, 0.9rem)",
+                              background: sel ? `${grupo.color}22` : "rgba(255,255,255,0.04)",
+                              border: sel ? `1.5px solid ${grupo.color}` : "1px solid rgba(255,255,255,0.10)",
+                              color: sel ? "#F5F0E8" : "#8A8A8A",
+                              backdropFilter: "blur(12px)",
+                              WebkitBackdropFilter: "blur(12px)",
+                              boxShadow: sel
+                                ? `0 0 14px ${grupo.color}30, 0 1px 0 ${grupo.color}20 inset`
+                                : "0 2px 8px rgba(0,0,0,0.25)",
+                              transition: "all 0.2s ease",
+                            }}
+                          >
+                            {ing}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </StepShell>
           )}
 
