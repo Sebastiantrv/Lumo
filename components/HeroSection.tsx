@@ -24,7 +24,7 @@ export default function HeroSection() {
             right: "0",
             width: "62%",
             maxWidth: "none",
-            filter: "brightness(1.28) contrast(1.02)",
+            filter: "brightness(1.10) contrast(1.05)",
             animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
             animationDelay: "0.08s",
           }}
