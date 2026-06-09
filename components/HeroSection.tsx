@@ -60,10 +60,10 @@ export default function HeroSection() {
               fontSize: "clamp(2.7rem, 10.35vw, 4.95rem)",
               lineHeight: 1.08,
               animationDelay: "0.06s",
-              maxWidth: "58%",
+              maxWidth: "50%",
             }}
           >
-            Prensados en<br />frío.<br /><br />Hechos cada<br />mañana.
+            Prensados en frío.<br /><br />Hechos cada<br />mañana.
           </h1>
 
           <div
@@ -78,7 +78,7 @@ export default function HeroSection() {
             className="font-inter text-[#8A8A8A] leading-relaxed spring-in"
             style={{
               fontSize: "clamp(0.81rem, 3.15vw, 0.99rem)",
-              maxWidth: "60%",
+              maxWidth: "50%",
               animationDelay: "0.22s",
             }}
           >
