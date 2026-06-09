@@ -18,7 +18,7 @@ export default function ProcesoSection() {
       className="relative overflow-hidden"
       style={{ minHeight: "calc(100svh - 68px)" }}
     >
-      {/* ── Image — flush right, top half only (mirrors homepage) ── */}
+      {/* ── Image — flush right, vertically centered next to the steps ── */}
       {!imgError ? (
         <img
           src="/bottle-proceso.png"
@@ -26,9 +26,10 @@ export default function ProcesoSection() {
           onError={() => setImgError(true)}
           className="absolute pointer-events-none"
           style={{
-            top: "-2%",
+            top: "50%",
             right: "0",
-            width: "46%",
+            transform: "translateY(-50%)",
+            width: "44%",
             maxWidth: "none",
             filter: "brightness(1.18) contrast(1.03)",
             animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
@@ -36,80 +37,56 @@ export default function ProcesoSection() {
           }}
         />
       ) : (
-        <div className="absolute right-0 top-[4%] w-[44%] h-[55%] rounded-l-[40px] glass-verde" />
+        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[42%] h-[60%] rounded-l-[40px] glass-verde" />
       )}
-      <div className="absolute top-[20%] right-0 w-60 h-60 bg-[#4A5E3A]/14 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 -translate-y-1/2 right-0 w-56 h-56 bg-[#4A5E3A]/14 rounded-full blur-3xl pointer-events-none" />
 
       {/* Gradient — keeps left text readable */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "linear-gradient(to right, #0D0D0D 42%, rgba(13,13,13,0.5) 56%, rgba(13,13,13,0) 72%)",
+          background: "linear-gradient(to right, #0D0D0D 48%, rgba(13,13,13,0.5) 60%, rgba(13,13,13,0) 74%)",
         }}
       />
 
       {/* ── Content ── */}
       <div
-        className="relative z-10 flex flex-col justify-between px-6 py-8 gap-8"
-        style={{ minHeight: "calc(100svh - 68px)" }}
+        className="relative z-10 flex flex-col justify-center px-6 py-10 gap-9"
+        style={{ minHeight: "calc(100svh - 68px)", maxWidth: "56%" }}
       >
-        {/* Top: heading constrained to left of the image */}
         <h2
           className="font-cormorant font-light text-[#F5F0E8] leading-tight spring-in"
-          style={{ fontSize: "clamp(2.4rem, 9.5vw, 4.5rem)", lineHeight: 1.05, animationDelay: "0.04s", maxWidth: "52%" }}
+          style={{ fontSize: "clamp(2.2rem, 9vw, 4.5rem)", lineHeight: 1.05, animationDelay: "0.04s" }}
         >
           Hecho con intención
         </h2>
 
-        {/* Bottom: full-width steps + note + button (below the image) */}
-        <div className="flex flex-col gap-6">
-          <div
-            className="flex flex-col rounded-2xl overflow-hidden glass spring-in"
-            style={{ animationDelay: "0.14s" }}
-          >
-            {steps.map((step, i) => (
-              <div
-                key={step.num}
-                className="flex items-center gap-5 px-6 py-4 spring-press"
-                style={{ borderBottom: i < steps.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}
-              >
-                <span className="font-cormorant text-2xl font-light text-[#4A5E3A] min-w-[2.25rem]">
-                  {step.num}
-                </span>
-                <p className="font-inter text-[#F5F0E8] font-light" style={{ fontSize: "clamp(0.9rem, 3.6vw, 1.05rem)" }}>
-                  {step.label}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex flex-col gap-5 spring-in" style={{ animationDelay: "0.28s" }}>
-            <div className="flex items-start gap-3">
-              <LeafIcon />
-              <p className="font-inter text-[#8A8A8A] leading-relaxed" style={{ fontSize: "clamp(0.78rem, 3vw, 0.95rem)" }}>
-                Cada lote se prepara por la mañana para conservar frescura, sabor y nutrientes.
+        {/* Steps — just number + label, no box */}
+        <div className="flex flex-col gap-5">
+          {steps.map((step, i) => (
+            <div
+              key={step.num}
+              className="flex items-start gap-4 spring-in"
+              style={{ animationDelay: `${0.14 + i * 0.07}s` }}
+            >
+              <span className="font-cormorant text-2xl font-light text-[#4A5E3A] leading-none pt-0.5">
+                {step.num}
+              </span>
+              <p className="font-inter text-[#F5F0E8] font-light leading-snug" style={{ fontSize: "clamp(0.9rem, 3.8vw, 1.1rem)" }}>
+                {step.label}
               </p>
             </div>
-
-            <a
-              href="/piloto"
-              className="inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press"
-              style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.6rem" }}
-            >
-              Unirme al piloto <span aria-hidden="true" className="ml-3">→</span>
-            </a>
-          </div>
+          ))}
         </div>
+
+        <a
+          href="/piloto"
+          className="inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press self-start spring-in"
+          style={{ fontSize: "clamp(0.85rem, 3.4vw, 1rem)", padding: "0.85rem 1.4rem", animationDelay: "0.42s" }}
+        >
+          Unirme al piloto <span aria-hidden="true" className="ml-3">→</span>
+        </a>
       </div>
     </section>
-  );
-}
-
-function LeafIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E3A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mt-0.5 flex-shrink-0" aria-hidden="true">
-      <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
-      <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
-    </svg>
   );
 }
