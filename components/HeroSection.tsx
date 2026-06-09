@@ -12,10 +12,12 @@ export default function HeroSection() {
       className="relative overflow-hidden"
       style={{ minHeight: "calc(100svh - 68px)" }}
     >
-      {/* ── Bottle — right half, bleeds to edge ── */}
+      {/* ── Bottle — right half, shifted up ── */}
       <div
-        className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none"
+        className="absolute right-0 w-[55%] pointer-events-none"
         style={{
+          top: "-6%",
+          bottom: "18%",
           animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
           animationDelay: "0.08s",
         }}
@@ -29,7 +31,7 @@ export default function HeroSection() {
             fill
             priority
             onError={() => setImgError(true)}
-            className="object-contain object-right-bottom"
+            className="object-contain object-right-center"
             sizes="55vw"
           />
         )}
@@ -133,7 +135,7 @@ export default function HeroSection() {
 /* ── SVG bottle illustration ── */
 function BottleIllustration() {
   return (
-    <div className="absolute inset-0 flex items-end justify-end">
+    <div className="absolute inset-0 flex items-center justify-end" style={{ paddingBottom: "10%" }}>
       <svg
         viewBox="0 0 260 500"
         className="h-[88%] w-auto"
