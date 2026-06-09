@@ -158,7 +158,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       </div>
 
       {/* Bottle image */}
-      <div className="relative flex-shrink-0 -my-2 -mr-1" style={{ width: 132, height: 210 }}>
+      <div className="relative flex-shrink-0 -my-2 -mr-1" style={{ width: 145, height: 231 }}>
         {!imgError ? (
           <Image
             src={product.bottleImg}
