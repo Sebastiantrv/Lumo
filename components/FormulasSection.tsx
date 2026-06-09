@@ -10,6 +10,7 @@ type Product = {
   ingredients: string[][];
   glassClass: string;
   bottleImg: string;
+  iconImg: string;
   icon: React.ReactNode;
   accentColor: string;
   glowColor: string;
@@ -26,6 +27,7 @@ const products: Product[] = [
     ],
     glassClass: "glass-verde",
     bottleImg: "/bottle-verde.png",
+    iconImg: "/icon-verde.jpeg",
     icon: <LeafIcon color="#4A5E3A" />,
     accentColor: "#4A5E3A",
     glowColor: "rgba(74, 94, 58, 0.15)",
@@ -40,6 +42,7 @@ const products: Product[] = [
     ],
     glassClass: "glass-rojo",
     bottleImg: "/bottle-rojo.png",
+    iconImg: "/icon-rojo.jpeg",
     icon: <BeetIcon color="#7A2030" />,
     accentColor: "#7A2030",
     glowColor: "rgba(122, 32, 48, 0.15)",
@@ -51,6 +54,7 @@ const products: Product[] = [
     ingredients: [["Piña", "Pepino", "Limón", "Jengibre"]],
     glassClass: "glass-tropical",
     bottleImg: "/bottle-tropical.png",
+    iconImg: "/icon-tropical.jpeg",
     icon: <PineappleIcon color="#B8860B" />,
     accentColor: "#B8860B",
     glowColor: "rgba(184, 134, 11, 0.15)",
@@ -97,6 +101,7 @@ export default function FormulasSection() {
 
 function ProductCard({ product, index }: { product: Product; index: number }) {
   const [imgError, setImgError] = useState(false);
+  const [iconError, setIconError] = useState(false);
 
   return (
     <article
@@ -122,7 +127,10 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
               boxShadow: `0 0 20px ${product.glowColor}`,
             }}
           >
-            {product.icon}
+            {!iconError ? (
+              <img src={product.iconImg} alt={product.name} onError={() => setIconError(true)}
+                style={{ width: 28, height: 28, objectFit: "contain" }} />
+            ) : product.icon}
           </div>
           <div>
             <h3

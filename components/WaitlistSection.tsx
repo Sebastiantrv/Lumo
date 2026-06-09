@@ -1,8 +1,24 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
-/* ── Types ── */
+/* ── Design tokens for light cream background ── */
+const T = {
+  text:        "#1A1A1A",
+  textSub:     "#6A6A6A",
+  textMuted:   "#9A9A9A",
+  border:      "rgba(0,0,0,0.10)",
+  borderFocus: "rgba(0,0,0,0.30)",
+  inputBg:     "rgba(255,255,255,0.65)",
+  cardBg:      "rgba(255,255,255,0.55)",
+  cardBorder:  "rgba(0,0,0,0.08)",
+  btnPrimary:  "#0D0D0D",
+  btnText:     "#F4EFE7",
+  btnBack:     "#6A6A6A",
+  error:       "#7A2030",
+};
+
 type FormData = {
   nombre: string;
   whatsapp: string;
@@ -12,13 +28,20 @@ type FormData = {
   restricciones: string;
 };
 
-const TOTAL_STEPS = 6; // steps 1-6 (excluding intro=0 and confirmation=7)
+const TOTAL_STEPS = 6;
 
 const FORMULAS = [
-  { id: "verde",    label: "Verde Fresco",     color: "#4A5E3A" },
-  { id: "rojo",     label: "Rojo Vital",        color: "#7A2030" },
-  { id: "tropical", label: "Tropical Hydrate",  color: "#B8860B" },
-  { id: "sorpresa", label: "Sorpréndeme",        color: "#8A8A8A" },
+  { id: "verde",    label: "Verde Fresco",    color: "#4A5E3A" },
+  { id: "rojo",     label: "Rojo Vital",       color: "#7A2030" },
+  { id: "tropical", label: "Tropical Hydrate", color: "#B8860B" },
+  { id: "sorpresa", label: "Sorpréndeme",       color: "#5A6A7A" },
+];
+
+const PREFERENCIAS = [
+  { id: "fresco",     label: "Más fresco / ligero" },
+  { id: "dulce",      label: "Más dulce / frutal" },
+  { id: "intenso",    label: "Más intenso / con jengibre" },
+  { id: "balanceado", label: "Balanceado" },
 ];
 
 const INGREDIENTES_POR_FORMULA = [
@@ -39,21 +62,12 @@ const INGREDIENTES_POR_FORMULA = [
   },
 ];
 
-const PREFERENCIAS = [
-  { id: "fresco",      label: "Más fresco / ligero" },
-  { id: "dulce",       label: "Más dulce / frutal" },
-  { id: "intenso",     label: "Más intenso / con jengibre" },
-  { id: "balanceado",  label: "Balanceado" },
-];
-
-/* ── Main component ── */
 export default function WaitlistSection() {
-  const [step, setStep] = useState(0);
+  const [step, setStep]           = useState(0);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
-  const [animKey, setAnimKey] = useState(0);
-  const [data, setData] = useState<FormData>({
-    nombre: "", whatsapp: "", area: "",
-    formula: "", preferencia: "", restricciones: "",
+  const [animKey, setAnimKey]     = useState(0);
+  const [data, setData]           = useState<FormData>({
+    nombre: "", whatsapp: "", area: "", formula: "", preferencia: "", restricciones: "",
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [evitar, setEvitar] = useState<string[]>([]);
@@ -65,24 +79,18 @@ export default function WaitlistSection() {
     setErrors({});
   }
 
-  function next() {
-    if (!validate()) return;
-    goTo(step + 1, "forward");
-  }
-
-  function back() {
-    goTo(step - 1, "backward");
-  }
+  function next()  { if (!validate()) return; goTo(step + 1, "forward"); }
+  function back()  { goTo(step - 1, "backward"); }
 
   function validate(): boolean {
     const e: Partial<FormData> = {};
-    if (step === 1 && !data.nombre.trim())       e.nombre      = "Ingresa tu nombre.";
-    if (step === 2 && !data.whatsapp.trim())      e.whatsapp    = "Ingresa tu WhatsApp.";
+    if (step === 1 && !data.nombre.trim())    e.nombre      = "Ingresa tu nombre.";
+    if (step === 2 && !data.whatsapp.trim())  e.whatsapp    = "Ingresa tu WhatsApp.";
     if (step === 2 && data.whatsapp && !/^[\d\s\+\-\(\)]{7,}$/.test(data.whatsapp))
-                                                   e.whatsapp    = "Número no válido.";
-    if (step === 3 && !data.area.trim())           e.area        = "Ingresa tu área o piso.";
-    if (step === 4 && !data.formula)               e.formula     = "Selecciona una fórmula.";
-    if (step === 5 && !data.preferencia)           e.preferencia = "Selecciona una preferencia.";
+                                               e.whatsapp    = "Número no válido.";
+    if (step === 3 && !data.area.trim())       e.area        = "Ingresa tu empresa.";
+    if (step === 4 && !data.formula)           e.formula     = "Selecciona una fórmula.";
+    if (step === 5 && !data.preferencia)       e.preferencia = "Selecciona una preferencia.";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -121,185 +129,147 @@ export default function WaitlistSection() {
     >
       <div className="w-full max-w-md flex flex-col gap-6">
 
-        {/* ── Progress bar (steps 1–6) ── */}
+        {/* Progress bar */}
         {step >= 1 && step <= TOTAL_STEPS && (
           <div className="flex flex-col gap-2">
-            <div className="w-full h-[2px] rounded-full bg-[#F5F0E8]/10 overflow-hidden">
+            <div className="w-full h-[2px] rounded-full overflow-hidden" style={{ background: "rgba(0,0,0,0.10)" }}>
               <div
                 className="h-full rounded-full transition-all duration-500 ease-out"
-                style={{
-                  width: `${(step / TOTAL_STEPS) * 100}%`,
-                  backgroundColor: "#4A5E3A",
-                }}
+                style={{ width: `${(step / TOTAL_STEPS) * 100}%`, backgroundColor: "#4A5E3A" }}
               />
             </div>
-            <p className="font-inter text-[#8A8A8A]/60 text-xs text-right">
+            <p className="font-inter text-xs text-right" style={{ color: T.textMuted }}>
               {step} / {TOTAL_STEPS}
             </p>
           </div>
         )}
 
-        {/* ── Step content (animated) ── */}
         <div key={animKey} style={animStyle}>
 
-          {/* ── 0: Intro ── */}
+          {/* 0: Intro */}
           {step === 0 && (
             <div className="flex flex-col gap-8">
               <div className="flex flex-col gap-4">
                 <h2
-                  className="font-cormorant font-light text-[#F5F0E8]"
-                  style={{ fontSize: "clamp(2.6rem, 10vw, 3.8rem)", lineHeight: 1.1 }}
+                  className="font-cormorant font-light"
+                  style={{ fontSize: "clamp(2.6rem, 10vw, 3.8rem)", lineHeight: 1.1, color: T.text }}
                 >
                   Solicita tu prueba.
                 </h2>
-                <p className="font-inter text-[#8A8A8A] leading-relaxed" style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)" }}>
+                <p className="font-inter leading-relaxed" style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", color: T.textSub }}>
                   LUMO se prepara en pequeños lotes cada mañana. Déjanos tus datos y te confirmaremos disponibilidad.
                 </p>
               </div>
               <button
                 onClick={() => goTo(1, "forward")}
-                className="w-full inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press"
-                style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem" }}
+                className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
+                style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: T.btnPrimary, color: T.btnText }}
               >
                 Iniciar solicitud <span aria-hidden="true">→</span>
               </button>
             </div>
           )}
 
-          {/* ── 1: Nombre ── */}
+          {/* 1: Nombre */}
           {step === 1 && (
             <StepShell label="¿Cómo te llamas?" onNext={next} onBack={back} showBack={false}>
-              <GlassInput
-                placeholder="Nombre"
-                value={data.nombre}
+              <LightInput placeholder="Nombre" value={data.nombre}
                 onChange={v => setData(d => ({ ...d, nombre: v }))}
-                error={errors.nombre}
-                onEnter={next}
-                autoFocus
-              />
+                error={errors.nombre} onEnter={next} autoFocus />
             </StepShell>
           )}
 
-          {/* ── 2: WhatsApp ── */}
+          {/* 2: WhatsApp */}
           {step === 2 && (
             <StepShell label="¿Dónde te confirmamos?" onNext={next} onBack={back}>
-              <GlassInput
-                placeholder="WhatsApp"
-                value={data.whatsapp}
+              <LightInput placeholder="WhatsApp" value={data.whatsapp} type="tel"
                 onChange={v => setData(d => ({ ...d, whatsapp: v }))}
-                error={errors.whatsapp}
-                type="tel"
-                onEnter={next}
-                autoFocus
-              />
+                error={errors.whatsapp} onEnter={next} autoFocus />
             </StepShell>
           )}
 
-          {/* ── 3: Empresa ── */}
+          {/* 3: Empresa */}
           {step === 3 && (
-            <StepShell
-              label="¿En qué empresa trabajas?"
+            <StepShell label="¿En qué empresa trabajas?"
               sublabel="Nos ayuda a saber dónde coordinar la entrega."
-              onNext={next}
-              onBack={back}
-            >
-              <GlassInput
-                placeholder="Nombre de tu empresa"
-                value={data.area}
+              onNext={next} onBack={back}>
+              <LightInput placeholder="Nombre de tu empresa" value={data.area}
                 onChange={v => setData(d => ({ ...d, area: v }))}
-                error={errors.area}
-                onEnter={next}
-                autoFocus
-              />
+                error={errors.area} onEnter={next} autoFocus />
             </StepShell>
           )}
 
-          {/* ── 4: Fórmula ── */}
+          {/* 4: Fórmula */}
           {step === 4 && (
             <StepShell label="¿Qué fórmula quieres probar?" onNext={next} onBack={back}>
-              {errors.formula && (
-                <p className="font-inter text-[#7A2030] text-xs mb-1" role="alert">{errors.formula}</p>
-              )}
+              {errors.formula && <p className="font-inter text-xs mb-1" style={{ color: T.error }} role="alert">{errors.formula}</p>}
               <div className="flex flex-col gap-3">
-                {FORMULAS.map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => setData(d => ({ ...d, formula: f.id }))}
-                    className="w-full text-left px-5 py-4 rounded-2xl font-inter transition-all spring-press"
-                    style={{
-                      fontSize: "clamp(0.88rem, 3.4vw, 1rem)",
-                      background: data.formula === f.id ? `${f.color}18` : "rgba(255,255,255,0.04)",
-                      border: data.formula === f.id ? `1.5px solid ${f.color}` : "1px solid rgba(255,255,255,0.08)",
-                      color: data.formula === f.id ? "#F5F0E8" : "#8A8A8A",
-                      backdropFilter: "blur(16px)",
-                      WebkitBackdropFilter: "blur(16px)",
-                      boxShadow: data.formula === f.id
-                        ? `0 0 20px ${f.color}20, 0 1px 0 ${f.color}25 inset`
-                        : "0 4px 12px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05) inset",
-                    }}
-                  >
-                    {f.label}
-                  </button>
-                ))}
+                {FORMULAS.map(f => {
+                  const sel = data.formula === f.id;
+                  return (
+                    <button key={f.id}
+                      onClick={() => setData(d => ({ ...d, formula: f.id }))}
+                      className="w-full text-left px-5 py-4 rounded-2xl font-inter transition-all spring-press"
+                      style={{
+                        fontSize: "clamp(0.88rem, 3.4vw, 1rem)",
+                        background: sel ? `${f.color}15` : T.cardBg,
+                        border: sel ? `1.5px solid ${f.color}` : `1px solid ${T.cardBorder}`,
+                        color: sel ? f.color : T.textSub,
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        boxShadow: sel ? `0 0 20px ${f.color}18` : "0 2px 8px rgba(0,0,0,0.06)",
+                        fontWeight: sel ? 500 : 400,
+                      }}>
+                      {f.label}
+                    </button>
+                  );
+                })}
               </div>
             </StepShell>
           )}
 
-          {/* ── 5: Preferencia ── */}
+          {/* 5: Preferencia */}
           {step === 5 && (
             <StepShell label="¿Cómo lo prefieres?" onNext={next} onBack={back}>
-              {errors.preferencia && (
-                <p className="font-inter text-[#7A2030] text-xs mb-1" role="alert">{errors.preferencia}</p>
-              )}
+              {errors.preferencia && <p className="font-inter text-xs mb-1" style={{ color: T.error }} role="alert">{errors.preferencia}</p>}
               <div className="flex flex-col gap-3">
-                {PREFERENCIAS.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => setData(d => ({ ...d, preferencia: p.id }))}
-                    className="w-full text-left px-5 py-4 rounded-2xl font-inter transition-all spring-press"
-                    style={{
-                      fontSize: "clamp(0.88rem, 3.4vw, 1rem)",
-                      background: data.preferencia === p.id ? "rgba(74,94,58,0.15)" : "rgba(255,255,255,0.04)",
-                      border: data.preferencia === p.id ? "1.5px solid #4A5E3A" : "1px solid rgba(255,255,255,0.08)",
-                      color: data.preferencia === p.id ? "#F5F0E8" : "#8A8A8A",
-                      backdropFilter: "blur(16px)",
-                      WebkitBackdropFilter: "blur(16px)",
-                      boxShadow: data.preferencia === p.id
-                        ? "0 0 20px rgba(74,94,58,0.2), 0 1px 0 rgba(74,94,58,0.2) inset"
-                        : "0 4px 12px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.05) inset",
-                    }}
-                  >
-                    {p.label}
-                  </button>
-                ))}
+                {PREFERENCIAS.map(p => {
+                  const sel = data.preferencia === p.id;
+                  return (
+                    <button key={p.id}
+                      onClick={() => setData(d => ({ ...d, preferencia: p.id }))}
+                      className="w-full text-left px-5 py-4 rounded-2xl font-inter transition-all spring-press"
+                      style={{
+                        fontSize: "clamp(0.88rem, 3.4vw, 1rem)",
+                        background: sel ? "rgba(74,94,58,0.12)" : T.cardBg,
+                        border: sel ? "1.5px solid #4A5E3A" : `1px solid ${T.cardBorder}`,
+                        color: sel ? "#4A5E3A" : T.textSub,
+                        backdropFilter: "blur(12px)",
+                        WebkitBackdropFilter: "blur(12px)",
+                        boxShadow: sel ? "0 0 20px rgba(74,94,58,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
+                        fontWeight: sel ? 500 : 400,
+                      }}>
+                      {p.label}
+                    </button>
+                  );
+                })}
               </div>
             </StepShell>
           )}
 
-          {/* ── 6: Restricciones por ingrediente ── */}
+          {/* 6: Ingredientes a evitar */}
           {step === 6 && (
-            <StepShell
-              label="¿Hay algún ingrediente que prefieras evitar?"
+            <StepShell label="¿Hay algún ingrediente que prefieras evitar?"
               sublabel="Opcional — toca los que no te gusten."
-              onNext={submit}
-              onBack={back}
-              nextLabel="Enviar solicitud →"
-            >
+              onNext={submit} onBack={back} nextLabel="Enviar solicitud →">
               <div className="flex flex-col gap-5">
                 {INGREDIENTES_POR_FORMULA.map((grupo) => (
                   <div key={grupo.formula} className="flex flex-col gap-2.5">
-                    <div
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg self-start"
-                      style={{
-                        background: `${grupo.color}18`,
-                        border: `1px solid ${grupo.color}40`,
-                      }}
-                    >
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg self-start"
+                      style={{ background: `${grupo.color}14`, border: `1px solid ${grupo.color}35` }}>
                       <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: grupo.color }} />
-                      <p
-                        className="font-cormorant font-semibold tracking-widest uppercase"
-                        style={{ fontSize: "0.85rem", color: grupo.color }}
-                      >
+                      <p className="font-cormorant font-semibold tracking-widest uppercase"
+                        style={{ fontSize: "0.85rem", color: grupo.color }}>
                         {grupo.formula}
                       </p>
                     </div>
@@ -307,28 +277,18 @@ export default function WaitlistSection() {
                       {grupo.ingredientes.map((ing) => {
                         const sel = evitar.includes(ing);
                         return (
-                          <button
-                            key={ing}
-                            type="button"
-                            onClick={() =>
-                              setEvitar(prev =>
-                                sel ? prev.filter(x => x !== ing) : [...prev, ing]
-                              )
-                            }
+                          <button key={ing} type="button"
+                            onClick={() => setEvitar(prev => sel ? prev.filter(x => x !== ing) : [...prev, ing])}
                             className="px-3 py-1.5 rounded-full font-inter spring-press"
                             style={{
                               fontSize: "clamp(0.78rem, 3vw, 0.9rem)",
-                              background: sel ? `${grupo.color}22` : "rgba(255,255,255,0.04)",
-                              border: sel ? `1.5px solid ${grupo.color}` : "1px solid rgba(255,255,255,0.10)",
-                              color: sel ? "#F5F0E8" : "#8A8A8A",
-                              backdropFilter: "blur(12px)",
-                              WebkitBackdropFilter: "blur(12px)",
-                              boxShadow: sel
-                                ? `0 0 14px ${grupo.color}30, 0 1px 0 ${grupo.color}20 inset`
-                                : "0 2px 8px rgba(0,0,0,0.25)",
+                              background: sel ? `${grupo.color}18` : T.cardBg,
+                              border: sel ? `1.5px solid ${grupo.color}` : `1px solid ${T.cardBorder}`,
+                              color: sel ? grupo.color : T.textSub,
+                              boxShadow: sel ? `0 0 12px ${grupo.color}25` : "0 1px 4px rgba(0,0,0,0.06)",
                               transition: "all 0.2s ease",
-                            }}
-                          >
+                              fontWeight: sel ? 500 : 400,
+                            }}>
                             {ing}
                           </button>
                         );
@@ -340,38 +300,39 @@ export default function WaitlistSection() {
             </StepShell>
           )}
 
-          {/* ── 7: Confirmación ── */}
+          {/* 7: Confirmación */}
           {step === 7 && (
             <div className="flex flex-col gap-8">
               <div className="flex flex-col gap-5">
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(74,94,58,0.15)", border: "1.5px solid #4A5E3A" }}
-                >
+                <div className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(74,94,58,0.12)", border: "1.5px solid #4A5E3A" }}>
                   <CheckIcon />
                 </div>
-                <h2
-                  className="font-cormorant font-light text-[#F5F0E8]"
-                  style={{ fontSize: "clamp(2.4rem, 9.5vw, 3.6rem)", lineHeight: 1.1 }}
-                >
+
+                <h2 className="font-cormorant font-light"
+                  style={{ fontSize: "clamp(2.4rem, 9.5vw, 3.6rem)", lineHeight: 1.1, color: T.text }}>
                   Solicitud recibida.
                 </h2>
-                <div
-                  className="rounded-2xl p-6 flex flex-col gap-3"
-                  style={{
-                    background: "rgba(74,94,58,0.08)",
-                    border: "1px solid rgba(74,94,58,0.22)",
-                    backdropFilter: "blur(16px)",
-                    WebkitBackdropFilter: "blur(16px)",
-                  }}
-                >
-                  <p className="font-inter text-[#8A8A8A] leading-relaxed" style={{ fontSize: "clamp(0.85rem, 3.3vw, 1rem)" }}>
-                    Revisaremos disponibilidad para el siguiente lote y te confirmaremos por WhatsApp.
+
+                <div className="flex flex-col gap-3 rounded-2xl p-5"
+                  style={{ background: "rgba(255,255,255,0.7)", border: `1px solid ${T.cardBorder}`, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
+                  <p className="font-inter leading-relaxed" style={{ fontSize: "clamp(0.85rem, 3.3vw, 1rem)", color: T.textSub }}>
+                    Ahora formas parte de los primeros interesados en probar LUMO.
                   </p>
-                  <p className="font-cormorant text-[#4A5E3A] italic" style={{ fontSize: "clamp(1rem, 4vw, 1.2rem)" }}>
-                    Gracias por querer probar LUMO.
+                  <p className="font-inter leading-relaxed" style={{ fontSize: "clamp(0.85rem, 3.3vw, 1rem)", color: T.textSub }}>
+                    Te confirmaremos disponibilidad para el siguiente lote por WhatsApp.
                   </p>
                 </div>
+
+                <p className="font-cormorant italic" style={{ fontSize: "clamp(1rem, 4vw, 1.2rem)", color: T.textSub }}>
+                  Mientras tanto, conoce nuestras fórmulas.
+                </p>
+
+                <Link href="/formulas"
+                  className="inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
+                  style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: T.btnPrimary, color: T.btnText }}>
+                  Ver fórmulas <span aria-hidden="true">→</span>
+                </Link>
               </div>
             </div>
           )}
@@ -382,53 +343,35 @@ export default function WaitlistSection() {
   );
 }
 
-/* ── Reusable step shell ── */
-function StepShell({
-  label, sublabel, children, onNext, onBack, showBack = true, nextLabel = "Continuar →",
-}: {
-  label: string;
-  sublabel?: string;
-  children: React.ReactNode;
-  onNext: () => void;
-  onBack: () => void;
-  showBack?: boolean;
-  nextLabel?: string;
+/* ── Step shell ── */
+function StepShell({ label, sublabel, children, onNext, onBack, showBack = true, nextLabel = "Continuar →" }: {
+  label: string; sublabel?: string; children: React.ReactNode;
+  onNext: () => void; onBack: () => void; showBack?: boolean; nextLabel?: string;
 }) {
   return (
     <div className="flex flex-col gap-7">
       <div className="flex flex-col gap-2">
-        <h2
-          className="font-cormorant font-light text-[#F5F0E8]"
-          style={{ fontSize: "clamp(2rem, 8vw, 3rem)", lineHeight: 1.15 }}
-        >
+        <h2 className="font-cormorant font-light"
+          style={{ fontSize: "clamp(2rem, 8vw, 3rem)", lineHeight: 1.15, color: "#1A1A1A" }}>
           {label}
         </h2>
         {sublabel && (
-          <p className="font-inter text-[#8A8A8A]" style={{ fontSize: "clamp(0.78rem, 3vw, 0.9rem)" }}>
+          <p className="font-inter" style={{ fontSize: "clamp(0.78rem, 3vw, 0.9rem)", color: "#6A6A6A" }}>
             {sublabel}
           </p>
         )}
       </div>
-
+      <div className="flex flex-col gap-3">{children}</div>
       <div className="flex flex-col gap-3">
-        {children}
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <button
-          onClick={onNext}
-          className="w-full inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press"
-          style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem" }}
-        >
+        <button onClick={onNext}
+          className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
+          style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: "#0D0D0D", color: "#F4EFE7" }}>
           {nextLabel} <span aria-hidden="true">{nextLabel.includes("→") ? "" : "→"}</span>
         </button>
-
         {showBack && (
-          <button
-            onClick={onBack}
-            className="w-full inline-flex items-center justify-center font-inter text-[#8A8A8A] spring-press py-2"
-            style={{ fontSize: "clamp(0.82rem, 3.2vw, 0.95rem)" }}
-          >
+          <button onClick={onBack}
+            className="w-full inline-flex items-center justify-center font-inter spring-press py-2"
+            style={{ fontSize: "clamp(0.82rem, 3.2vw, 0.95rem)", color: "#6A6A6A" }}>
             ← Regresar
           </button>
         )}
@@ -437,74 +380,32 @@ function StepShell({
   );
 }
 
-/* ── Glass input ── */
-function GlassInput({
-  placeholder, value, onChange, error, type = "text", onEnter, autoFocus,
-}: {
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  error?: string;
-  type?: string;
-  onEnter?: () => void;
-  autoFocus?: boolean;
+/* ── Light input ── */
+function LightInput({ placeholder, value, onChange, error, type = "text", onEnter, autoFocus }: {
+  placeholder: string; value: string; onChange: (v: string) => void;
+  error?: string; type?: string; onEnter?: () => void; autoFocus?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <input
-        type={type}
-        value={value}
-        autoFocus={autoFocus}
-        placeholder={placeholder}
+      <input type={type} value={value} autoFocus={autoFocus} placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         onKeyDown={e => e.key === "Enter" && onEnter?.()}
-        className="w-full bg-transparent rounded-2xl px-5 py-4 font-inter text-[#F5F0E8] placeholder-[#8A8A8A]/40 outline-none"
+        className="w-full rounded-2xl px-5 py-4 font-inter outline-none"
         style={{
           fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
-          border: error ? "1px solid rgba(122,32,48,0.6)" : "1px solid rgba(255,255,255,0.10)",
-          background: "rgba(255,255,255,0.04)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.07) inset",
+          color: "#1A1A1A",
+          background: "rgba(255,255,255,0.7)",
+          border: error ? "1px solid rgba(122,32,48,0.5)" : "1px solid rgba(0,0,0,0.10)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          boxShadow: "0 2px 12px rgba(0,0,0,0.06)",
           transition: "border-color 0.2s ease",
         }}
-        onFocus={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)"; }}
-        onBlur={e => { e.currentTarget.style.borderColor = error ? "rgba(122,32,48,0.6)" : "rgba(255,255,255,0.10)"; }}
+        onFocus={e => { e.currentTarget.style.borderColor = "rgba(0,0,0,0.30)"; }}
+        onBlur={e => { e.currentTarget.style.borderColor = error ? "rgba(122,32,48,0.5)" : "rgba(0,0,0,0.10)"; }}
       />
-      {error && <p className="font-inter text-[#7A2030] text-xs px-1" role="alert">{error}</p>}
+      {error && <p className="font-inter text-xs px-1" style={{ color: "#7A2030" }} role="alert">{error}</p>}
     </div>
-  );
-}
-
-/* ── Glass textarea ── */
-function GlassTextarea({
-  placeholder, value, onChange, autoFocus,
-}: {
-  placeholder: string;
-  value: string;
-  onChange: (v: string) => void;
-  autoFocus?: boolean;
-}) {
-  return (
-    <textarea
-      value={value}
-      autoFocus={autoFocus}
-      placeholder={placeholder}
-      rows={4}
-      onChange={e => onChange(e.target.value)}
-      className="w-full bg-transparent rounded-2xl px-5 py-4 font-inter text-[#F5F0E8] placeholder-[#8A8A8A]/40 outline-none resize-none"
-      style={{
-        fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
-        border: "1px solid rgba(255,255,255,0.10)",
-        background: "rgba(255,255,255,0.04)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.07) inset",
-        transition: "border-color 0.2s ease",
-      }}
-      onFocus={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)"; }}
-      onBlur={e => { e.currentTarget.style.borderColor = "rgba(255,255,255,0.10)"; }}
-    />
   );
 }
 

@@ -58,7 +58,7 @@ export default function Navbar() {
             backdropFilter: "blur(40px) saturate(180%)",
             WebkitBackdropFilter: "blur(40px) saturate(180%)",
             animation: closing
-              ? "overlayOut 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both"
+              ? "overlayIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) reverse both"
               : "overlayIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
           }}
           onAnimationEnd={handleAnimationEnd}
