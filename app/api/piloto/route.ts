@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       fields: {
         nombre:       body.nombre       ?? "",
         whatsapp:     body.whatsapp     ?? "",
-        area:         body.area         ?? "",
+        empresa:      body.area         ?? "",
         formula:      body.formula      ?? "",
         preferencia:  body.preferencia  ?? "",
         restricciones: body.restricciones ?? "",

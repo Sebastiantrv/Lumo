@@ -57,7 +57,7 @@ export default function HeroSection() {
           <h1
             className="font-cormorant font-light text-[#F5F0E8] spring-in"
             style={{
-              fontSize: "clamp(3rem, 11.5vw, 5.5rem)",
+              fontSize: "clamp(2.7rem, 10.35vw, 4.95rem)",
               lineHeight: 1.08,
               animationDelay: "0.06s",
               maxWidth: "58%",
@@ -77,7 +77,7 @@ export default function HeroSection() {
           <p
             className="font-inter text-[#8A8A8A] leading-relaxed spring-in"
             style={{
-              fontSize: "clamp(0.9rem, 3.5vw, 1.1rem)",
+              fontSize: "clamp(0.81rem, 3.15vw, 0.99rem)",
               maxWidth: "60%",
               animationDelay: "0.22s",
             }}
