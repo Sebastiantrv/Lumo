@@ -13,33 +13,31 @@ export default function HeroSection() {
       style={{ minHeight: "calc(100svh - 68px)" }}
     >
       {/* ── Bottle — flush right edge ── */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          top: "-8%",
-          bottom: "8%",
-          right: "-4%",
-          width: "72%",
-          animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
-          animationDelay: "0.08s",
-        }}
-      >
-        {imgError ? (
+      {!imgError ? (
+        <img
+          src="/bottle-hero.png"
+          alt="LUMO Rojo Vital — jugo prensado en frío"
+          onError={() => setImgError(true)}
+          className="absolute pointer-events-none"
+          style={{
+            top: "-5%",
+            right: "-8%",
+            width: "78%",
+            maxWidth: "none",
+            filter: "brightness(1.12) contrast(1.05)",
+            animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+            animationDelay: "0.08s",
+          }}
+        />
+      ) : (
+        <div
+          className="absolute right-0 pointer-events-none"
+          style={{ top: "-8%", bottom: "8%", width: "72%", animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both", animationDelay: "0.08s" }}
+        >
           <BottleIllustration />
-        ) : (
-          <Image
-            src="/bottle-hero.png"
-            alt="LUMO Rojo Vital — jugo prensado en frío"
-            fill
-            priority
-            onError={() => setImgError(true)}
-            className="object-contain"
-            style={{ objectPosition: "right center", filter: "brightness(1.12) contrast(1.05)" }}
-            sizes="72vw"
-          />
-        )}
-        <div className="absolute bottom-0 right-0 w-72 h-72 bg-[#7A2030]/12 rounded-full blur-3xl" />
-      </div>
+        </div>
+      )}
+      <div className="absolute bottom-[15%] right-0 w-72 h-72 bg-[#7A2030]/12 rounded-full blur-3xl pointer-events-none" />
 
       {/* Gradient — left text stays fully readable */}
       <div
