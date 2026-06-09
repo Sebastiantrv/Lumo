@@ -18,7 +18,7 @@ export default function ProcesoSection() {
       className="relative overflow-hidden"
       style={{ minHeight: "calc(100svh - 68px)" }}
     >
-      {/* ── Image — flush right edge ── */}
+      {/* ── Image — flush right, top half only (mirrors homepage) ── */}
       {!imgError ? (
         <img
           src="/bottle-proceso.png"
@@ -26,9 +26,9 @@ export default function ProcesoSection() {
           onError={() => setImgError(true)}
           className="absolute pointer-events-none"
           style={{
-            top: "-4%",
+            top: "-2%",
             right: "0",
-            width: "58%",
+            width: "46%",
             maxWidth: "none",
             filter: "brightness(1.18) contrast(1.03)",
             animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
@@ -36,15 +36,15 @@ export default function ProcesoSection() {
           }}
         />
       ) : (
-        <div className="absolute right-0 top-[8%] w-[55%] h-[70%] rounded-l-[40px] glass-verde" />
+        <div className="absolute right-0 top-[4%] w-[44%] h-[55%] rounded-l-[40px] glass-verde" />
       )}
-      <div className="absolute bottom-[12%] right-0 w-72 h-72 bg-[#4A5E3A]/14 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-[20%] right-0 w-60 h-60 bg-[#4A5E3A]/14 rounded-full blur-3xl pointer-events-none" />
 
       {/* Gradient — keeps left text readable */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "linear-gradient(to right, #0D0D0D 30%, rgba(13,13,13,0.6) 45%, rgba(13,13,13,0) 62%)",
+          background: "linear-gradient(to right, #0D0D0D 42%, rgba(13,13,13,0.5) 56%, rgba(13,13,13,0) 72%)",
         }}
       />
 
@@ -53,50 +53,52 @@ export default function ProcesoSection() {
         className="relative z-10 flex flex-col justify-between px-6 py-8 gap-8"
         style={{ minHeight: "calc(100svh - 68px)" }}
       >
-        <div className="flex flex-col gap-7">
-          <h2
-            className="font-cormorant font-light text-[#F5F0E8] leading-tight spring-in"
-            style={{ fontSize: "clamp(2.8rem, 11vw, 5rem)", lineHeight: 1.05, animationDelay: "0.04s", maxWidth: "70%" }}
-          >
-            Hecho con intención
-          </h2>
+        {/* Top: heading constrained to left of the image */}
+        <h2
+          className="font-cormorant font-light text-[#F5F0E8] leading-tight spring-in"
+          style={{ fontSize: "clamp(2.4rem, 9.5vw, 4.5rem)", lineHeight: 1.05, animationDelay: "0.04s", maxWidth: "52%" }}
+        >
+          Hecho con intención
+        </h2>
 
+        {/* Bottom: full-width steps + note + button (below the image) */}
+        <div className="flex flex-col gap-6">
           <div
             className="flex flex-col rounded-2xl overflow-hidden glass spring-in"
-            style={{ animationDelay: "0.14s", maxWidth: "92%" }}
+            style={{ animationDelay: "0.14s" }}
           >
             {steps.map((step, i) => (
               <div
                 key={step.num}
-                className="flex items-center gap-5 px-5 py-4 spring-press"
+                className="flex items-center gap-5 px-6 py-4 spring-press"
                 style={{ borderBottom: i < steps.length - 1 ? "1px solid rgba(255,255,255,0.06)" : "none" }}
               >
-                <span className="font-cormorant text-xl font-light text-[#4A5E3A] min-w-[2rem]">
+                <span className="font-cormorant text-2xl font-light text-[#4A5E3A] min-w-[2.25rem]">
                   {step.num}
                 </span>
-                <p className="font-inter text-[#F5F0E8] font-light" style={{ fontSize: "clamp(0.85rem, 3.4vw, 1.05rem)" }}>
+                <p className="font-inter text-[#F5F0E8] font-light" style={{ fontSize: "clamp(0.9rem, 3.6vw, 1.05rem)" }}>
                   {step.label}
                 </p>
               </div>
             ))}
           </div>
-        </div>
 
-        <div className="flex flex-col gap-5 spring-in" style={{ animationDelay: "0.28s" }}>
-          <div className="flex items-start gap-3" style={{ maxWidth: "70%" }}>
-            <LeafIcon />
-            <p className="font-inter text-[#8A8A8A] leading-relaxed" style={{ fontSize: "clamp(0.78rem, 3vw, 0.95rem)" }}>
-              Cada lote se prepara por la mañana para conservar frescura, sabor y nutrientes.
-            </p>
+          <div className="flex flex-col gap-5 spring-in" style={{ animationDelay: "0.28s" }}>
+            <div className="flex items-start gap-3">
+              <LeafIcon />
+              <p className="font-inter text-[#8A8A8A] leading-relaxed" style={{ fontSize: "clamp(0.78rem, 3vw, 0.95rem)" }}>
+                Cada lote se prepara por la mañana para conservar frescura, sabor y nutrientes.
+              </p>
+            </div>
+
+            <a
+              href="/piloto"
+              className="inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press"
+              style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.6rem" }}
+            >
+              Unirme al piloto <span aria-hidden="true" className="ml-3">→</span>
+            </a>
           </div>
-
-          <a
-            href="/piloto"
-            className="inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press self-start"
-            style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.6rem" }}
-          >
-            Unirme al piloto <span aria-hidden="true" className="ml-3">→</span>
-          </a>
         </div>
       </div>
     </section>
