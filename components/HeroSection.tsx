@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 export default function HeroSection() {
@@ -13,16 +14,20 @@ export default function HeroSection() {
     >
       {/* ── Bottle — flush right edge ── */}
       {!imgError ? (
-        <img
+        <Image
           src="/bottle-hero.png"
           alt="LUMO Rojo Vital — jugo prensado en frío"
+          width={1194}
+          height={2274}
+          priority
+          sizes="62vw"
           onError={() => setImgError(true)}
-          fetchPriority="high"
           className="absolute pointer-events-none"
           style={{
             top: "-4%",
             right: "0",
             width: "62%",
+            height: "auto",
             maxWidth: "none",
             filter: "brightness(1.10) contrast(1.05)",
             animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",

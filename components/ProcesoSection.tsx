@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 const steps = [
@@ -24,13 +25,17 @@ export default function ProcesoSection() {
         style={{ top: "50%", right: "0", transform: "translateY(-50%)", width: "48%" }}
       >
         {!imgError ? (
-          <img
+          <Image
             src="/bottle-proceso.png"
             alt="LUMO Verde — proceso de prensado en frío"
+            width={1548}
+            height={2202}
+            priority
+            sizes="48vw"
             onError={() => setImgError(true)}
-            fetchPriority="high"
             style={{
               width: "100%",
+              height: "auto",
               display: "block",
               filter: "brightness(1.18) contrast(1.03)",
               animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
