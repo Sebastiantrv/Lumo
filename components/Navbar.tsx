@@ -60,8 +60,9 @@ export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" })
 
       {menuOpen && (
         <div
-          className="fixed inset-0 z-50 flex flex-col"
+          className="fixed z-50 flex flex-col"
           style={{
+            top: "-2px", left: "-2px", right: "-2px", bottom: "-2px",
             background: "rgba(13, 13, 13, 0.85)",
             backdropFilter: "blur(40px) saturate(180%)",
             WebkitBackdropFilter: "blur(40px) saturate(180%)",
