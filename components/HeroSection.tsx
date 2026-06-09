@@ -73,19 +73,25 @@ export default function HeroSection() {
             <div className="h-px w-10 bg-[#F5F0E8]/25" />
             <LeafIcon />
           </div>
-        </div>
 
-        {/* Bottom: subtitle + buttons + lock */}
-        <div
-          className="flex flex-col gap-4 spring-in"
-          style={{ animationDelay: "0.22s" }}
-        >
           <p
-            className="font-inter text-[#8A8A8A] leading-relaxed"
-            style={{ fontSize: "clamp(0.81rem, 3.15vw, 0.99rem)" }}
+            className="font-inter text-[#8A8A8A] spring-in"
+            style={{
+              fontSize: "clamp(0.75rem, 2.8vw, 0.9rem)",
+              maxWidth: "46%",
+              lineHeight: 1.6,
+              animationDelay: "0.22s",
+            }}
           >
             Jugos naturales preparados en lotes limitados y entregados cada mañana.
           </p>
+        </div>
+
+        {/* Bottom: buttons + lock */}
+        <div
+          className="flex flex-col gap-4 spring-in"
+          style={{ animationDelay: "0.30s" }}
+        >
           <div className="flex flex-col gap-3">
             <a
               href="/piloto"
