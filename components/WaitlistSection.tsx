@@ -20,24 +20,31 @@ export default function WaitlistSection() {
   return (
     <section
       id="piloto"
-      className="px-6 md:px-12 py-24 md:py-32 flex flex-col items-center text-center"
+      className="px-4 md:px-10 py-16 md:py-24 flex flex-col items-center text-center"
       aria-label="Unirse al piloto"
     >
       <div className="max-w-md w-full flex flex-col items-center gap-6">
         <div className="flex flex-col gap-2">
-          <h2 className="font-cormorant text-4xl md:text-5xl font-light text-[#F5F0E8]">
+          <h2
+            className="font-cormorant text-4xl md:text-5xl font-light text-[#F5F0E8] spring-in"
+            style={{ animationDelay: "0.04s" }}
+          >
             Únete al piloto
           </h2>
-          <p className="font-inter text-[#8A8A8A] text-base">
+          <p
+            className="font-inter text-[#8A8A8A] text-base spring-in"
+            style={{ animationDelay: "0.10s" }}
+          >
             Cupos limitados por semana.
           </p>
         </div>
 
         {status === "success" ? (
-          <div className="w-full border border-[#4A5E3A]/40 rounded-card p-6 bg-[#4A5E3A]/10">
-            <p className="font-cormorant text-xl text-[#F5F0E8] mb-1">
-              ¡Listo!
-            </p>
+          <div
+            className="w-full rounded-2xl p-7 glass-verde spring-in"
+            style={{ animationDelay: "0s" }}
+          >
+            <p className="font-cormorant text-2xl text-[#F5F0E8] mb-1">¡Listo!</p>
             <p className="font-inter text-[#8A8A8A] text-sm">
               Te avisaremos cuando haya un cupo disponible.
             </p>
@@ -45,10 +52,11 @@ export default function WaitlistSection() {
         ) : (
           <form
             onSubmit={handleSubmit}
-            className="w-full flex flex-col gap-3"
+            className="w-full flex flex-col gap-3 spring-in"
+            style={{ animationDelay: "0.18s" }}
             noValidate
           >
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               <input
                 type="email"
                 value={email}
@@ -57,11 +65,25 @@ export default function WaitlistSection() {
                   if (status === "error") setStatus("idle");
                 }}
                 placeholder="tu@correo.com"
-                className={`w-full bg-transparent border rounded-card px-4 py-3 font-inter text-[#F5F0E8] text-sm placeholder-[#8A8A8A]/50 outline-none focus:border-[#F5F0E8]/50 transition-colors ${
-                  status === "error"
-                    ? "border-[#7A2030]/70"
-                    : "border-[#F5F0E8]/20"
-                }`}
+                className="w-full bg-transparent rounded-2xl px-5 py-3.5 font-inter text-[#F5F0E8] text-sm placeholder-[#8A8A8A]/40 outline-none transition-all"
+                style={{
+                  border: status === "error"
+                    ? "1px solid rgba(122, 32, 48, 0.6)"
+                    : "1px solid rgba(255,255,255,0.10)",
+                  background: "rgba(255,255,255,0.04)",
+                  backdropFilter: "blur(16px)",
+                  WebkitBackdropFilter: "blur(16px)",
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.07) inset",
+                  transition: "border-color 0.2s ease, box-shadow 0.2s ease",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.22)";
+                  e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.12) inset";
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = status === "error" ? "rgba(122, 32, 48, 0.6)" : "rgba(255,255,255,0.10)";
+                  e.currentTarget.style.boxShadow = "0 4px 16px rgba(0,0,0,0.3), 0 1px 0 rgba(255,255,255,0.07) inset";
+                }}
                 aria-label="Correo electrónico"
                 aria-invalid={status === "error"}
                 aria-describedby={status === "error" ? "email-error" : undefined}
@@ -80,14 +102,18 @@ export default function WaitlistSection() {
 
             <button
               type="submit"
-              className="w-full bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium text-sm px-6 py-3 rounded-full hover:bg-white transition-colors"
+              className="w-full bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium text-sm px-6 py-3.5 rounded-full spring-press shadow-lg"
+              style={{ boxShadow: "0 4px 20px rgba(245, 240, 232, 0.12)" }}
             >
               Quiero unirme →
             </button>
           </form>
         )}
 
-        <p className="font-inter text-[#8A8A8A]/50 text-xs">
+        <p
+          className="font-inter text-[#8A8A8A]/40 text-xs spring-in"
+          style={{ animationDelay: "0.28s" }}
+        >
           Sin spam. Sin compromisos. Solo acceso al piloto.
         </p>
       </div>
