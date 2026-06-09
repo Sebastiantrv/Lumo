@@ -24,14 +24,14 @@ export default function HeroSection() {
 
         <div className="flex flex-col sm:flex-row gap-3 mt-2">
           <a
-            href="#piloto"
+            href="/piloto"
             className="inline-flex items-center justify-center gap-2 bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium text-sm px-6 py-3 rounded-full hover:bg-white transition-colors"
           >
             Unirme al piloto
             <span aria-hidden="true">→</span>
           </a>
           <a
-            href="#formulas"
+            href="/formulas"
             className="inline-flex items-center justify-center gap-2 border border-[#F5F0E8]/30 text-[#F5F0E8] font-inter font-medium text-sm px-6 py-3 rounded-full hover:border-[#F5F0E8]/60 transition-colors"
           >
             Ver fórmulas

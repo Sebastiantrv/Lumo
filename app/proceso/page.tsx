@@ -1,14 +1,14 @@
 import Navbar from "@/components/Navbar";
-import HeroSection from "@/components/HeroSection";
+import ProcesoSection from "@/components/ProcesoSection";
 import Footer from "@/components/Footer";
 
-export default function Home() {
+export default function ProcesoPage() {
   return (
     <main>
       <header>
         <Navbar />
       </header>
-      <HeroSection />
+      <ProcesoSection />
       <Footer />
     </main>
   );

@@ -1,14 +1,14 @@
 import Navbar from "@/components/Navbar";
-import HeroSection from "@/components/HeroSection";
+import WaitlistSection from "@/components/WaitlistSection";
 import Footer from "@/components/Footer";
 
-export default function Home() {
+export default function PilotoPage() {
   return (
     <main>
       <header>
         <Navbar />
       </header>
-      <HeroSection />
+      <WaitlistSection />
       <Footer />
     </main>
   );

@@ -1,14 +1,14 @@
 import Navbar from "@/components/Navbar";
-import HeroSection from "@/components/HeroSection";
+import FormulasSection from "@/components/FormulasSection";
 import Footer from "@/components/Footer";
 
-export default function Home() {
+export default function FormulasPage() {
   return (
     <main>
       <header>
         <Navbar />
       </header>
-      <HeroSection />
+      <FormulasSection />
       <Footer />
     </main>
   );

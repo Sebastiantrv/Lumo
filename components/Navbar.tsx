@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -8,13 +9,13 @@ export default function Navbar() {
   return (
     <>
       <nav className="flex items-center justify-between px-6 py-5 md:px-12">
-        <a
-          href="#hero"
+        <Link
+          href="/"
           className="font-cormorant text-xl tracking-[0.35em] font-semibold text-[#F5F0E8]"
           aria-label="LUMO inicio"
         >
           L U M O
-        </a>
+        </Link>
 
         <button
           onClick={() => setMenuOpen(true)}
@@ -29,7 +30,6 @@ export default function Navbar() {
 
       <div className="mx-6 md:mx-12 h-px bg-[#F5F0E8]/15" />
 
-      {/* Full-screen overlay menu */}
       {menuOpen && (
         <div
           className="fixed inset-0 z-50 bg-[#0D0D0D] flex flex-col"
@@ -38,22 +38,19 @@ export default function Navbar() {
           aria-label="Menú principal"
         >
           <div className="flex items-center justify-between px-6 py-5 md:px-12">
-            <span className="font-cormorant text-xl tracking-[0.35em] font-semibold text-[#F5F0E8]">
+            <Link
+              href="/"
+              onClick={() => setMenuOpen(false)}
+              className="font-cormorant text-xl tracking-[0.35em] font-semibold text-[#F5F0E8]"
+            >
               L U M O
-            </span>
+            </Link>
             <button
               onClick={() => setMenuOpen(false)}
               className="p-2 text-[#F5F0E8] hover:opacity-70 transition-opacity"
               aria-label="Cerrar menú"
             >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <line x1="18" y1="6" x2="6" y2="18" />
                 <line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -62,18 +59,18 @@ export default function Navbar() {
 
           <nav className="flex flex-col items-center justify-center flex-1 gap-10">
             {[
-              { href: "#formulas", label: "Fórmulas" },
-              { href: "#proceso", label: "Proceso" },
-              { href: "#piloto", label: "Únete al piloto" },
+              { href: "/formulas", label: "Fórmulas" },
+              { href: "/proceso", label: "Proceso" },
+              { href: "/piloto", label: "Únete al piloto" },
             ].map((item) => (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 onClick={() => setMenuOpen(false)}
                 className="font-cormorant text-4xl font-light text-[#F5F0E8] hover:text-[#8A8A8A] transition-colors"
               >
                 {item.label}
-              </a>
+              </Link>
             ))}
           </nav>
 

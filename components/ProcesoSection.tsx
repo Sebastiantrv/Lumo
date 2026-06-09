@@ -45,7 +45,7 @@ export default function ProcesoSection() {
         </div>
 
         <a
-          href="#piloto"
+          href="/piloto"
           className="inline-flex items-center gap-2 self-start border border-[#F5F0E8]/30 text-[#F5F0E8] font-inter font-medium text-sm px-6 py-3 rounded-full hover:border-[#F5F0E8]/60 transition-colors mt-2"
         >
           Unirme al piloto
