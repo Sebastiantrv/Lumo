@@ -29,7 +29,7 @@ export default function ProcesoSection() {
             top: "50%",
             right: "0",
             transform: "translateY(-50%)",
-            width: "44%",
+            width: "48%",
             maxWidth: "none",
             filter: "brightness(1.18) contrast(1.03)",
             animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
