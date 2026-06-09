@@ -119,18 +119,16 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 
       <div className="flex flex-col gap-5">
         <div className="flex items-center gap-4">
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0"
-            style={{
-              background: `${product.accentColor}18`,
-              border: `1px solid ${product.accentColor}40`,
-              boxShadow: `0 0 20px ${product.glowColor}`,
-            }}
-          >
+          <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
             {!iconError ? (
               <img src={product.iconImg} alt={product.name} onError={() => setIconError(true)}
-                style={{ width: 28, height: 28, objectFit: "contain" }} />
-            ) : product.icon}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            ) : (
+              <div className="w-full h-full rounded-full flex items-center justify-center"
+                style={{ background: `${product.accentColor}18`, border: `1px solid ${product.accentColor}40` }}>
+                {product.icon}
+              </div>
+            )}
           </div>
           <div>
             <h3
