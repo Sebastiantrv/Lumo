@@ -20,11 +20,11 @@ export default function HeroSection() {
           onError={() => setImgError(true)}
           className="absolute pointer-events-none"
           style={{
-            top: "-5%",
-            right: "-8%",
-            width: "78%",
+            top: "-4%",
+            right: "-16%",
+            width: "92%",
             maxWidth: "none",
-            filter: "brightness(1.12) contrast(1.05)",
+            filter: "brightness(1.28) contrast(1.02)",
             animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
             animationDelay: "0.08s",
           }}
@@ -43,7 +43,7 @@ export default function HeroSection() {
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "linear-gradient(to right, #0D0D0D 38%, rgba(13,13,13,0.75) 60%, rgba(13,13,13,0.1) 100%)",
+          background: "linear-gradient(to right, #0D0D0D 30%, rgba(13,13,13,0.6) 45%, rgba(13,13,13,0) 60%)",
         }}
       />
 
