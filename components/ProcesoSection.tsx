@@ -18,27 +18,28 @@ export default function ProcesoSection() {
       className="relative overflow-hidden"
       style={{ minHeight: "calc(100svh - 68px)" }}
     >
-      {/* ── Image — flush right, vertically centered next to the steps ── */}
-      {!imgError ? (
-        <img
-          src="/bottle-proceso.png"
-          alt="LUMO Verde — proceso de prensado en frío"
-          onError={() => setImgError(true)}
-          className="absolute pointer-events-none"
-          style={{
-            top: "50%",
-            right: "0",
-            transform: "translateY(-50%)",
-            width: "48%",
-            maxWidth: "none",
-            filter: "brightness(1.18) contrast(1.03)",
-            animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
-            animationDelay: "0.08s",
-          }}
-        />
-      ) : (
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[42%] h-[60%] rounded-l-[40px] glass-verde" />
-      )}
+      {/* ── Image — wrapper centers vertically, inner img animates ── */}
+      <div
+        className="absolute pointer-events-none"
+        style={{ top: "50%", right: "0", transform: "translateY(-50%)", width: "48%" }}
+      >
+        {!imgError ? (
+          <img
+            src="/bottle-proceso.png"
+            alt="LUMO Verde — proceso de prensado en frío"
+            onError={() => setImgError(true)}
+            style={{
+              width: "100%",
+              display: "block",
+              filter: "brightness(1.18) contrast(1.03)",
+              animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+              animationDelay: "0.08s",
+            }}
+          />
+        ) : (
+          <div className="w-full h-[60vh] rounded-l-[40px] glass-verde" />
+        )}
+      </div>
       <div className="absolute top-1/2 -translate-y-1/2 right-0 w-56 h-56 bg-[#4A5E3A]/14 rounded-full blur-3xl pointer-events-none" />
 
       {/* Gradient — keeps left text readable */}
