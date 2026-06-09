@@ -71,7 +71,11 @@ export default function WaitlistSection() {
   async function submit() {
     const payload = {
       ...data,
-      timestamp: new Date().toISOString(),
+      timestamp: new Date().toLocaleString("es-MX", {
+        timeZone: "America/Mexico_City",
+        year: "numeric", month: "long", day: "numeric",
+        hour: "2-digit", minute: "2-digit",
+      }),
     };
     try {
       await fetch("/api/piloto", {
@@ -171,16 +175,16 @@ export default function WaitlistSection() {
             </StepShell>
           )}
 
-          {/* ── 3: Área ── */}
+          {/* ── 3: Empresa ── */}
           {step === 3 && (
             <StepShell
-              label="¿En qué área o piso estás?"
-              sublabel="Por ahora las entregas serán únicamente dentro de Swiss Re."
+              label="¿En qué empresa trabajas?"
+              sublabel="Nos ayuda a saber dónde coordinar la entrega."
               onNext={next}
               onBack={back}
             >
               <GlassInput
-                placeholder="Área / piso / referencia"
+                placeholder="Nombre de tu empresa"
                 value={data.area}
                 onChange={v => setData(d => ({ ...d, area: v }))}
                 error={errors.area}
