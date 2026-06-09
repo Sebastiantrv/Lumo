@@ -82,7 +82,7 @@ export default function HeroSection() {
               animationDelay: "0.22s",
             }}
           >
-            Jugos naturales preparados en lotes limitados y entregados cada mañana.
+            Lotes limitados.<br />Sin conservadores.<br />Sin artificiales.
           </p>
         </div>
 
