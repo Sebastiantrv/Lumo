@@ -152,14 +152,14 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       </div>
 
       {/* Bottle image */}
-      <div className="relative flex-shrink-0" style={{ width: 96, height: 152 }}>
+      <div className="relative flex-shrink-0 -my-2 -mr-1" style={{ width: 132, height: 210 }}>
         {!imgError ? (
           <Image
             src={product.bottleImg}
             alt={product.name}
             fill
-            className="object-contain drop-shadow-2xl"
-            sizes="96px"
+            className="object-contain object-right drop-shadow-2xl"
+            sizes="132px"
             onError={() => setImgError(true)}
           />
         ) : (
