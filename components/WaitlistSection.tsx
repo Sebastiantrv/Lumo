@@ -68,14 +68,20 @@ export default function WaitlistSection() {
     return Object.keys(e).length === 0;
   }
 
-  function submit() {
+  async function submit() {
     const payload = {
       ...data,
       timestamp: new Date().toISOString(),
-      source: "lumo-piloto-form",
     };
-    console.log("LUMO form submission:", JSON.stringify(payload, null, 2));
-    // TODO: POST to Airtable/webhook here
+    try {
+      await fetch("/api/piloto", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      console.error("Submit error:", e);
+    }
     goTo(7, "forward");
   }
 
