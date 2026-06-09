@@ -121,7 +121,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
             {!iconError ? (
-              <img src={product.iconImg} alt={product.name} onError={() => setIconError(true)}
+              <img src={product.iconImg} alt={product.name} fetchPriority="high" onError={() => setIconError(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
               <div className="w-full h-full rounded-full flex items-center justify-center"
@@ -164,8 +164,9 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             src={product.bottleImg}
             alt={product.name}
             fill
+            priority
             className="object-contain object-right drop-shadow-2xl"
-            sizes="132px"
+            sizes="145px"
             onError={() => setImgError(true)}
           />
         ) : (
