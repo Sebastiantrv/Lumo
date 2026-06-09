@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 
 const steps = [
   { num: "01", label: "Seleccionamos ingredientes" },
@@ -11,12 +11,6 @@ const steps = [
 
 export default function ProcesoSection() {
   const [imgError, setImgError] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-
-  useEffect(() => {
-    if (imgRef.current?.complete) setLoaded(true);
-  }, []);
 
   return (
     <section
@@ -31,19 +25,16 @@ export default function ProcesoSection() {
       >
         {!imgError ? (
           <img
-            ref={imgRef}
             src="/bottle-proceso.png"
             alt="LUMO Verde — proceso de prensado en frío"
             onError={() => setImgError(true)}
-            onLoad={() => setLoaded(true)}
             fetchPriority="high"
-            decoding="async"
             style={{
               width: "100%",
               display: "block",
               filter: "brightness(1.18) contrast(1.03)",
-              opacity: loaded ? undefined : 0,
-              animation: loaded ? "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both" : "none",
+              animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+              animationDelay: "0.08s",
             }}
           />
         ) : (
