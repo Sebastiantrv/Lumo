@@ -288,12 +288,21 @@ export default function WaitlistSection() {
               <div className="flex flex-col gap-5">
                 {INGREDIENTES_POR_FORMULA.map((grupo) => (
                   <div key={grupo.formula} className="flex flex-col gap-2.5">
-                    <p
-                      className="font-inter font-medium tracking-widest uppercase"
-                      style={{ fontSize: "0.65rem", color: grupo.color }}
+                    <div
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-lg self-start"
+                      style={{
+                        background: `${grupo.color}18`,
+                        border: `1px solid ${grupo.color}40`,
+                      }}
                     >
-                      {grupo.formula}
-                    </p>
+                      <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: grupo.color }} />
+                      <p
+                        className="font-cormorant font-semibold tracking-widest uppercase"
+                        style={{ fontSize: "0.85rem", color: grupo.color }}
+                      >
+                        {grupo.formula}
+                      </p>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       {grupo.ingredientes.map((ing) => {
                         const sel = evitar.includes(ing);
