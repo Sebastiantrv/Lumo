@@ -10,7 +10,7 @@ export default function Navbar() {
     <>
       {/* Navbar — full-width on mobile, floating glass on desktop */}
       <nav
-        className="fixed top-0 left-0 right-0 md:top-4 md:left-5 md:right-5 z-40 flex items-center justify-between px-5 py-4 md:px-7 md:py-4 md:rounded-2xl glass-strong"
+        className="fixed top-0 left-0 right-0 md:top-4 md:left-5 md:right-5 z-40 flex items-center justify-between px-6 py-[18px] md:px-7 md:py-4 md:rounded-2xl glass-strong"
         style={{ animation: "navbarDrop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}
       >
         <Link
@@ -32,8 +32,8 @@ export default function Navbar() {
         </button>
       </nav>
 
-      {/* Spacer — taller on mobile (full-width navbar), slightly smaller on desktop (floating) */}
-      <div className="h-[72px] md:h-[88px]" />
+      {/* Spacer — matches navbar height so content starts right below */}
+      <div className="h-[68px] md:h-[88px]" />
 
       {/* Full-screen glass overlay menu */}
       {menuOpen && (

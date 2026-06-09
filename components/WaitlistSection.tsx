@@ -26,14 +26,14 @@ export default function WaitlistSection() {
       <div className="max-w-md w-full flex flex-col items-center gap-8">
         <div className="flex flex-col gap-3">
           <h2
-            className="font-cormorant text-5xl md:text-6xl font-light text-[#F5F0E8] spring-in"
-            style={{ animationDelay: "0.04s" }}
+            className="font-cormorant font-light text-[#F5F0E8] spring-in"
+            style={{ fontSize: "clamp(2.6rem, 10vw, 4rem)", animationDelay: "0.04s" }}
           >
             Únete al piloto
           </h2>
           <p
-            className="font-inter text-[#8A8A8A] text-base md:text-lg spring-in"
-            style={{ animationDelay: "0.10s" }}
+            className="font-inter text-[#8A8A8A] spring-in"
+            style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.125rem)", animationDelay: "0.10s" }}
           >
             Cupos limitados por semana.
           </p>

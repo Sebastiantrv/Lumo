@@ -14,8 +14,8 @@ export default function ProcesoSection() {
     >
       <div className="flex flex-col gap-8">
         <h2
-          className="font-cormorant text-4xl md:text-5xl lg:text-6xl font-light text-[#F5F0E8] leading-tight spring-in"
-          style={{ animationDelay: "0.04s" }}
+          className="font-cormorant font-light text-[#F5F0E8] leading-tight spring-in"
+          style={{ fontSize: "clamp(2.4rem, 9.5vw, 4rem)", animationDelay: "0.04s" }}
         >
           Hecho con<br />intención
         </h2>
@@ -33,7 +33,7 @@ export default function ProcesoSection() {
               <span className="font-cormorant text-2xl font-light text-[#4A5E3A] min-w-[2.5rem]">
                 {step.num}
               </span>
-              <p className="font-inter text-[#F5F0E8] text-sm md:text-base font-light">
+              <p className="font-inter text-[#F5F0E8] font-light" style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)" }}>
                 {step.label}
               </p>
             </div>

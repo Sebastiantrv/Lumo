@@ -65,14 +65,14 @@ export default function FormulasSection() {
     >
       <div className="mb-12 md:mb-16">
         <h2
-          className="font-cormorant text-5xl md:text-6xl font-light italic text-[#F5F0E8] mb-3 spring-in"
-          style={{ animationDelay: "0.04s" }}
+          className="font-cormorant font-light italic text-[#F5F0E8] mb-3 spring-in"
+          style={{ fontSize: "clamp(2.6rem, 10vw, 4rem)", animationDelay: "0.04s" }}
         >
           Fórmulas
         </h2>
         <p
-          className="font-inter text-[#8A8A8A] text-base md:text-lg spring-in"
-          style={{ animationDelay: "0.10s" }}
+          className="font-inter text-[#8A8A8A] spring-in"
+          style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.125rem)", animationDelay: "0.10s" }}
         >
           Lo que necesitas. Nada más.
         </p>
@@ -122,10 +122,16 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
             {product.icon}
           </div>
           <div>
-            <h3 className="font-inter font-bold text-sm md:text-base tracking-widest text-[#F5F0E8] uppercase">
+            <h3
+              className="font-inter font-bold tracking-widest text-[#F5F0E8] uppercase"
+              style={{ fontSize: "clamp(0.75rem, 3vw, 1rem)" }}
+            >
               {product.name}
             </h3>
-            <p className="font-cormorant text-[#8A8A8A] text-base md:text-lg italic mt-1">
+            <p
+              className="font-cormorant text-[#8A8A8A] italic mt-1"
+              style={{ fontSize: "clamp(1rem, 4vw, 1.2rem)" }}
+            >
               {product.subtitle}
             </p>
           </div>
@@ -135,7 +141,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 
         <div className="flex flex-col gap-2">
           {product.ingredients.map((line, i) => (
-            <p key={i} className="font-inter text-[#8A8A8A] text-sm md:text-base">
+            <p key={i} className="font-inter text-[#8A8A8A]" style={{ fontSize: "clamp(0.8rem, 3.2vw, 1rem)" }}>
               {line.join("  ·  ")}
             </p>
           ))}
