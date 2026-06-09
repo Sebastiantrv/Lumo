@@ -1,3 +1,8 @@
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+
 const steps = [
   { num: "01", label: "Seleccionamos ingredientes" },
   { num: "02", label: "Prensamos en frío" },
@@ -59,15 +64,33 @@ export default function ProcesoSection() {
         </a>
       </div>
 
-      <div
-        className="flex justify-center md:justify-end spring-in"
-        style={{ animation: "springInRight 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both", animationDelay: "0.1s" }}
-      >
-        <div className="relative spring-press">
-          <div className="absolute -top-8 -right-6 w-20 h-20 bg-[#4A5E3A]/20 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-[#4A5E3A]/12 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-1/3 -left-5 w-10 h-10 bg-[#4A5E3A]/20 rounded-full blur-xl pointer-events-none" />
+      <ProcesoBottle />
+    </section>
+  );
+}
 
+function ProcesoBottle() {
+  const [imgError, setImgError] = useState(false);
+  return (
+    <div
+      className="flex justify-center md:justify-end spring-in"
+      style={{ animation: "springInRight 0.75s cubic-bezier(0.34, 1.56, 0.64, 1) both", animationDelay: "0.1s" }}
+    >
+      <div className="relative spring-press">
+        <div className="absolute -top-8 -right-6 w-20 h-20 bg-[#4A5E3A]/20 rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute -bottom-10 -left-10 w-28 h-28 bg-[#4A5E3A]/12 rounded-full blur-3xl pointer-events-none" />
+        {!imgError ? (
+          <div className="relative w-52 h-[340px] md:w-64 md:h-[420px]">
+            <Image
+              src="/bottle-proceso.png"
+              alt="LUMO Verde — proceso de prensado en frío"
+              fill
+              className="object-contain drop-shadow-2xl"
+              sizes="(max-width: 768px) 208px, 256px"
+              onError={() => setImgError(true)}
+            />
+          </div>
+        ) : (
           <div
             className="relative w-52 h-[340px] md:w-64 md:h-[400px] rounded-[40px] glass-verde flex flex-col items-center justify-center gap-4"
             style={{ boxShadow: "0 24px 64px rgba(74, 94, 58, 0.2), 0 1px 0 rgba(74, 94, 58, 0.25) inset" }}
@@ -78,17 +101,13 @@ export default function ProcesoSection() {
             <div className="text-center px-6">
               <p className="font-cormorant text-[#F5F0E8]/90 text-xl font-semibold tracking-widest">LUMO</p>
               <div className="h-px w-14 bg-[#4A5E3A]/50 mx-auto my-3" />
-              <p className="font-cormorant text-[#4A5E3A] text-sm font-medium tracking-wider italic">VERDE FRESCO</p>
-            </div>
-            <div className="flex flex-col gap-1.5 text-center px-6">
-              <p className="font-inter text-[#8A8A8A]/40 text-[10px] tracking-widest uppercase">Cold Pressed</p>
-              <p className="font-inter text-[#8A8A8A]/25 text-[9px]">Hecho cada mañana</p>
+              <p className="font-cormorant text-[#4A5E3A] text-sm font-medium tracking-wider italic">VERDE ESENCIAL</p>
             </div>
           </div>
-          <div className="absolute -inset-10 bg-[#4A5E3A]/08 rounded-full blur-3xl -z-10" />
-        </div>
+        )}
+        <div className="absolute -inset-10 bg-[#4A5E3A]/08 rounded-full blur-3xl -z-10" />
       </div>
-    </section>
+    </div>
   );
 }
 

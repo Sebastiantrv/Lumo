@@ -1,12 +1,16 @@
+"use client";
+
+import Image from "next/image";
+import { useState } from "react";
+
 type Product = {
   id: string;
   name: string;
   subtitle: string;
   ingredients: string[][];
   glassClass: string;
-  bottleGradient: string;
+  bottleImg: string;
   icon: React.ReactNode;
-  bottleLabel: string;
   accentColor: string;
   glowColor: string;
 };
@@ -21,9 +25,8 @@ const products: Product[] = [
       ["Limón", "Espinaca", "Jengibre"],
     ],
     glassClass: "glass-verde",
-    bottleGradient: "from-[#1a2414] to-[#0f170a]",
+    bottleImg: "/bottle-verde.png",
     icon: <LeafIcon color="#4A5E3A" />,
-    bottleLabel: "VERDE FRESCO",
     accentColor: "#4A5E3A",
     glowColor: "rgba(74, 94, 58, 0.15)",
   },
@@ -36,9 +39,8 @@ const products: Product[] = [
       ["Limón", "Jengibre", "Pepino"],
     ],
     glassClass: "glass-rojo",
-    bottleGradient: "from-[#200d10] to-[#130508]",
+    bottleImg: "/bottle-rojo.png",
     icon: <BeetIcon color="#7A2030" />,
-    bottleLabel: "ROJO VITAL",
     accentColor: "#7A2030",
     glowColor: "rgba(122, 32, 48, 0.15)",
   },
@@ -48,9 +50,8 @@ const products: Product[] = [
     subtitle: "Brillante y refrescante.",
     ingredients: [["Piña", "Pepino", "Limón", "Jengibre"]],
     glassClass: "glass-tropical",
-    bottleGradient: "from-[#1f1700] to-[#120e00]",
+    bottleImg: "/bottle-tropical.png",
     icon: <PineappleIcon color="#B8860B" />,
-    bottleLabel: "TROPICAL HYDRATE",
     accentColor: "#B8860B",
     glowColor: "rgba(184, 134, 11, 0.15)",
   },
@@ -95,9 +96,11 @@ export default function FormulasSection() {
 }
 
 function ProductCard({ product, index }: { product: Product; index: number }) {
+  const [imgError, setImgError] = useState(false);
+
   return (
     <article
-      className={`rounded-2xl p-6 md:p-9 grid grid-cols-1 md:grid-cols-[1fr_auto] gap-6 md:gap-10 items-center spring-press spring-in ${product.glassClass}`}
+      className={`rounded-2xl p-6 md:p-9 grid grid-cols-[1fr_auto] gap-6 items-center spring-press spring-in ${product.glassClass}`}
       style={{
         animationDelay: `${0.18 + index * 0.12}s`,
         position: "relative",
@@ -148,24 +151,29 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         </div>
       </div>
 
-      <div className="flex justify-center md:justify-end">
-        <div className="relative spring-press">
+      {/* Bottle image */}
+      <div className="relative flex-shrink-0" style={{ width: 96, height: 152 }}>
+        {!imgError ? (
+          <Image
+            src={product.bottleImg}
+            alt={product.name}
+            fill
+            className="object-contain drop-shadow-2xl"
+            sizes="96px"
+            onError={() => setImgError(true)}
+          />
+        ) : (
           <div
-            className={`w-28 h-44 md:w-32 md:h-52 bg-gradient-to-b ${product.bottleGradient} rounded-[28px] flex flex-col items-center justify-center gap-2`}
+            className="w-full h-full rounded-[20px] flex items-center justify-center"
             style={{
+              background: `${product.accentColor}12`,
               border: `1px solid ${product.accentColor}30`,
-              boxShadow: `0 8px 28px ${product.glowColor}, 0 1px 0 ${product.accentColor}20 inset`,
             }}
           >
-            <p className="font-cormorant text-[#F5F0E8]/70 text-xs font-semibold tracking-widest">LUMO</p>
-            <div className="h-px w-8 opacity-40" style={{ backgroundColor: product.accentColor }} />
-            <p className="font-cormorant text-[10px] italic tracking-wide text-center px-2 leading-tight" style={{ color: product.accentColor }}>
-              {product.bottleLabel}
-            </p>
-            <p className="font-inter text-[#8A8A8A]/30 text-[8px] mt-2 tracking-widest uppercase">Cold Pressed</p>
+            {product.icon}
           </div>
-          <div className="absolute -inset-4 rounded-full blur-2xl -z-10 opacity-20" style={{ backgroundColor: product.accentColor }} />
-        </div>
+        )}
+        <div className="absolute -inset-4 rounded-full blur-2xl -z-10 opacity-15" style={{ backgroundColor: product.accentColor }} />
       </div>
     </article>
   );
