@@ -10,14 +10,14 @@ export default function HeroSection() {
     <section
       id="hero"
       className="relative overflow-hidden"
-      style={{ minHeight: "calc(100svh - 72px)" }}
+      style={{ minHeight: "calc(100svh - 68px)" }}
     >
-      {/* ── Bottle — absolute, bleeds from right ── */}
+      {/* ── Bottle — right half, bleeds to edge ── */}
       <div
-        className="absolute right-0 top-0 bottom-0 w-[52%] md:w-[45%] pointer-events-none"
+        className="absolute right-0 top-0 bottom-0 w-[55%] pointer-events-none"
         style={{
           animation: "springInRight 0.9s cubic-bezier(0.34, 1.56, 0.64, 1) both",
-          animationDelay: "0.1s",
+          animationDelay: "0.08s",
         }}
       >
         {imgError ? (
@@ -30,85 +30,96 @@ export default function HeroSection() {
             priority
             onError={() => setImgError(true)}
             className="object-contain object-right-bottom"
-            sizes="(max-width: 768px) 52vw, 45vw"
+            sizes="55vw"
           />
         )}
-        {/* Glow */}
-        <div className="absolute bottom-0 right-0 w-64 h-64 bg-[#7A2030]/15 rounded-full blur-3xl" />
-        <div className="absolute top-1/2 right-0 w-40 h-40 bg-[#7A2030]/08 rounded-full blur-2xl" />
+        <div className="absolute bottom-0 right-0 w-72 h-72 bg-[#7A2030]/12 rounded-full blur-3xl" />
       </div>
 
-      {/* Left-side fade so text stays readable over bottle */}
+      {/* Gradient — left text stays fully readable */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
-          background: "linear-gradient(to right, #0D0D0D 42%, rgba(13,13,13,0.7) 65%, transparent 100%)",
+          background: "linear-gradient(to right, #0D0D0D 38%, rgba(13,13,13,0.75) 60%, rgba(13,13,13,0.1) 100%)",
         }}
       />
 
-      {/* ── Text content ── */}
-      <div className="relative z-10 flex flex-col justify-center h-full px-6 md:px-12 py-10 md:py-16"
-        style={{ minHeight: "calc(100svh - 72px)" }}
+      {/* ── Content ── */}
+      <div
+        className="relative z-10 flex flex-col justify-between px-6 py-8"
+        style={{ minHeight: "calc(100svh - 68px)" }}
       >
-        <div className="flex flex-col gap-6 max-w-[58%] md:max-w-[50%]">
-
+        {/* Top: heading + divider + body */}
+        <div className="flex flex-col gap-5">
           <h1
             className="font-cormorant font-light text-[#F5F0E8] spring-in"
             style={{
-              fontSize: "clamp(2.4rem, 9.5vw, 5rem)",
-              lineHeight: 1.1,
+              fontSize: "clamp(3rem, 11.5vw, 5.5rem)",
+              lineHeight: 1.08,
               animationDelay: "0.06s",
+              maxWidth: "58%",
             }}
           >
-            Prensados<br />en frío.<br /><br />Hechos<br />cada<br />mañana.
+            Prensados en<br />frío.<br /><br />Hechos cada<br />mañana.
           </h1>
 
           <div
             className="flex items-center gap-3 spring-in"
             style={{ animationDelay: "0.14s" }}
           >
-            <div className="h-px w-10 bg-[#F5F0E8]/30" />
+            <div className="h-px w-10 bg-[#F5F0E8]/25" />
             <LeafIcon />
           </div>
 
           <p
             className="font-inter text-[#8A8A8A] leading-relaxed spring-in"
             style={{
-              fontSize: "clamp(0.8rem, 3.2vw, 1.1rem)",
+              fontSize: "clamp(0.9rem, 3.5vw, 1.1rem)",
+              maxWidth: "60%",
               animationDelay: "0.22s",
             }}
           >
             Jugos naturales preparados en lotes limitados y entregados cada mañana.
           </p>
+        </div>
 
-          <div
-            className="flex flex-col gap-3 spring-in"
-            style={{ animationDelay: "0.30s" }}
-          >
+        {/* Bottom: buttons + lock */}
+        <div
+          className="flex flex-col gap-4 spring-in"
+          style={{ animationDelay: "0.30s" }}
+        >
+          <div className="flex flex-col gap-3">
             <a
               href="/piloto"
-              className="inline-flex items-center justify-center gap-2 bg-[#F5F0E8] text-[#0D0D0D] font-inter font-semibold rounded-full spring-press shadow-lg"
-              style={{ fontSize: "clamp(0.78rem, 3vw, 0.95rem)", padding: "0.8rem 1.6rem" }}
+              className="inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press"
+              style={{
+                fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
+                padding: "0.9rem 1.5rem",
+              }}
             >
               Unirme al piloto <span aria-hidden="true">→</span>
             </a>
             <a
               href="/formulas"
-              className="inline-flex items-center justify-center gap-2 font-inter font-medium rounded-full spring-press glass text-[#F5F0E8]"
-              style={{ fontSize: "clamp(0.78rem, 3vw, 0.95rem)", padding: "0.8rem 1.6rem" }}
+              className="inline-flex items-center justify-between font-inter font-medium rounded-full spring-press text-[#F5F0E8]"
+              style={{
+                fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
+                padding: "0.9rem 1.5rem",
+                border: "1.5px solid #4A5E3A",
+              }}
             >
               Ver fórmulas <span aria-hidden="true">→</span>
             </a>
           </div>
 
-          <div
-            className="flex items-start gap-2 spring-in"
-            style={{ animationDelay: "0.38s" }}
-          >
+          <div className="flex items-start gap-2">
             <LockIcon />
             <p
-              className="font-inter text-[#8A8A8A] leading-snug"
-              style={{ fontSize: "clamp(0.65rem, 2.5vw, 0.8rem)" }}
+              className="font-inter leading-snug"
+              style={{
+                fontSize: "clamp(0.7rem, 2.8vw, 0.85rem)",
+                color: "#4A5E3A",
+              }}
             >
               Acceso exclusivo para un número limitado de personas cada semana.
             </p>
@@ -119,7 +130,7 @@ export default function HeroSection() {
   );
 }
 
-/* ── SVG bottle illustration (shown until real photo is uploaded) ── */
+/* ── SVG bottle illustration ── */
 function BottleIllustration() {
   return (
     <div className="absolute inset-0 flex items-end justify-end">
@@ -141,7 +152,7 @@ function BottleIllustration() {
             <stop offset="50%"  stopColor="#8b1425" stopOpacity="0.95" />
             <stop offset="100%" stopColor="#4a0c14" stopOpacity="0.7" />
           </linearGradient>
-          <linearGradient id="bHighlight" x1="0%" y1="0%" x2="100%" y2="0%">
+          <linearGradient id="bHL" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%"   stopColor="white" stopOpacity="0" />
             <stop offset="20%"  stopColor="white" stopOpacity="0.12" />
             <stop offset="30%"  stopColor="white" stopOpacity="0.04" />
@@ -160,10 +171,8 @@ function BottleIllustration() {
           </clipPath>
         </defs>
 
-        {/* Background glow */}
         <ellipse cx="130" cy="400" rx="110" ry="80" fill="url(#bGlow)" />
 
-        {/* Leaves behind */}
         <g opacity="0.8">
           <ellipse cx="195" cy="65"  rx="36" ry="14" fill="#2d4a1e" transform="rotate(-38,195,65)" />
           <ellipse cx="215" cy="38"  rx="30" ry="12" fill="#3a5c26" transform="rotate(-42,215,38)" />
@@ -173,26 +182,18 @@ function BottleIllustration() {
           <line x1="178" y1="108" x2="172" y2="50"  stroke="#1e3010" strokeWidth="1.5" />
         </g>
 
-        {/* Cap */}
         <rect x="104" y="68" width="52" height="10" rx="3" fill="url(#bCap)" />
         <rect x="100" y="76" width="60" height="34" rx="4" fill="url(#bCap)" />
-
-        {/* Neck */}
         <path d="M108 108 Q106 128 104 150 L102 154 L158 154 L156 150 Q154 128 152 108 Z" fill="url(#bBody)" />
-
-        {/* Body */}
         <path d="M74 152 L74 408 Q74 432 98 432 L162 432 Q186 432 186 408 L186 152 Z" fill="url(#bBody)" />
 
-        {/* Juice */}
         <g clipPath="url(#bClip)">
           <rect x="74" y="192" width="112" height="240" fill="url(#bJuice)" />
           <ellipse cx="130" cy="194" rx="52" ry="5" fill="#9b2030" opacity="0.6" />
         </g>
 
-        {/* Glass highlight */}
-        <path d="M74 152 L74 408 Q74 432 98 432 L162 432 Q186 432 186 408 L186 152 Z" fill="url(#bHighlight)" />
+        <path d="M74 152 L74 408 Q74 432 98 432 L162 432 Q186 432 186 408 L186 152 Z" fill="url(#bHL)" />
 
-        {/* Label */}
         <rect x="83" y="254" width="94" height="106" rx="5" fill="#0d0d0d" opacity="0.93" />
         <rect x="84" y="255" width="92" height="104" rx="4.5" fill="none" stroke="#222" strokeWidth="0.8" />
         <text x="130" y="275" textAnchor="middle" fill="#F5F0E8" fontFamily="Georgia,serif" fontSize="9.5" fontWeight="600" letterSpacing="4">LUMO</text>
@@ -204,11 +205,9 @@ function BottleIllustration() {
         <text x="130" y="336" textAnchor="middle" fill="#777" fontFamily="Arial,sans-serif" fontSize="5.2">Hechos cada mañana.</text>
         <text x="130" y="350" textAnchor="middle" fill="#444" fontFamily="Arial,sans-serif" fontSize="4.8">250 ml</text>
 
-        {/* Base */}
         <ellipse cx="130" cy="431" rx="56" ry="6" fill="#0a0305" opacity="0.7" />
         <ellipse cx="130" cy="433" rx="42" ry="8" fill="#150608" opacity="0.4" />
 
-        {/* Front leaf */}
         <ellipse cx="62" cy="330" rx="28" ry="10" fill="#2d4a1e" transform="rotate(22,62,330)" opacity="0.55" />
         <line x1="62" y1="330" x2="48" y2="378" stroke="#1e3010" strokeWidth="1.5" opacity="0.7" />
       </svg>
@@ -218,7 +217,7 @@ function BottleIllustration() {
 
 function LeafIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E3A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4A5E3A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z" />
       <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12" />
     </svg>
@@ -227,7 +226,7 @@ function LeafIcon() {
 
 function LockIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#8A8A8A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mt-0.5 flex-shrink-0">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#4A5E3A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="mt-0.5 flex-shrink-0">
       <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
       <path d="M7 11V7a5 5 0 0 1 10 0v4" />
     </svg>
