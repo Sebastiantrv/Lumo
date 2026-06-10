@@ -9,7 +9,8 @@ function AdminNav() {
   const path = usePathname();
 
   const links = [
-    { href: "/admin", label: "Hoy", icon: SunIcon },
+    { href: "/admin", label: "Inicio", icon: HomeIcon },
+    { href: "/admin/hoy", label: "Hoy", icon: SunIcon },
     { href: "/admin/semana", label: "Semana", icon: CalendarIcon },
     { href: "/admin/compras", label: "Compras", icon: CartIcon },
     { href: "/admin/recetas", label: "Recetas", icon: LeafIcon },
@@ -100,6 +101,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 }
 
 /* ── Icons ── */
+function HomeIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  );
+}
 function SunIcon({ size, color }: { size: number; color: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
