@@ -40,6 +40,7 @@ export default function ClientesPage() {
   const [showPedidoFor, setShowPedidoFor] = useState<string | null>(null);
   const [editandoCliente, setEditandoCliente] = useState<Cliente | null>(null);
   const [showInactivos, setShowInactivos] = useState(false);
+  const [expandido, setExpandido] = useState<string | null>(null);
 
   async function load() {
     const [{ data: c }, { data: f }] = await Promise.all([
@@ -59,19 +60,20 @@ export default function ClientesPage() {
   const inactivos = clientes.filter((c) => !c.activo);
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
+      {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
           <p className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#4A5E3A" }}>
             Clientes
           </p>
           <h1 className="font-cormorant font-light text-[#F5F0E8]" style={{ fontSize: "2rem" }}>
-            {activos.length} clientes activos
+            {activos.length} activos
           </h1>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 font-inter text-sm font-medium"
+          className="rounded-xl px-4 py-2.5 font-inter text-sm font-medium"
           style={{ background: "#F5F0E8", color: "#0D0D0D" }}
         >
           + Nuevo cliente
@@ -81,55 +83,74 @@ export default function ClientesPage() {
       {activos.length === 0 && inactivos.length === 0 ? (
         <EmptyState onAdd={() => setShowForm(true)} />
       ) : (
-        <div className="flex flex-col gap-3">
-          {activos.map((c) => (
-            <ClienteCard
-              key={c.id}
-              cliente={c}
-              onPedido={() => setShowPedidoFor(c.id)}
-              onEditar={() => setEditandoCliente(c)}
-              onReload={load}
-            />
-          ))}
+        <div className="flex flex-col gap-6">
+          {/* Tabla de activos */}
+          {activos.length > 0 && (
+            <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.07)" }}>
+              {/* Encabezado de columnas */}
+              <div className="grid px-4 py-2.5" style={{
+                gridTemplateColumns: "1fr 130px 1fr auto",
+                background: "rgba(255,255,255,0.02)",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}>
+                <span className="font-inter text-xs uppercase tracking-widest" style={{ color: "#555" }}>Nombre</span>
+                <span className="font-inter text-xs uppercase tracking-widest" style={{ color: "#555" }}>WhatsApp</span>
+                <span className="font-inter text-xs uppercase tracking-widest" style={{ color: "#555" }}>Notas</span>
+                <span />
+              </div>
 
-          {inactivos.length > 0 && (
-            <>
-              <button
-                onClick={() => setShowInactivos((v) => !v)}
-                className="font-inter text-xs mt-2 text-left"
-                style={{ color: "#555" }}
-              >
-                {showInactivos ? "▲ Ocultar inactivos" : `▼ Ver inactivos (${inactivos.length})`}
-              </button>
-              {showInactivos && inactivos.map((c) => (
-                <ClienteCard
+              {activos.map((c, i) => (
+                <ClienteRow
                   key={c.id}
                   cliente={c}
+                  isLast={i === activos.length - 1}
+                  expanded={expandido === c.id}
+                  onToggleExpand={() => setExpandido(expandido === c.id ? null : c.id)}
                   onPedido={() => setShowPedidoFor(c.id)}
                   onEditar={() => setEditandoCliente(c)}
                   onReload={load}
                 />
               ))}
-            </>
+            </div>
+          )}
+
+          {/* Inactivos colapsables */}
+          {inactivos.length > 0 && (
+            <div>
+              <button
+                onClick={() => setShowInactivos((v) => !v)}
+                className="font-inter text-xs mb-3"
+                style={{ color: "#555" }}
+              >
+                {showInactivos ? "▲ Ocultar inactivos" : `▼ Ver inactivos (${inactivos.length})`}
+              </button>
+              {showInactivos && (
+                <div className="rounded-2xl overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.05)", opacity: 0.6 }}>
+                  {inactivos.map((c, i) => (
+                    <ClienteRow
+                      key={c.id}
+                      cliente={c}
+                      isLast={i === inactivos.length - 1}
+                      expanded={expandido === c.id}
+                      onToggleExpand={() => setExpandido(expandido === c.id ? null : c.id)}
+                      onPedido={() => {}}
+                      onEditar={() => setEditandoCliente(c)}
+                      onReload={load}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}
 
       {showForm && (
-        <NuevoClienteModal
-          onClose={() => setShowForm(false)}
-          onSaved={() => { setShowForm(false); load(); }}
-        />
+        <NuevoClienteModal onClose={() => setShowForm(false)} onSaved={() => { setShowForm(false); load(); }} />
       )}
-
       {editandoCliente && (
-        <EditarClienteModal
-          cliente={editandoCliente}
-          onClose={() => setEditandoCliente(null)}
-          onSaved={() => { setEditandoCliente(null); load(); }}
-        />
+        <EditarClienteModal cliente={editandoCliente} onClose={() => setEditandoCliente(null)} onSaved={() => { setEditandoCliente(null); load(); }} />
       )}
-
       {showPedidoFor && (
         <NuevoPedidoModal
           clienteId={showPedidoFor}
@@ -143,13 +164,15 @@ export default function ClientesPage() {
   );
 }
 
-function ClienteCard({ cliente, onPedido, onEditar, onReload }: {
+function ClienteRow({ cliente, isLast, expanded, onToggleExpand, onPedido, onEditar, onReload }: {
   cliente: Cliente;
+  isLast: boolean;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onPedido: () => void;
   onEditar: () => void;
   onReload: () => void;
 }) {
-  const [deleting, setDeleting] = useState(false);
   const [toggling, setToggling] = useState(false);
 
   async function handleToggleActivo() {
@@ -160,85 +183,70 @@ function ClienteCard({ cliente, onPedido, onEditar, onReload }: {
   }
 
   async function handleEliminar() {
-    if (!window.confirm(`¿Eliminar a ${cliente.nombre}?`)) return;
-    setDeleting(true);
+    if (!window.confirm(`¿Eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`)) return;
     await supabase.from("clientes").delete().eq("id", cliente.id);
     onReload();
   }
 
   return (
-    <div
-      className="rounded-2xl p-5"
-      style={{
-        background: "rgba(255,255,255,0.03)",
-        border: "1px solid rgba(255,255,255,0.07)",
-        opacity: cliente.activo ? 1 : 0.5,
-      }}
-    >
-      <div className="flex items-start justify-between mb-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-inter font-medium text-sm" style={{ color: "#F5F0E8" }}>{cliente.nombre}</p>
-            {!cliente.activo && (
-              <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.07)", color: "#777" }}>
-                Inactivo
-              </span>
-            )}
-          </div>
-          {cliente.telefono && (
-            <a
-              href={`https://wa.me/${cliente.telefono.replace(/\D/g, "")}`}
-              target="_blank"
-              rel="noopener"
-              className="font-inter text-xs mt-0.5 block"
-              style={{ color: "#4A5E3A" }}
-            >
-              {cliente.telefono}
-            </a>
-          )}
-          {cliente.email && (
-            <p className="font-inter text-xs mt-0.5" style={{ color: "#555" }}>{cliente.email}</p>
-          )}
-          {cliente.notas && (
-            <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>{cliente.notas}</p>
-          )}
-        </div>
+    <div style={{ borderBottom: isLast ? "none" : "1px solid rgba(255,255,255,0.05)" }}>
+      {/* Fila principal */}
+      <div
+        className="grid px-4 py-3 cursor-pointer transition-colors"
+        style={{
+          gridTemplateColumns: "1fr 130px 1fr auto",
+          background: expanded ? "rgba(255,255,255,0.04)" : "transparent",
+          gap: "12px",
+          alignItems: "center",
+        }}
+        onClick={onToggleExpand}
+      >
+        <span className="font-inter text-sm font-medium truncate" style={{ color: "#F5F0E8" }}>
+          {cliente.nombre}
+        </span>
+        <span className="font-inter text-xs truncate" style={{ color: "#4A5E3A" }}>
+          {cliente.telefono ?? "—"}
+        </span>
+        <span className="font-inter text-xs truncate" style={{ color: "#555" }}>
+          {cliente.notas ?? "—"}
+        </span>
+        <span className="font-inter text-xs" style={{ color: "#444" }}>
+          {expanded ? "▲" : "▼"}
+        </span>
       </div>
 
-      <div className="flex items-center gap-2 flex-wrap">
-        {cliente.activo && (
-          <button
-            onClick={onPedido}
+      {/* Panel expandido */}
+      {expanded && (
+        <div className="px-4 pb-4 pt-1 flex items-center gap-2 flex-wrap"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+          {cliente.email && (
+            <span className="font-inter text-xs mr-3" style={{ color: "#555" }}>{cliente.email}</span>
+          )}
+          {cliente.activo && (
+            <button onClick={(e) => { e.stopPropagation(); onPedido(); }}
+              className="rounded-lg px-3 py-1.5 font-inter text-xs"
+              style={{ background: "rgba(74,94,58,0.2)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.3)" }}>
+              + Pedido
+            </button>
+          )}
+          <button onClick={(e) => { e.stopPropagation(); onEditar(); }}
             className="rounded-lg px-3 py-1.5 font-inter text-xs"
-            style={{ background: "rgba(74,94,58,0.15)", color: "#4A5E3A" }}
-          >
-            + Pedido
+            style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.08)" }}>
+            Editar
           </button>
-        )}
-        <button
-          onClick={onEditar}
-          className="rounded-lg px-3 py-1.5 font-inter text-xs"
-          style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}
-        >
-          Editar
-        </button>
-        <button
-          onClick={handleToggleActivo}
-          disabled={toggling}
-          className="rounded-lg px-3 py-1.5 font-inter text-xs"
-          style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}
-        >
-          {cliente.activo ? "Desactivar" : "Reactivar"}
-        </button>
-        <button
-          onClick={handleEliminar}
-          disabled={deleting}
-          className="rounded-lg px-3 py-1.5 font-inter text-xs"
-          style={{ background: "rgba(122,32,48,0.12)", color: "#7A2030" }}
-        >
-          Eliminar
-        </button>
-      </div>
+          <button onClick={(e) => { e.stopPropagation(); handleToggleActivo(); }}
+            disabled={toggling}
+            className="rounded-lg px-3 py-1.5 font-inter text-xs"
+            style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.08)" }}>
+            {cliente.activo ? "Desactivar" : "Reactivar"}
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); handleEliminar(); }}
+            className="rounded-lg px-3 py-1.5 font-inter text-xs"
+            style={{ background: "rgba(122,32,48,0.12)", color: "#7A2030", border: "1px solid rgba(122,32,48,0.2)" }}>
+            Eliminar
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -253,31 +261,17 @@ function NuevoClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved:
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await supabase.from("clientes").insert({
-      nombre,
-      telefono: telefono || null,
-      email: email || null,
-      notas: notas || null,
-      activo: true,
-    });
+    await supabase.from("clientes").insert({ nombre, telefono: telefono || null, email: email || null, notas: notas || null, activo: true });
     onSaved();
   }
 
   return (
     <Modal title="Nuevo cliente" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Nombre" required>
-          <Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required />
-        </Field>
-        <Field label="Teléfono / WhatsApp">
-          <Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" />
-        </Field>
-        <Field label="Email">
-          <Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" />
-        </Field>
-        <Field label="Notas">
-          <Input value={notas} onChange={setNotas} placeholder="Preferencias, alergias, etc." />
-        </Field>
+        <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
+        <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
+        <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
+        <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Empresa, preferencias, alergias..." /></Field>
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>
           {saving ? "Guardando..." : "Guardar cliente"}
@@ -297,30 +291,17 @@ function EditarClienteModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await supabase.from("clientes").update({
-      nombre,
-      telefono: telefono || null,
-      email: email || null,
-      notas: notas || null,
-    }).eq("id", cliente.id);
+    await supabase.from("clientes").update({ nombre, telefono: telefono || null, email: email || null, notas: notas || null }).eq("id", cliente.id);
     onSaved();
   }
 
   return (
     <Modal title="Editar cliente" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <Field label="Nombre" required>
-          <Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required />
-        </Field>
-        <Field label="Teléfono / WhatsApp">
-          <Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" />
-        </Field>
-        <Field label="Email">
-          <Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" />
-        </Field>
-        <Field label="Notas">
-          <Input value={notas} onChange={setNotas} placeholder="Preferencias, alergias, etc." />
-        </Field>
+        <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
+        <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
+        <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
+        <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Empresa, preferencias, alergias..." /></Field>
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>
           {saving ? "Guardando..." : "Guardar cambios"}
@@ -330,18 +311,11 @@ function EditarClienteModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
   );
 }
 
-function NuevoPedidoModal({
-  clienteId, clienteNombre, formulas, onClose, onSaved,
-}: {
-  clienteId: string;
-  clienteNombre: string;
-  formulas: Formula[];
-  onClose: () => void;
-  onSaved: () => void;
+function NuevoPedidoModal({ clienteId, clienteNombre, formulas, onClose, onSaved }: {
+  clienteId: string; clienteNombre: string; formulas: Formula[]; onClose: () => void; onSaved: () => void;
 }) {
   const d = new Date();
   const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
   const [cantidad, setCantidad] = useState("1");
   const [diaEntrega, setDiaEntrega] = useState(todayStr);
@@ -353,14 +327,9 @@ function NuevoPedidoModal({
 
   useEffect(() => {
     if (formulaId && formulaId !== SORPRESA_ID) {
-      supabase
-        .from("recetas")
-        .select("ingredientes(nombre)")
-        .eq("formula_id", formulaId)
+      supabase.from("recetas").select("ingredientes(nombre)").eq("formula_id", formulaId)
         .then(({ data }) => {
-          const ings = (data ?? [])
-            .map((r: any) => r.ingredientes as { nombre: string } | null)
-            .filter(Boolean) as { nombre: string }[];
+          const ings = (data ?? []).map((r: any) => r.ingredientes as { nombre: string } | null).filter(Boolean) as { nombre: string }[];
           setIngredientes(ings);
           setExcluidos([]);
         });
@@ -370,118 +339,68 @@ function NuevoPedidoModal({
     }
   }, [formulaId]);
 
-  function toggleExcluido(nombre: string) {
-    setExcluidos((prev) =>
-      prev.includes(nombre) ? prev.filter((n) => n !== nombre) : [...prev, nombre]
-    );
-  }
-
-  function togglePreferencia(p: string) {
-    setPreferencia((prev) => (prev === p ? "" : p));
-  }
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     let realFormulaId = formulaId;
     let esSorpresa = false;
     if (formulaId === SORPRESA_ID) {
-      const random = formulas[Math.floor(Math.random() * formulas.length)];
-      realFormulaId = random?.id ?? formulas[0]?.id ?? "";
+      realFormulaId = formulas[Math.floor(Math.random() * formulas.length)]?.id ?? formulas[0]?.id ?? "";
       esSorpresa = true;
     }
     await supabase.from("pedidos").insert({
-      cliente_id: clienteId,
-      formula_id: realFormulaId,
-      cantidad: parseInt(cantidad),
-      dia_entrega: diaEntrega,
-      notas: notas || null,
-      tipo_pedido: getTipoPedido(diaEntrega),
-      es_sorpresa: esSorpresa,
-      ingredientes_excluidos: excluidos.length > 0 ? excluidos : null,
+      cliente_id: clienteId, formula_id: realFormulaId, cantidad: parseInt(cantidad),
+      dia_entrega: diaEntrega, notas: notas || null, tipo_pedido: getTipoPedido(diaEntrega),
+      es_sorpresa: esSorpresa, ingredientes_excluidos: excluidos.length > 0 ? excluidos : null,
       preferencia_sorpresa: preferencia || null,
     });
     onSaved();
   }
 
-  const preferencias = ["Dulce", "Fresco", "Balanceado"];
-
   return (
-    <Modal title={`Pedido para ${clienteNombre}`} onClose={onClose}>
+    <Modal title={`Pedido — ${clienteNombre}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Fórmula">
-          <select
-            value={formulaId}
-            onChange={(e) => setFormulaId(e.target.value)}
+          <select value={formulaId} onChange={(e) => setFormulaId(e.target.value)}
             className="w-full rounded-xl px-4 py-3 font-inter text-sm outline-none"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
-          >
-            {formulas.map((f) => (
-              <option key={f.id} value={f.id} style={{ background: "#1a1a1a" }}>{f.nombre}</option>
-            ))}
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}>
+            {formulas.map((f) => <option key={f.id} value={f.id} style={{ background: "#1a1a1a" }}>{f.nombre}</option>)}
             <option value={SORPRESA_ID} style={{ background: "#1a1a1a" }}>🎲 Sorpresa</option>
           </select>
         </Field>
 
         {formulaId === SORPRESA_ID && (
           <div className="rounded-xl px-4 py-3" style={{ background: "rgba(184,134,11,0.12)", border: "1px solid rgba(184,134,11,0.25)" }}>
-            <p className="font-inter text-xs" style={{ color: "#E6A800" }}>
-              🎲 Se asignará una fórmula al azar al guardar. Verás cuál fue en Hoy y Semana.
-            </p>
+            <p className="font-inter text-xs" style={{ color: "#E6A800" }}>🎲 Se asignará una fórmula al azar al guardar.</p>
           </div>
         )}
 
         {formulaId !== SORPRESA_ID && ingredientes.length > 0 && (
           <div className="flex flex-col gap-2">
-            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
-              Excluir ingredientes
-            </label>
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Excluir ingredientes</label>
             <div className="flex flex-wrap gap-2">
               {ingredientes.map((ing) => {
                 const excluido = excluidos.includes(ing.nombre);
                 return (
-                  <button
-                    key={ing.nombre}
-                    type="button"
-                    onClick={() => toggleExcluido(ing.nombre)}
+                  <button key={ing.nombre} type="button" onClick={() => setExcluidos((prev) => excluido ? prev.filter((n) => n !== ing.nombre) : [...prev, ing.nombre])}
                     className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
-                    style={{
-                      background: excluido ? "rgba(224,80,112,0.12)" : "rgba(255,255,255,0.06)",
-                      color: excluido ? "#E05070" : "#8A8A8A",
-                      border: excluido ? "1px solid rgba(224,80,112,0.3)" : "1px solid rgba(255,255,255,0.08)",
-                      textDecoration: excluido ? "line-through" : "none",
-                    }}
-                  >
+                    style={{ background: excluido ? "rgba(224,80,112,0.12)" : "rgba(255,255,255,0.06)", color: excluido ? "#E05070" : "#8A8A8A", border: excluido ? "1px solid rgba(224,80,112,0.3)" : "1px solid rgba(255,255,255,0.08)", textDecoration: excluido ? "line-through" : "none" }}>
                     {ing.nombre}
                   </button>
                 );
               })}
             </div>
-            {excluidos.length > 0 && (
-              <p className="font-inter text-xs" style={{ color: "#E05070" }}>
-                Sin: {excluidos.join(", ")}
-              </p>
-            )}
+            {excluidos.length > 0 && <p className="font-inter text-xs" style={{ color: "#E05070" }}>Sin: {excluidos.join(", ")}</p>}
           </div>
         )}
 
         <div className="flex flex-col gap-2">
-          <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
-            Preferencia de sabor
-          </label>
+          <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Preferencia de sabor</label>
           <div className="flex gap-2">
-            {preferencias.map((p) => (
-              <button
-                key={p}
-                type="button"
-                onClick={() => togglePreferencia(p)}
+            {["Dulce", "Fresco", "Balanceado"].map((p) => (
+              <button key={p} type="button" onClick={() => setPreferencia((prev) => prev === p ? "" : p)}
                 className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
-                style={{
-                  background: preferencia === p ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.06)",
-                  color: preferencia === p ? "#6DBF67" : "#8A8A8A",
-                  border: preferencia === p ? "1px solid rgba(74,94,58,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                }}
-              >
+                style={{ background: preferencia === p ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.06)", color: preferencia === p ? "#6DBF67" : "#8A8A8A", border: preferencia === p ? "1px solid rgba(74,94,58,0.4)" : "1px solid rgba(255,255,255,0.08)" }}>
                 {p}
               </button>
             ))}
@@ -499,13 +418,9 @@ function NuevoPedidoModal({
         </Field>
 
         <Field label="Día de entrega">
-          <input
-            type="date"
-            value={diaEntrega}
-            onChange={(e) => setDiaEntrega(e.target.value)}
+          <input type="date" value={diaEntrega} onChange={(e) => setDiaEntrega(e.target.value)}
             className="w-full rounded-xl px-4 py-3 font-inter text-sm outline-none"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8", colorScheme: "dark" }}
-          />
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8", colorScheme: "dark" }} />
         </Field>
 
         <Field label="Notas (opcional)">
@@ -524,7 +439,7 @@ function NuevoPedidoModal({
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
-      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}>
       <div className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ background: "#171717", border: "1px solid rgba(255,255,255,0.08)" }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-cormorant text-xl font-light" style={{ color: "#F5F0E8" }}>{title}</h2>
@@ -550,16 +465,11 @@ function Field({ label, required, children }: { label: string; required?: boolea
 
 function Input({ value, onChange, placeholder, required }: { value: string; onChange: (v: string) => void; placeholder?: string; required?: boolean }) {
   return (
-    <input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      required={required}
+    <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} required={required}
       className="w-full rounded-xl px-4 py-3 font-inter text-sm outline-none"
       style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
       onFocus={(e) => (e.currentTarget.style.borderColor = "#4A5E3A")}
-      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")}
-    />
+      onBlur={(e) => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)")} />
   );
 }
 
@@ -567,11 +477,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
     <div className="rounded-2xl p-10 text-center" style={{ border: "1px dashed rgba(255,255,255,0.08)" }}>
       <p className="font-cormorant text-2xl mb-2" style={{ color: "#F5F0E8" }}>Sin clientes aún</p>
-      <p className="font-inter text-sm mb-5" style={{ color: "#555" }}>Agrega tu primer cliente para empezar a gestionar pedidos.</p>
+      <p className="font-inter text-sm mb-5" style={{ color: "#555" }}>Agrega tu primer cliente para empezar.</p>
       <button onClick={onAdd} className="rounded-xl px-5 py-2.5 font-inter text-sm font-medium"
-        style={{ background: "#F5F0E8", color: "#0D0D0D" }}>
-        + Agregar cliente
-      </button>
+        style={{ background: "#F5F0E8", color: "#0D0D0D" }}>+ Agregar cliente</button>
     </div>
   );
 }
