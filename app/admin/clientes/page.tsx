@@ -23,6 +23,21 @@ type NuevoPedido = {
   notas: string;
 };
 
+function getTipoPedido(diaEntrega: string): "normal" | "domingo" | "extra" {
+  const hoy = new Date();
+  const dow = hoy.getDay();
+  if (dow === 0) return "domingo";
+  if (dow === 6) return "normal";
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - dow + 1);
+  const sabado = new Date(lunes);
+  sabado.setDate(lunes.getDate() + 5);
+  const lunesStr = lunes.toISOString().split("T")[0];
+  const sabadoStr = sabado.toISOString().split("T")[0];
+  if (diaEntrega >= lunesStr && diaEntrega <= sabadoStr) return "extra";
+  return "normal";
+}
+
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [formulas, setFormulas] = useState<Formula[]>([]);
@@ -182,6 +197,7 @@ function NuevoPedidoModal({
       cantidad: parseInt(cantidad),
       dia_entrega: diaEntrega,
       notas: notas || null,
+      tipo_pedido: getTipoPedido(diaEntrega),
     });
     onSaved();
   }

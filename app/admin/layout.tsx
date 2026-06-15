@@ -15,6 +15,7 @@ function AdminNav() {
     { href: "/admin/compras", label: "Compras", icon: CartIcon },
     { href: "/admin/recetas", label: "Recetas", icon: LeafIcon },
     { href: "/admin/clientes", label: "Clientes", icon: PeopleIcon },
+    { href: "/admin/finanzas", label: "Finanzas", icon: FinanzasIcon },
   ];
 
   return (
@@ -156,6 +157,14 @@ function ExternalIcon({ size, color }: { size: number; color: string }) {
       <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
       <polyline points="15 3 21 3 21 9" />
       <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
+  );
+}
+function FinanzasIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+      <line x1="12" y1="1" x2="12" y2="23" />
+      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
     </svg>
   );
 }

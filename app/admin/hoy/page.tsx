@@ -9,6 +9,7 @@ type Pedido = {
   estado: string;
   notas: string | null;
   dia_entrega: string;
+  tipo_pedido: string | null;
   clientes: { nombre: string } | null;
   formulas: { nombre: string; slug: string; color_acento: string } | null;
 };
@@ -155,9 +156,17 @@ export default function AdminHoy() {
                 }}
               >
                 <div>
-                  <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
-                    {p.clientes?.nombre ?? "Sin nombre"}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
+                      {p.clientes?.nombre ?? "Sin nombre"}
+                    </p>
+                    {p.tipo_pedido === "domingo" && (
+                      <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>Domingo</span>
+                    )}
+                    {p.tipo_pedido === "extra" && (
+                      <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(122,32,48,0.15)", color: "#7A2030" }}>Extra</span>
+                    )}
+                  </div>
                   <p className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
                     {p.formulas?.nombre} × {p.cantidad}
                     {p.notas ? ` · ${p.notas}` : ""}
