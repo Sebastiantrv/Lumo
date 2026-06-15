@@ -15,13 +15,7 @@ type Cliente = {
 
 type Formula = { id: string; nombre: string; slug: string; color_acento: string };
 
-type NuevoPedido = {
-  cliente_id: string;
-  formula_id: string;
-  cantidad: number;
-  dia_entrega: string;
-  notas: string;
-};
+const SORPRESA_ID = "__sorpresa__";
 
 function getTipoPedido(diaEntrega: string): "normal" | "domingo" | "extra" {
   const hoy = new Date();
@@ -32,8 +26,8 @@ function getTipoPedido(diaEntrega: string): "normal" | "domingo" | "extra" {
   lunes.setDate(hoy.getDate() - dow + 1);
   const sabado = new Date(lunes);
   sabado.setDate(lunes.getDate() + 5);
-  const lunesStr = lunes.toISOString().split("T")[0];
-  const sabadoStr = sabado.toISOString().split("T")[0];
+  const lunesStr = `${lunes.getFullYear()}-${String(lunes.getMonth()+1).padStart(2,"0")}-${String(lunes.getDate()).padStart(2,"0")}`;
+  const sabadoStr = `${sabado.getFullYear()}-${String(sabado.getMonth()+1).padStart(2,"0")}-${String(sabado.getDate()).padStart(2,"0")}`;
   if (diaEntrega >= lunesStr && diaEntrega <= sabadoStr) return "extra";
   return "normal";
 }
@@ -44,6 +38,8 @@ export default function ClientesPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showPedidoFor, setShowPedidoFor] = useState<string | null>(null);
+  const [editandoCliente, setEditandoCliente] = useState<Cliente | null>(null);
+  const [showInactivos, setShowInactivos] = useState(false);
 
   async function load() {
     const [{ data: c }, { data: f }] = await Promise.all([
@@ -59,6 +55,9 @@ export default function ClientesPage() {
 
   if (loading) return <Loader />;
 
+  const activos = clientes.filter((c) => c.activo);
+  const inactivos = clientes.filter((c) => !c.activo);
+
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-8">
@@ -67,7 +66,7 @@ export default function ClientesPage() {
             Clientes
           </p>
           <h1 className="font-cormorant font-light text-[#F5F0E8]" style={{ fontSize: "2rem" }}>
-            {clientes.length} clientes registrados
+            {activos.length} clientes activos
           </h1>
         </div>
         <button
@@ -79,43 +78,40 @@ export default function ClientesPage() {
         </button>
       </div>
 
-      {clientes.length === 0 ? (
+      {activos.length === 0 && inactivos.length === 0 ? (
         <EmptyState onAdd={() => setShowForm(true)} />
       ) : (
         <div className="flex flex-col gap-3">
-          {clientes.map((c) => (
-            <div
+          {activos.map((c) => (
+            <ClienteCard
               key={c.id}
-              className="rounded-2xl p-5"
-              style={{
-                background: "rgba(255,255,255,0.03)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                opacity: c.activo ? 1 : 0.5,
-              }}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-inter font-medium text-sm" style={{ color: "#F5F0E8" }}>{c.nombre}</p>
-                  {c.telefono && (
-                    <a href={`https://wa.me/${c.telefono.replace(/\D/g, "")}`} target="_blank" rel="noopener"
-                      className="font-inter text-xs mt-0.5 block" style={{ color: "#4A5E3A" }}>
-                      {c.telefono}
-                    </a>
-                  )}
-                  {c.notas && (
-                    <p className="font-inter text-xs mt-1.5" style={{ color: "#555" }}>{c.notas}</p>
-                  )}
-                </div>
-                <button
-                  onClick={() => setShowPedidoFor(c.id)}
-                  className="rounded-lg px-3 py-1.5 font-inter text-xs"
-                  style={{ background: "rgba(74,94,58,0.15)", color: "#4A5E3A" }}
-                >
-                  + Pedido
-                </button>
-              </div>
-            </div>
+              cliente={c}
+              onPedido={() => setShowPedidoFor(c.id)}
+              onEditar={() => setEditandoCliente(c)}
+              onReload={load}
+            />
           ))}
+
+          {inactivos.length > 0 && (
+            <>
+              <button
+                onClick={() => setShowInactivos((v) => !v)}
+                className="font-inter text-xs mt-2 text-left"
+                style={{ color: "#555" }}
+              >
+                {showInactivos ? "▲ Ocultar inactivos" : `▼ Ver inactivos (${inactivos.length})`}
+              </button>
+              {showInactivos && inactivos.map((c) => (
+                <ClienteCard
+                  key={c.id}
+                  cliente={c}
+                  onPedido={() => setShowPedidoFor(c.id)}
+                  onEditar={() => setEditandoCliente(c)}
+                  onReload={load}
+                />
+              ))}
+            </>
+          )}
         </div>
       )}
 
@@ -123,6 +119,14 @@ export default function ClientesPage() {
         <NuevoClienteModal
           onClose={() => setShowForm(false)}
           onSaved={() => { setShowForm(false); load(); }}
+        />
+      )}
+
+      {editandoCliente && (
+        <EditarClienteModal
+          cliente={editandoCliente}
+          onClose={() => setEditandoCliente(null)}
+          onSaved={() => { setEditandoCliente(null); load(); }}
         />
       )}
 
@@ -139,16 +143,123 @@ export default function ClientesPage() {
   );
 }
 
+function ClienteCard({ cliente, onPedido, onEditar, onReload }: {
+  cliente: Cliente;
+  onPedido: () => void;
+  onEditar: () => void;
+  onReload: () => void;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [toggling, setToggling] = useState(false);
+
+  async function handleToggleActivo() {
+    setToggling(true);
+    await supabase.from("clientes").update({ activo: !cliente.activo }).eq("id", cliente.id);
+    onReload();
+    setToggling(false);
+  }
+
+  async function handleEliminar() {
+    if (!window.confirm(`¿Eliminar a ${cliente.nombre}?`)) return;
+    setDeleting(true);
+    await supabase.from("clientes").delete().eq("id", cliente.id);
+    onReload();
+  }
+
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        background: "rgba(255,255,255,0.03)",
+        border: "1px solid rgba(255,255,255,0.07)",
+        opacity: cliente.activo ? 1 : 0.5,
+      }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <p className="font-inter font-medium text-sm" style={{ color: "#F5F0E8" }}>{cliente.nombre}</p>
+            {!cliente.activo && (
+              <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.07)", color: "#777" }}>
+                Inactivo
+              </span>
+            )}
+          </div>
+          {cliente.telefono && (
+            <a
+              href={`https://wa.me/${cliente.telefono.replace(/\D/g, "")}`}
+              target="_blank"
+              rel="noopener"
+              className="font-inter text-xs mt-0.5 block"
+              style={{ color: "#4A5E3A" }}
+            >
+              {cliente.telefono}
+            </a>
+          )}
+          {cliente.email && (
+            <p className="font-inter text-xs mt-0.5" style={{ color: "#555" }}>{cliente.email}</p>
+          )}
+          {cliente.notas && (
+            <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>{cliente.notas}</p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        {cliente.activo && (
+          <button
+            onClick={onPedido}
+            className="rounded-lg px-3 py-1.5 font-inter text-xs"
+            style={{ background: "rgba(74,94,58,0.15)", color: "#4A5E3A" }}
+          >
+            + Pedido
+          </button>
+        )}
+        <button
+          onClick={onEditar}
+          className="rounded-lg px-3 py-1.5 font-inter text-xs"
+          style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}
+        >
+          Editar
+        </button>
+        <button
+          onClick={handleToggleActivo}
+          disabled={toggling}
+          className="rounded-lg px-3 py-1.5 font-inter text-xs"
+          style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}
+        >
+          {cliente.activo ? "Desactivar" : "Reactivar"}
+        </button>
+        <button
+          onClick={handleEliminar}
+          disabled={deleting}
+          className="rounded-lg px-3 py-1.5 font-inter text-xs"
+          style={{ background: "rgba(122,32,48,0.12)", color: "#7A2030" }}
+        >
+          Eliminar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function NuevoClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
+  const [email, setEmail] = useState("");
   const [notas, setNotas] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await supabase.from("clientes").insert({ nombre, telefono: telefono || null, notas: notas || null });
+    await supabase.from("clientes").insert({
+      nombre,
+      telefono: telefono || null,
+      email: email || null,
+      notas: notas || null,
+      activo: true,
+    });
     onSaved();
   }
 
@@ -161,12 +272,58 @@ function NuevoClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved:
         <Field label="Teléfono / WhatsApp">
           <Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" />
         </Field>
+        <Field label="Email">
+          <Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" />
+        </Field>
         <Field label="Notas">
           <Input value={notas} onChange={setNotas} placeholder="Preferencias, alergias, etc." />
         </Field>
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>
           {saving ? "Guardando..." : "Guardar cliente"}
+        </button>
+      </form>
+    </Modal>
+  );
+}
+
+function EditarClienteModal({ cliente, onClose, onSaved }: { cliente: Cliente; onClose: () => void; onSaved: () => void }) {
+  const [nombre, setNombre] = useState(cliente.nombre);
+  const [telefono, setTelefono] = useState(cliente.telefono ?? "");
+  const [email, setEmail] = useState(cliente.email ?? "");
+  const [notas, setNotas] = useState(cliente.notas ?? "");
+  const [saving, setSaving] = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    await supabase.from("clientes").update({
+      nombre,
+      telefono: telefono || null,
+      email: email || null,
+      notas: notas || null,
+    }).eq("id", cliente.id);
+    onSaved();
+  }
+
+  return (
+    <Modal title="Editar cliente" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="Nombre" required>
+          <Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required />
+        </Field>
+        <Field label="Teléfono / WhatsApp">
+          <Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" />
+        </Field>
+        <Field label="Email">
+          <Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" />
+        </Field>
+        <Field label="Notas">
+          <Input value={notas} onChange={setNotas} placeholder="Preferencias, alergias, etc." />
+        </Field>
+        <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
+          style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>
+          {saving ? "Guardando..." : "Guardar cambios"}
         </button>
       </form>
     </Modal>
@@ -182,25 +339,72 @@ function NuevoPedidoModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const d = new Date();
+  const todayStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+
   const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
   const [cantidad, setCantidad] = useState("1");
-  const [diaEntrega, setDiaEntrega] = useState(new Date().toISOString().split("T")[0]);
+  const [diaEntrega, setDiaEntrega] = useState(todayStr);
   const [notas, setNotas] = useState("");
+  const [excluidos, setExcluidos] = useState<string[]>([]);
+  const [ingredientes, setIngredientes] = useState<{ nombre: string }[]>([]);
+  const [preferencia, setPreferencia] = useState("");
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (formulaId && formulaId !== SORPRESA_ID) {
+      supabase
+        .from("recetas")
+        .select("ingredientes(nombre)")
+        .eq("formula_id", formulaId)
+        .then(({ data }) => {
+          const ings = (data ?? [])
+            .map((r: { ingredientes: { nombre: string } | null }) => r.ingredientes)
+            .filter(Boolean) as { nombre: string }[];
+          setIngredientes(ings);
+          setExcluidos([]);
+        });
+    } else {
+      setIngredientes([]);
+      setExcluidos([]);
+    }
+  }, [formulaId]);
+
+  function toggleExcluido(nombre: string) {
+    setExcluidos((prev) =>
+      prev.includes(nombre) ? prev.filter((n) => n !== nombre) : [...prev, nombre]
+    );
+  }
+
+  function togglePreferencia(p: string) {
+    setPreferencia((prev) => (prev === p ? "" : p));
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
+    let realFormulaId = formulaId;
+    let esSorpresa = false;
+    if (formulaId === SORPRESA_ID) {
+      const random = formulas[Math.floor(Math.random() * formulas.length)];
+      realFormulaId = random?.id ?? formulas[0]?.id ?? "";
+      esSorpresa = true;
+    }
     await supabase.from("pedidos").insert({
       cliente_id: clienteId,
-      formula_id: formulaId,
+      formula_id: realFormulaId,
       cantidad: parseInt(cantidad),
       dia_entrega: diaEntrega,
       notas: notas || null,
       tipo_pedido: getTipoPedido(diaEntrega),
+      es_sorpresa: esSorpresa,
+      ingredientes_excluidos: excluidos.length > 0 ? excluidos : null,
+      preferencia_sorpresa: preferencia || null,
     });
     onSaved();
   }
+
+  const preferencias = ["Dulce", "Fresco", "Balanceado"];
 
   return (
     <Modal title={`Pedido para ${clienteNombre}`} onClose={onClose}>
@@ -215,8 +419,75 @@ function NuevoPedidoModal({
             {formulas.map((f) => (
               <option key={f.id} value={f.id} style={{ background: "#1a1a1a" }}>{f.nombre}</option>
             ))}
+            <option value={SORPRESA_ID} style={{ background: "#1a1a1a" }}>🎲 Sorpresa</option>
           </select>
         </Field>
+
+        {formulaId === SORPRESA_ID && (
+          <div className="rounded-xl px-4 py-3" style={{ background: "rgba(184,134,11,0.12)", border: "1px solid rgba(184,134,11,0.25)" }}>
+            <p className="font-inter text-xs" style={{ color: "#E6A800" }}>
+              🎲 Se asignará una fórmula al azar al guardar. Verás cuál fue en Hoy y Semana.
+            </p>
+          </div>
+        )}
+
+        {formulaId !== SORPRESA_ID && ingredientes.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
+              Excluir ingredientes
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {ingredientes.map((ing) => {
+                const excluido = excluidos.includes(ing.nombre);
+                return (
+                  <button
+                    key={ing.nombre}
+                    type="button"
+                    onClick={() => toggleExcluido(ing.nombre)}
+                    className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
+                    style={{
+                      background: excluido ? "rgba(224,80,112,0.12)" : "rgba(255,255,255,0.06)",
+                      color: excluido ? "#E05070" : "#8A8A8A",
+                      border: excluido ? "1px solid rgba(224,80,112,0.3)" : "1px solid rgba(255,255,255,0.08)",
+                      textDecoration: excluido ? "line-through" : "none",
+                    }}
+                  >
+                    {ing.nombre}
+                  </button>
+                );
+              })}
+            </div>
+            {excluidos.length > 0 && (
+              <p className="font-inter text-xs" style={{ color: "#E05070" }}>
+                Sin: {excluidos.join(", ")}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
+            Preferencia de sabor
+          </label>
+          <div className="flex gap-2">
+            {preferencias.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => togglePreferencia(p)}
+                className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
+                style={{
+                  background: preferencia === p ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.06)",
+                  color: preferencia === p ? "#6DBF67" : "#8A8A8A",
+                  border: preferencia === p ? "1px solid rgba(74,94,58,0.4)" : "1px solid rgba(255,255,255,0.08)",
+                }}
+              >
+                {p}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <Field label="Cantidad">
           <div className="flex items-center gap-3">
             <button type="button" onClick={() => setCantidad((v) => String(Math.max(1, parseInt(v) - 1)))}
@@ -226,14 +497,21 @@ function NuevoPedidoModal({
               className="w-10 h-10 rounded-xl font-inter text-lg" style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8" }}>+</button>
           </div>
         </Field>
+
         <Field label="Día de entrega">
-          <input type="date" value={diaEntrega} onChange={(e) => setDiaEntrega(e.target.value)}
+          <input
+            type="date"
+            value={diaEntrega}
+            onChange={(e) => setDiaEntrega(e.target.value)}
             className="w-full rounded-xl px-4 py-3 font-inter text-sm outline-none"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8", colorScheme: "dark" }} />
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8", colorScheme: "dark" }}
+          />
         </Field>
+
         <Field label="Notas (opcional)">
-          <Input value={notas} onChange={setNotas} placeholder="Ej. sin jengibre, doble betabel..." />
+          <Input value={notas} onChange={setNotas} placeholder="Ej. doble betabel..." />
         </Field>
+
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>
           {saving ? "Guardando..." : "Guardar pedido"}
@@ -247,7 +525,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)" }}>
-      <div className="w-full max-w-md rounded-2xl p-6" style={{ background: "#171717", border: "1px solid rgba(255,255,255,0.08)" }}>
+      <div className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ background: "#171717", border: "1px solid rgba(255,255,255,0.08)" }}>
         <div className="flex items-center justify-between mb-5">
           <h2 className="font-cormorant text-xl font-light" style={{ color: "#F5F0E8" }}>{title}</h2>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center"
