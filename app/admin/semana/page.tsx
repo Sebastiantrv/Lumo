@@ -21,7 +21,7 @@ type Pedido = {
 
 type Formula = { id: string; nombre: string; slug: string; color_acento: string };
 
-function localStr(d: Date): string {
+function localStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
@@ -42,7 +42,7 @@ export default function SemanaPage() {
   const [formulas, setFormulas] = useState<Formula[]>([]);
   const [weekOffset, setWeekOffset] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [aplazarOpen, setAplazarOpen] = useState<string | null>(null);
+  const [aplazarPickerFor, setAplazarPickerFor] = useState<string | null>(null);
 
   const days = getWeekDays(weekOffset);
   const monday = days[0];
@@ -68,7 +68,7 @@ export default function SemanaPage() {
 
   async function aplazar(id: string, fecha: string) {
     await supabase.from("pedidos").update({ dia_entrega: fecha, estado_extra: "aplazado" }).eq("id", id);
-    setAplazarOpen(null);
+    setAplazarPickerFor(null);
     await load();
   }
 
@@ -83,13 +83,10 @@ export default function SemanaPage() {
 
   const todayStr = localStr(new Date());
 
-  const weekLabel = (() => {
-    const m = new Date(monday + "T12:00:00");
-    const s = new Date(saturday + "T12:00:00");
-    const mLabel = m.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-    const sLabel = s.toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-    return `${mLabel} – ${sLabel}`;
-  })();
+  // Week label
+  const mondayLabel = new Date(monday + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+  const saturdayLabel = new Date(saturday + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+  const weekLabel = `${mondayLabel} – ${saturdayLabel}`;
 
   return (
     <div className="max-w-2xl">
@@ -103,17 +100,13 @@ export default function SemanaPage() {
           </h1>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => setWeekOffset((w) => w - 1)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}
-          >‹</button>
+          <button onClick={() => setWeekOffset((w) => w - 1)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-inter text-lg"
+            style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}>‹</button>
           <span className="font-inter text-xs px-2" style={{ color: "#8A8A8A" }}>{weekLabel}</span>
-          <button
-            onClick={() => setWeekOffset((w) => w + 1)}
-            className="w-8 h-8 rounded-lg flex items-center justify-center"
-            style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}
-          >›</button>
+          <button onClick={() => setWeekOffset((w) => w + 1)}
+            className="w-8 h-8 rounded-lg flex items-center justify-center font-inter text-lg"
+            style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}>›</button>
         </div>
       </div>
 
@@ -132,23 +125,18 @@ export default function SemanaPage() {
             const dayNum = dateObj.getDate();
 
             return (
-              <div
-                key={dia}
-                className="rounded-2xl p-5"
+              <div key={dia} className="rounded-2xl p-5"
                 style={{
                   background: isToday ? "rgba(74,94,58,0.1)" : "rgba(255,255,255,0.03)",
                   border: isToday ? "1px solid rgba(74,94,58,0.3)" : "1px solid rgba(255,255,255,0.06)",
-                }}
-              >
+                }}>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div
-                      className="w-9 h-9 rounded-xl flex items-center justify-center font-cormorant text-lg font-semibold"
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center font-cormorant text-lg font-semibold"
                       style={{
                         background: isToday ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.05)",
                         color: isToday ? "#4A5E3A" : "#F5F0E8",
-                      }}
-                    >
+                      }}>
                       {dayNum}
                     </div>
                     <p className="font-inter text-sm font-medium capitalize" style={{ color: isToday ? "#F5F0E8" : "#8A8A8A" }}>
@@ -171,9 +159,9 @@ export default function SemanaPage() {
                         onSetExtra={setExtra}
                         onAplazar={aplazar}
                         onCambiarFormula={cambiarFormula}
-                        showAplazarPicker={aplazarOpen === p.id}
-                        onOpenAplazar={() => setAplazarOpen(p.id)}
-                        onCloseAplazar={() => setAplazarOpen(null)}
+                        showAplazarPicker={aplazarPickerFor === p.id}
+                        onOpenAplazar={() => setAplazarPickerFor(p.id)}
+                        onCloseAplazar={() => setAplazarPickerFor(null)}
                       />
                     ))}
                   </div>
@@ -206,12 +194,14 @@ function PedidoRow({
 
   function borderColor() { return `1px solid ${acento}44`; }
 
-  // 7 days from tomorrow for aplazar picker
-  const aplazarDays = Array.from({ length: 7 }, (_, i) => {
+  // Next 7 days from tomorrow for aplazar picker
+  const nextDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i + 1);
     return localStr(d);
   });
+
+  const showDecisionButtons = (tipo === "extra" || p.es_sorpresa) && !p.estado_extra && !showAplazarPicker;
 
   return (
     <div
@@ -232,7 +222,7 @@ function PedidoRow({
               {p.clientes?.nombre ?? "—"}
             </span>
             <p className="font-inter text-xs mt-0.5" style={{ color: acento }}>
-              {p.formulas?.nombre} ×{p.cantidad}
+              {p.formulas?.nombre} × {p.cantidad}
               {p.notas ? ` · ${p.notas}` : ""}
             </p>
             {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
@@ -247,10 +237,11 @@ function PedidoRow({
             )}
           </div>
         </div>
+
         {/* Badges */}
         <div className="flex items-center gap-1.5 shrink-0">
           {p.es_sorpresa && (
-            <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#E6A800" }}>🎲</span>
+            <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲</span>
           )}
           <TipoBadge tipo={tipo} />
           <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={estadoBadge(p.estado)}>
@@ -275,27 +266,27 @@ function PedidoRow({
         </div>
       )}
 
-      {/* Decision buttons for extra or sorpresa without estado_extra */}
-      {(tipo === "extra" || p.es_sorpresa) && !p.estado_extra && !showAplazarPicker && (
+      {/* Decision buttons */}
+      {showDecisionButtons && (
         <div className="flex items-center gap-2 mt-0.5">
           <button
             onClick={() => onSetExtra(p.id, "aceptado")}
-            className="rounded-lg px-2.5 py-1 font-inter text-xs font-semibold"
-            style={{ background: "rgba(74,94,58,0.3)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.5)" }}
+            className="rounded-lg px-3 py-1 font-inter text-xs font-semibold"
+            style={{ background: "rgba(74,94,58,0.35)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.5)" }}
           >
             Aceptar
           </button>
           <button
             onClick={onOpenAplazar}
-            className="rounded-lg px-2.5 py-1 font-inter text-xs font-semibold"
-            style={{ background: "rgba(184,134,11,0.25)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.4)" }}
+            className="rounded-lg px-3 py-1 font-inter text-xs font-semibold"
+            style={{ background: "rgba(184,134,11,0.3)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.5)" }}
           >
             Aplazar
           </button>
           <button
             onClick={() => onSetExtra(p.id, "rechazado")}
-            className="rounded-lg px-2.5 py-1 font-inter text-xs font-semibold"
-            style={{ background: "rgba(122,32,48,0.25)", color: "#E05070", border: "1px solid rgba(122,32,48,0.4)" }}
+            className="rounded-lg px-3 py-1 font-inter text-xs font-semibold"
+            style={{ background: "rgba(122,32,48,0.35)", color: "#E05070", border: "1px solid rgba(122,32,48,0.5)" }}
           >
             Rechazar
           </button>
@@ -305,29 +296,26 @@ function PedidoRow({
       {/* Aplazar date picker */}
       {showAplazarPicker && (
         <div className="flex flex-col gap-2 mt-1">
-          <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Selecciona nuevo día:</p>
+          <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Elegir nuevo día:</p>
           <div className="flex flex-wrap gap-1.5">
-            {aplazarDays.map((fecha) => {
-              const d = new Date(fecha + "T12:00:00");
-              const wd = d.toLocaleDateString("es-MX", { weekday: "short" });
-              const day = d.getDate();
+            {nextDays.map((dia) => {
+              const d = new Date(dia + "T12:00:00");
+              const label = d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric" });
               return (
                 <button
-                  key={fecha}
-                  type="button"
-                  onClick={() => onAplazar(p.id, fecha)}
+                  key={dia}
+                  onClick={() => onAplazar(p.id, dia)}
                   className="rounded-lg px-2.5 py-1 font-inter text-xs"
-                  style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8", border: "1px solid rgba(255,255,255,0.1)" }}
+                  style={{ background: "rgba(255,255,255,0.07)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.1)" }}
                 >
-                  {wd} {day}
+                  {label}
                 </button>
               );
             })}
           </div>
           <button
-            type="button"
             onClick={onCloseAplazar}
-            className="self-start font-inter text-xs"
+            className="font-inter text-xs text-left mt-0.5"
             style={{ color: "#555" }}
           >
             Cancelar
@@ -335,8 +323,8 @@ function PedidoRow({
         </div>
       )}
 
-      {/* Estado extra badge + cambiar */}
-      {(tipo === "extra" || p.es_sorpresa) && p.estado_extra && !showAplazarPicker && (
+      {/* Estado extra badge when already decided */}
+      {p.estado_extra && !showAplazarPicker && (
         <div className="flex items-center gap-2 mt-0.5">
           <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={extraDecisionStyle(p.estado_extra)}>
             {p.estado_extra}
@@ -356,28 +344,30 @@ function PedidoRow({
 
 function TipoBadge({ tipo }: { tipo: string }) {
   if (tipo === "domingo") return (
-    <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>
+    <span className="font-inter text-xs px-2 py-0.5 rounded-full"
+      style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>
       Domingo
     </span>
   );
   if (tipo === "extra") return (
-    <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(122,32,48,0.2)", color: "#E05070", border: "1px solid rgba(122,32,48,0.35)" }}>
+    <span className="font-inter text-xs px-2 py-0.5 rounded-full"
+      style={{ background: "rgba(122,32,48,0.2)", color: "#E05070", border: "1px solid rgba(122,32,48,0.35)" }}>
       Extra
     </span>
   );
   return null;
 }
 
+function estadoBadge(estado: string): React.CSSProperties {
+  if (estado === "pendiente") return { background: "rgba(255,255,255,0.08)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
+  if (estado === "preparado") return { background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.35)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
+  return { background: "rgba(74,94,58,0.2)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.35)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
+}
+
 function extraDecisionStyle(estado: string): React.CSSProperties {
   if (estado === "aceptado") return { background: "rgba(74,94,58,0.15)", color: "#4A5E3A" };
   if (estado === "aplazado") return { background: "rgba(184,134,11,0.12)", color: "#B8860B" };
   return { background: "rgba(122,32,48,0.12)", color: "#7A2030" };
-}
-
-function estadoBadge(estado: string): React.CSSProperties {
-  if (estado === "preparado") return { background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.35)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
-  if (estado === "entregado") return { background: "rgba(74,94,58,0.2)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.35)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
-  return { background: "rgba(255,255,255,0.08)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
 }
 
 function Loader() {

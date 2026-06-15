@@ -24,8 +24,6 @@ type Receta = {
   ingredientes: { nombre: string; unidad: string } | null;
 };
 
-const DIAS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
-
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -40,7 +38,7 @@ function greeting() {
 
 function fmt(g: number) {
   if (g >= 1000) return `${(g / 1000).toFixed(2)} kg`;
-  return `${g} g`;
+  return `${Math.round(g)} g`;
 }
 
 export default function AdminHoy() {
@@ -84,7 +82,7 @@ export default function AdminHoy() {
     await load();
   }
 
-  // Per-formula production summary
+  // Per-formula totals
   const resumen = pedidos.reduce<Record<string, { nombre: string; color: string; total: number }>>(
     (acc, p) => {
       const slug = p.formulas?.slug ?? "?";
@@ -94,7 +92,7 @@ export default function AdminHoy() {
     }, {}
   );
 
-  // Ingredient gram breakdown (excluding excluded ingredients)
+  // Ingredient gram breakdown, skipping excluded ingredients
   const desglose: Record<string, { gramos: number; unidad: string }> = {};
   for (const p of pedidos) {
     const excluidos = p.ingredientes_excluidos ?? [];
@@ -108,7 +106,6 @@ export default function AdminHoy() {
     }
   }
 
-  const desgloseEntries = Object.entries(desglose).sort((a, b) => b[1].gramos - a[1].gramos);
   const totalBotellas = pedidos.reduce((s, p) => s + p.cantidad, 0);
   const pendientes = pedidos.filter((p) => p.estado !== "entregado").length;
 
@@ -171,7 +168,7 @@ export default function AdminHoy() {
           </div>
 
           {/* Para preparar hoy */}
-          {desgloseEntries.length > 0 && (
+          {Object.keys(desglose).length > 0 && (
             <div
               className="rounded-2xl p-6 mb-5"
               style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
@@ -180,12 +177,14 @@ export default function AdminHoy() {
                 Para preparar hoy
               </p>
               <div className="flex flex-col gap-2">
-                {desgloseEntries.map(([nombre, { gramos, unidad }]) => (
-                  <div key={nombre} className="flex items-center justify-between">
-                    <span className="font-inter text-sm" style={{ color: "#C0B8AE" }}>{nombre}</span>
-                    <span className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>{fmt(gramos)}</span>
-                  </div>
-                ))}
+                {Object.entries(desglose)
+                  .sort((a, b) => b[1].gramos - a[1].gramos)
+                  .map(([nombre, { gramos }]) => (
+                    <div key={nombre} className="flex items-center justify-between">
+                      <span className="font-inter text-sm" style={{ color: "#C0B8AE" }}>{nombre}</span>
+                      <span className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>{fmt(gramos)}</span>
+                    </div>
+                  ))}
               </div>
             </div>
           )}
@@ -198,7 +197,7 @@ export default function AdminHoy() {
             {pedidos.map((p) => (
               <div
                 key={p.id}
-                className="flex items-start justify-between rounded-xl px-4 py-3.5 transition-all gap-3"
+                className="flex items-start justify-between rounded-xl px-4 py-3.5 transition-all"
                 style={{
                   background: p.estado === "entregado"
                     ? "rgba(74,94,58,0.08)"
@@ -207,13 +206,13 @@ export default function AdminHoy() {
                   opacity: p.estado === "entregado" ? 0.6 : 1,
                 }}
               >
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 mr-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
                       {p.clientes?.nombre ?? "Sin nombre"}
                     </p>
                     {p.es_sorpresa && (
-                      <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#E6A800" }}>🎲 Sorpresa</span>
+                      <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲 Sorpresa</span>
                     )}
                     {p.tipo_pedido === "domingo" && (
                       <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>Domingo</span>
@@ -278,7 +277,10 @@ function estadoBadgeStyle(estado: string): React.CSSProperties {
 
 function EmptyDay() {
   return (
-    <div className="rounded-2xl p-10 text-center" style={{ border: "1px dashed rgba(255,255,255,0.08)" }}>
+    <div
+      className="rounded-2xl p-10 text-center"
+      style={{ border: "1px dashed rgba(255,255,255,0.08)" }}
+    >
       <p className="font-cormorant text-2xl mb-2" style={{ color: "#F5F0E8" }}>Sin pedidos hoy</p>
       <p className="font-inter text-sm" style={{ color: "#555" }}>Agrega pedidos desde la sección Clientes.</p>
     </div>
@@ -300,6 +302,3 @@ function CheckIcon() {
     </svg>
   );
 }
-
-// Suppress unused import warning
-void DIAS;
