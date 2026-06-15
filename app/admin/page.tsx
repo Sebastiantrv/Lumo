@@ -195,24 +195,30 @@ export default function AdminInicio() {
           </div>
           {pedidosSemana.length === 0 ? (
             <Empty texto="Sin pedidos esta semana" />
-          ) : (
-            <div className="flex flex-col gap-2">
-              {pedidosSemana.slice(0, 5).map((p) => (
-                <div key={p.id} className="flex items-center justify-between">
-                  <div>
-                    <span className="font-inter text-sm" style={{ color: "#F5F0E8" }}>{p.clientes?.nombre ?? "—"}</span>
-                    <span className="font-inter text-xs ml-2" style={{ color: "#555" }}>
-                      {new Date(p.dia_entrega + "T12:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric" })}
-                    </span>
+          ) : (() => {
+            const agrupado = pedidosSemana.reduce<Record<string, { nombre: string; color: string; total: number }>>((acc, p) => {
+              const slug = p.formulas?.slug ?? "?";
+              if (!acc[slug]) acc[slug] = { nombre: p.formulas?.nombre ?? slug, color: p.formulas?.color_acento ?? "#888", total: 0 };
+              acc[slug].total += p.cantidad;
+              return acc;
+            }, {});
+            return (
+              <div className="flex flex-col gap-3">
+                {Object.entries(agrupado).map(([slug, { nombre, color, total }]) => (
+                  <div key={slug} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+                      <span className="font-inter text-sm" style={{ color: "#F5F0E8" }}>{nombre}</span>
+                    </div>
+                    <span className="font-cormorant text-lg" style={{ color }}>×{total}</span>
                   </div>
-                  <span className="font-inter text-xs" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>{p.formulas?.nombre} ×{p.cantidad}</span>
-                </div>
-              ))}
-              {pedidosSemana.length > 5 && (
-                <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>+{pedidosSemana.length - 5} pedidos más</p>
-              )}
-            </div>
-          )}
+                ))}
+                <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>
+                  {pedidosSemana.length} pedido{pedidosSemana.length !== 1 ? "s" : ""} · {botellasSemana} botellas
+                </p>
+              </div>
+            );
+          })()}
         </div>
 
         {/* Compras de la semana */}
