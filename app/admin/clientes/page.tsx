@@ -359,7 +359,7 @@ function NuevoPedidoModal({
         .eq("formula_id", formulaId)
         .then(({ data }) => {
           const ings = (data ?? [])
-            .map((r: { ingredientes: { nombre: string } | null }) => r.ingredientes)
+            .map((r: any) => r.ingredientes as { nombre: string } | null)
             .filter(Boolean) as { nombre: string }[];
           setIngredientes(ings);
           setExcluidos([]);
