@@ -9,6 +9,7 @@ type Cliente = {
   telefono: string | null;
   email: string | null;
   notas: string | null;
+  restricciones: string | null;
   activo: boolean;
   created_at: string;
 };
@@ -95,7 +96,7 @@ export default function ClientesPage() {
               }}>
                 <span className="font-inter text-xs uppercase tracking-widest" style={{ color: "#555" }}>Nombre</span>
                 <span className="font-inter text-xs uppercase tracking-widest" style={{ color: "#555" }}>WhatsApp</span>
-                <span className="font-inter text-xs uppercase tracking-widest" style={{ color: "#555" }}>Notas</span>
+                <span className="font-inter text-xs uppercase tracking-widest" style={{ color: "#555" }}>Restricciones</span>
                 <span />
               </div>
 
@@ -207,8 +208,8 @@ function ClienteRow({ cliente, isLast, expanded, onToggleExpand, onPedido, onEdi
         <span className="font-inter text-xs truncate" style={{ color: "#4A5E3A" }}>
           {cliente.telefono ?? "—"}
         </span>
-        <span className="font-inter text-xs truncate" style={{ color: "#555" }}>
-          {cliente.notas ?? "—"}
+        <span className="font-inter text-xs truncate" style={{ color: cliente.restricciones ? "#E05070" : "#555" }}>
+          {cliente.restricciones ?? "—"}
         </span>
         <span className="font-inter text-xs" style={{ color: "#444" }}>
           {expanded ? "▲" : "▼"}
@@ -220,7 +221,10 @@ function ClienteRow({ cliente, isLast, expanded, onToggleExpand, onPedido, onEdi
         <div className="px-4 pb-4 pt-1 flex items-center gap-2 flex-wrap"
           style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
           {cliente.email && (
-            <span className="font-inter text-xs mr-3" style={{ color: "#555" }}>{cliente.email}</span>
+            <span className="font-inter text-xs" style={{ color: "#555" }}>{cliente.email}</span>
+          )}
+          {cliente.notas && (
+            <span className="font-inter text-xs" style={{ color: "#555" }}>· {cliente.notas}</span>
           )}
           {cliente.activo && (
             <button onClick={(e) => { e.stopPropagation(); onPedido(); }}
@@ -255,13 +259,17 @@ function NuevoClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved:
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
+  const [restricciones, setRestricciones] = useState("");
   const [notas, setNotas] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await supabase.from("clientes").insert({ nombre, telefono: telefono || null, email: email || null, notas: notas || null, activo: true });
+    await supabase.from("clientes").insert({
+      nombre, telefono: telefono || null, email: email || null,
+      restricciones: restricciones || null, notas: notas || null, activo: true,
+    });
     onSaved();
   }
 
@@ -271,7 +279,8 @@ function NuevoClienteModal({ onClose, onSaved }: { onClose: () => void; onSaved:
         <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
         <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
         <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
-        <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Empresa, preferencias, alergias..." /></Field>
+        <Field label="Restricciones / Alergias"><Input value={restricciones} onChange={setRestricciones} placeholder="Ej. Sin apio, sin jengibre..." /></Field>
+        <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Empresa, observaciones..." /></Field>
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>
           {saving ? "Guardando..." : "Guardar cliente"}
@@ -285,13 +294,17 @@ function EditarClienteModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
   const [nombre, setNombre] = useState(cliente.nombre);
   const [telefono, setTelefono] = useState(cliente.telefono ?? "");
   const [email, setEmail] = useState(cliente.email ?? "");
+  const [restricciones, setRestricciones] = useState(cliente.restricciones ?? "");
   const [notas, setNotas] = useState(cliente.notas ?? "");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    await supabase.from("clientes").update({ nombre, telefono: telefono || null, email: email || null, notas: notas || null }).eq("id", cliente.id);
+    await supabase.from("clientes").update({
+      nombre, telefono: telefono || null, email: email || null,
+      restricciones: restricciones || null, notas: notas || null,
+    }).eq("id", cliente.id);
     onSaved();
   }
 
@@ -301,7 +314,8 @@ function EditarClienteModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
         <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
         <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
         <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
-        <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Empresa, preferencias, alergias..." /></Field>
+        <Field label="Restricciones / Alergias"><Input value={restricciones} onChange={setRestricciones} placeholder="Ej. Sin apio, sin jengibre..." /></Field>
+        <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Empresa, observaciones..." /></Field>
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>
           {saving ? "Guardando..." : "Guardar cambios"}

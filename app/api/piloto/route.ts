@@ -9,10 +9,9 @@ const supabase = createClient(
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  // Construir notas con los datos del formulario
+  const restricciones = body.restricciones && body.restricciones !== "Ninguno" ? body.restricciones : null;
   const notasPartes = [
     body.area ? `Empresa: ${body.area}` : null,
-    body.restricciones && body.restricciones !== "Ninguno" ? `Restricción: ${body.restricciones}` : null,
     body.formula ? `Fórmula preferida: ${body.formula}` : null,
   ].filter(Boolean);
 
@@ -20,6 +19,7 @@ export async function POST(req: NextRequest) {
   const { error: sbError } = await supabase.from("clientes").insert({
     nombre: body.nombre ?? "",
     telefono: body.whatsapp ?? null,
+    restricciones,
     notas: notasPartes.length > 0 ? notasPartes.join(" | ") : null,
     activo: true,
   });
