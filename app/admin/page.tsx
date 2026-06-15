@@ -9,12 +9,23 @@ type Pedido = {
   cantidad: number;
   estado: string;
   dia_entrega: string;
+  formula_id: string;
   clientes: { nombre: string } | null;
   formulas: { nombre: string; slug: string; color_acento: string } | null;
 };
 
-function today() {
-  return new Date().toISOString().split("T")[0];
+function localStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function addDays(base: string, n: number) {
+  const d = new Date(base + "T12:00:00");
+  d.setDate(d.getDate() + n);
+  return localStr(d);
+}
+
+function todayStr() {
+  return localStr(new Date());
 }
 
 function greeting() {
@@ -30,7 +41,11 @@ function getWeekRange(offset = 0) {
   monday.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
   const saturday = new Date(monday);
   saturday.setDate(monday.getDate() + 5);
-  return { inicio: monday.toISOString().split("T")[0], fin: saturday.toISOString().split("T")[0] };
+  return {
+    inicio: localStr(monday),
+    fin: localStr(saturday),
+    label: `${monday.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${saturday.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`,
+  };
 }
 
 export default function AdminInicio() {
@@ -39,10 +54,16 @@ export default function AdminInicio() {
   const [compras, setCompras] = useState<{ ingrediente: string; gramos: number; unidad: string }[]>([]);
   const [numClientes, setNumClientes] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [dayOffset, setDayOffset] = useState(0);
+  const [weekOffset, setWeekOffset] = useState(0);
 
-  const fecha = today();
+  const baseToday = todayStr();
+  const fecha = addDays(baseToday, dayOffset);
   const fechaLabel = new Date(fecha + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
-  const { inicio, fin } = getWeekRange(0);
+  const isActualToday = dayOffset === 0;
+
+  const { inicio, fin, label: weekLabel } = getWeekRange(weekOffset);
+  const isCurrentWeek = weekOffset === 0;
 
   async function load() {
     const [hoyRes, semanaRes, clientesRes, recetasRes] = await Promise.all([
@@ -56,7 +77,6 @@ export default function AdminInicio() {
     setPedidosSemana(semanaRes.data ?? []);
     setNumClientes(clientesRes.count ?? 0);
 
-    // Calcular compras de la semana
     const totales: Record<string, { gramos: number; unidad: string }> = {};
     for (const pedido of semanaRes.data ?? []) {
       for (const r of (recetasRes.data ?? []).filter((r) => r.formula_id === (pedido as any).formula_id)) {
@@ -69,7 +89,7 @@ export default function AdminInicio() {
     setLoading(false);
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [fecha, inicio, fin]);
 
   if (loading) return <PageLoader />;
 
@@ -84,7 +104,6 @@ export default function AdminInicio() {
     return acc;
   }, {});
 
-  // Próxima entrega (día futuro más cercano con pedidos, distinto de hoy)
   const proximos = pedidosSemana
     .filter((p) => p.dia_entrega > fecha)
     .sort((a, b) => a.dia_entrega.localeCompare(b.dia_entrega));
@@ -98,10 +117,12 @@ export default function AdminInicio() {
       {/* Header */}
       <div className="mb-8">
         <p className="font-inter text-sm mb-1" style={{ color: "#4A5E3A", letterSpacing: "0.1em" }}>{greeting()}, Sebastián</p>
-        <h1 className="font-cormorant font-light text-[#F5F0E8] capitalize" style={{ fontSize: "2.2rem" }}>{fechaLabel}</h1>
+        <h1 className="font-cormorant font-light text-[#F5F0E8] capitalize" style={{ fontSize: "2.2rem" }}>
+          {new Date(localStr(new Date()) + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
+        </h1>
       </div>
 
-      {/* Tres métricas principales */}
+      {/* Métricas */}
       <div className="grid grid-cols-3 gap-4 mb-5">
         <MetricCard label="Hoy" value={botellasHoy} unit="botellas" accent="#4A5E3A"
           sub={pendientesHoy > 0 ? `${pendientesHoy} pendiente${pendientesHoy > 1 ? "s" : ""}` : botellasHoy > 0 ? "Todo entregado" : "Sin pedidos"} href="/admin/hoy" />
@@ -112,10 +133,31 @@ export default function AdminInicio() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Producción de hoy */}
-        <Panel title="Producción de hoy" href="/admin/hoy" linkLabel="Gestionar">
+
+        {/* Producción del día — con navegación */}
+        <div className="rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Producción del día</h2>
+              <p className="font-inter text-xs mt-0.5 capitalize" style={{ color: isActualToday ? "#4A5E3A" : "#B8860B" }}>
+                {isActualToday ? "hoy · " : ""}{fechaLabel}
+              </p>
+            </div>
+            <div className="flex items-center gap-1">
+              <NavBtn onClick={() => setDayOffset((d) => d - 1)}>‹</NavBtn>
+              {!isActualToday && (
+                <button onClick={() => setDayOffset(0)}
+                  className="font-inter text-xs px-2 py-1 rounded-lg"
+                  style={{ background: "rgba(74,94,58,0.15)", color: "#4A5E3A" }}>
+                  Hoy
+                </button>
+              )}
+              <NavBtn onClick={() => setDayOffset((d) => d + 1)}>›</NavBtn>
+              <Link href="/admin/hoy" className="font-inter text-xs ml-1" style={{ color: "#4A5E3A" }}>Gestionar →</Link>
+            </div>
+          </div>
           {botellasHoy === 0 ? (
-            <Empty texto="No hay pedidos para hoy" />
+            <Empty texto="No hay pedidos para este día" />
           ) : (
             <div className="flex flex-col gap-3">
               {Object.entries(resumenHoy).map(([slug, { nombre, color, total }]) => (
@@ -129,36 +171,54 @@ export default function AdminInicio() {
               ))}
             </div>
           )}
-        </Panel>
+        </div>
 
-        {/* Próxima entrega */}
-        <Panel title="Próxima entrega" href="/admin/semana" linkLabel="Ver semana">
-          {!proximaEntrega ? (
-            <Empty texto="Sin entregas próximas esta semana" />
-          ) : (
+        {/* Esta semana — con navegación */}
+        <div className="rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="font-inter text-xs uppercase tracking-widest mb-3 capitalize" style={{ color: "#B8860B" }}>
-                {new Date(proximaEntrega.fecha + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
-              </p>
-              <div className="flex flex-col gap-2">
-                {proximaEntrega.pedidos.slice(0, 4).map((p) => (
-                  <div key={p.id} className="flex items-center justify-between">
+              <h2 className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Esta semana</h2>
+              <p className="font-inter text-xs mt-0.5" style={{ color: isCurrentWeek ? "#B8860B" : "#8A8A8A" }}>{weekLabel}</p>
+            </div>
+            <div className="flex items-center gap-1">
+              <NavBtn onClick={() => setWeekOffset((w) => w - 1)}>‹</NavBtn>
+              {!isCurrentWeek && (
+                <button onClick={() => setWeekOffset(0)}
+                  className="font-inter text-xs px-2 py-1 rounded-lg"
+                  style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>
+                  Actual
+                </button>
+              )}
+              <NavBtn onClick={() => setWeekOffset((w) => w + 1)}>›</NavBtn>
+              <Link href="/admin/semana" className="font-inter text-xs ml-1" style={{ color: "#4A5E3A" }}>Ver →</Link>
+            </div>
+          </div>
+          {pedidosSemana.length === 0 ? (
+            <Empty texto="Sin pedidos esta semana" />
+          ) : (
+            <div className="flex flex-col gap-2">
+              {pedidosSemana.slice(0, 5).map((p) => (
+                <div key={p.id} className="flex items-center justify-between">
+                  <div>
                     <span className="font-inter text-sm" style={{ color: "#F5F0E8" }}>{p.clientes?.nombre ?? "—"}</span>
-                    <span className="font-inter text-xs" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>{p.formulas?.nombre} ×{p.cantidad}</span>
+                    <span className="font-inter text-xs ml-2" style={{ color: "#555" }}>
+                      {new Date(p.dia_entrega + "T12:00:00").toLocaleDateString("es-MX", { weekday: "short", day: "numeric" })}
+                    </span>
                   </div>
-                ))}
-                {proximaEntrega.pedidos.length > 4 && (
-                  <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>+{proximaEntrega.pedidos.length - 4} más</p>
-                )}
-              </div>
+                  <span className="font-inter text-xs" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>{p.formulas?.nombre} ×{p.cantidad}</span>
+                </div>
+              ))}
+              {pedidosSemana.length > 5 && (
+                <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>+{pedidosSemana.length - 5} pedidos más</p>
+              )}
             </div>
           )}
-        </Panel>
+        </div>
 
-        {/* Lista de compras (resumen) */}
-        <Panel title="Compras de la semana" href="/admin/compras" linkLabel="Ver lista">
+        {/* Compras de la semana */}
+        <Panel title={`Compras · ${weekLabel}`} href="/admin/compras" linkLabel="Ver lista">
           {compras.length === 0 ? (
-            <Empty texto="Sin ingredientes por comprar aún" />
+            <Empty texto="Sin ingredientes por comprar" />
           ) : (
             <div className="flex flex-col gap-2.5">
               {compras.slice(0, 5).map((c) => (
@@ -167,7 +227,7 @@ export default function AdminInicio() {
                   <span className="font-cormorant text-base" style={{ color: "#4A5E3A" }}>{fmt(c.gramos, c.unidad)}</span>
                 </div>
               ))}
-              {compras.length > 5 && <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>+{compras.length - 5} ingredientes más</p>}
+              {compras.length > 5 && <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>+{compras.length - 5} más</p>}
             </div>
           )}
         </Panel>
@@ -183,6 +243,16 @@ export default function AdminInicio() {
         </Panel>
       </div>
     </div>
+  );
+}
+
+function NavBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className="w-7 h-7 rounded-lg flex items-center justify-center font-inter text-sm transition-colors"
+      style={{ background: "rgba(255,255,255,0.05)", color: "#8A8A8A" }}>
+      {children}
+    </button>
   );
 }
 
@@ -210,9 +280,7 @@ function Panel({ title, href, linkLabel, children }: { title: string; href?: str
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>{title}</h2>
         {href && linkLabel && (
-          <Link href={href} className="font-inter text-xs flex items-center gap-1" style={{ color: "#4A5E3A" }}>
-            {linkLabel} →
-          </Link>
+          <Link href={href} className="font-inter text-xs" style={{ color: "#4A5E3A" }}>{linkLabel} →</Link>
         )}
       </div>
       {children}
