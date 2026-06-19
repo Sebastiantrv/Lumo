@@ -16,6 +16,7 @@ function AdminNav() {
     { href: "/admin/recetas", label: "Recetas", icon: LeafIcon },
     { href: "/admin/clientes", label: "Clientes", icon: PeopleIcon },
     { href: "/admin/finanzas", label: "Finanzas", icon: FinanzasIcon },
+    { href: "/admin/feedback", label: "Feedback", icon: FeedbackIcon },
   ];
 
   return (
@@ -165,6 +166,13 @@ function FinanzasIcon({ size, color }: { size: number; color: string }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
       <line x1="12" y1="1" x2="12" y2="23" />
       <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+    </svg>
+  );
+}
+function FeedbackIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
     </svg>
   );
 }
