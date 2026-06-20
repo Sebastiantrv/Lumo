@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Navbar from "@/components/Navbar";
 
 /* ── Design tokens ── */
 const T = {
@@ -14,6 +15,7 @@ const T = {
   btnPrimary: "#0D0D0D",
   btnText:    "#F4EFE7",
   green:      "#4A5E3A",
+  red:        "#7A2030",
   error:      "#7A2030",
 };
 
@@ -23,9 +25,9 @@ type FormData = {
   sensacion_sabor: string;
   frescura_rating: number;
   experiencia_lumo: string;
-  recomendacion: string;
+  recomendacion: string[];
   precio_justo: string;
-  razon_adopcion: string;
+  razon_adopcion: string[];
   mejora_abierta: string;
 };
 
@@ -76,9 +78,9 @@ export default function FeedbackPage() {
     sensacion_sabor: "",
     frescura_rating: 0,
     experiencia_lumo: "",
-    recomendacion: "",
+    recomendacion: [],
     precio_justo: "",
-    razon_adopcion: "",
+    razon_adopcion: [],
     mejora_abierta: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -110,9 +112,9 @@ export default function FeedbackPage() {
     if (step === 3 && !data.sensacion_sabor) e.sensacion_sabor = "Selecciona una opción.";
     if (step === 4 && !data.frescura_rating) e.frescura_rating = "Selecciona una calificación.";
     if (step === 5 && !data.experiencia_lumo) e.experiencia_lumo = "Selecciona una opción.";
-    if (step === 6 && !data.recomendacion) e.recomendacion = "Selecciona una opción.";
+    if (step === 6 && data.recomendacion.length === 0) e.recomendacion = "Selecciona al menos una opción.";
     if (step === 7 && !data.precio_justo) e.precio_justo = "Selecciona una opción.";
-    if (step === 8 && !data.razon_adopcion) e.razon_adopcion = "Selecciona una opción.";
+    if (step === 8 && data.razon_adopcion.length === 0) e.razon_adopcion = "Selecciona al menos una opción.";
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -120,6 +122,8 @@ export default function FeedbackPage() {
   async function submit() {
     const payload = {
       ...data,
+      recomendacion: data.recomendacion.join(" | "),
+      razon_adopcion: data.razon_adopcion.join(" | "),
       mejora_abierta: data.mejora_abierta.trim() || null,
       submitted_at: new Date().toLocaleString("es-MX", {
         timeZone: "America/Mexico_City",
@@ -153,9 +157,12 @@ export default function FeedbackPage() {
         @keyframes stepInLeft { from { opacity: 0; transform: translateX(-30px); } to { opacity: 1; transform: translateX(0); } }
       `}</style>
 
+      <main style={{ background: "#F4EFE7", minHeight: "100svh" }}>
+      <header>
+        <Navbar theme="light" />
+      </header>
       <section
-        className="min-h-svh px-5 md:px-12 py-14 md:py-24 flex flex-col items-center"
-        style={{ background: "#F4EFE7" }}
+        className="px-5 md:px-12 pt-28 pb-14 md:pt-32 md:pb-24 flex flex-col items-center"
         aria-label="Formulario de feedback"
       >
         <div className="w-full max-w-md flex flex-col gap-6">
@@ -287,17 +294,18 @@ export default function FeedbackPage() {
               </StepShell>
             )}
 
-            {/* 6: Recomendación */}
+            {/* 6: Recomendación (max 2) */}
             {step === 6 && (
-              <StepShell label="¿A quién se lo recomendarías?" onNext={next} onBack={back}>
+              <StepShell label="¿A quién se lo recomendarías?" sublabel="Selecciona hasta 2 opciones." onNext={next} onBack={back}>
                 {errors.recomendacion && (
                   <p className="font-inter text-xs mb-1" style={{ color: T.error }} role="alert">
                     {errors.recomendacion}
                   </p>
                 )}
-                <OptionCards
+                <MultiOptionCards
                   options={RECOMENDACION_OPTIONS}
                   value={data.recomendacion}
+                  max={2}
                   onChange={(v) => setData((d) => ({ ...d, recomendacion: v }))}
                 />
               </StepShell>
@@ -319,17 +327,18 @@ export default function FeedbackPage() {
               </StepShell>
             )}
 
-            {/* 8: Razón de adopción */}
+            {/* 8: Razón de adopción (max 2) */}
             {step === 8 && (
-              <StepShell label="Si LUMO formara parte de tu mañana, ¿cuál sería la razón principal?" onNext={next} onBack={back}>
+              <StepShell label="Si LUMO formara parte de tu mañana, ¿cuál sería la razón principal?" sublabel="Selecciona hasta 2 opciones." onNext={next} onBack={back}>
                 {errors.razon_adopcion && (
                   <p className="font-inter text-xs mb-1" style={{ color: T.error }} role="alert">
                     {errors.razon_adopcion}
                   </p>
                 )}
-                <OptionCards
+                <MultiOptionCards
                   options={RAZON_OPTIONS}
                   value={data.razon_adopcion}
+                  max={2}
                   onChange={(v) => setData((d) => ({ ...d, razon_adopcion: v }))}
                 />
               </StepShell>
@@ -395,6 +404,7 @@ export default function FeedbackPage() {
           </div>
         </div>
       </section>
+      </main>
     </>
   );
 }
@@ -537,6 +547,75 @@ function OptionCards({
               WebkitBackdropFilter: "blur(12px)",
               boxShadow: sel ? "0 0 20px rgba(74,94,58,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
               fontWeight: sel ? 500 : 400,
+            }}
+          >
+            {opt}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ── Multi-select option cards (max N) ── */
+function MultiOptionCards({
+  options,
+  value,
+  max,
+  onChange,
+}: {
+  options: string[];
+  value: string[];
+  max: number;
+  onChange: (v: string[]) => void;
+}) {
+  function toggle(opt: string) {
+    if (value.includes(opt)) {
+      onChange(value.filter((v) => v !== opt));
+    } else if (value.length < max) {
+      onChange([...value, opt]);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {options.map((opt) => {
+        const isFirst = value[0] === opt;
+        const isSecond = value.length > 1 && value[1] === opt;
+        const sel = value.includes(opt);
+        const disabled = !sel && value.length >= max;
+
+        return (
+          <button
+            key={opt}
+            onClick={() => toggle(opt)}
+            disabled={disabled}
+            className="w-full text-left px-5 py-4 rounded-2xl font-inter transition-all spring-press"
+            style={{
+              fontSize: "clamp(0.88rem, 3.4vw, 1rem)",
+              background: isSecond
+                ? "rgba(122,32,48,0.08)"
+                : isFirst
+                ? "rgba(74,94,58,0.12)"
+                : "rgba(255,255,255,0.65)",
+              border: isSecond
+                ? "1.5px solid #7A2030"
+                : isFirst
+                ? "1.5px solid #4A5E3A"
+                : "1px solid rgba(0,0,0,0.08)",
+              color: isSecond
+                ? "#7A2030"
+                : isFirst
+                ? "#4A5E3A"
+                : disabled
+                ? "#C0C0C0"
+                : "#6A6A6A",
+              backdropFilter: "blur(12px)",
+              WebkitBackdropFilter: "blur(12px)",
+              boxShadow: sel ? `0 0 20px ${isSecond ? "rgba(122,32,48,0.12)" : "rgba(74,94,58,0.15)"}` : "0 2px 8px rgba(0,0,0,0.06)",
+              fontWeight: sel ? 500 : 400,
+              opacity: disabled ? 0.5 : 1,
+              cursor: disabled ? "default" : "pointer",
             }}
           >
             {opt}
