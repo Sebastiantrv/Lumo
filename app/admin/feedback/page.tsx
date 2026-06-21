@@ -221,6 +221,7 @@ function FeedbackCard({ fb, matchedFormula, formulaNames, onAsignar, showPendien
   onAsignar: (id: string, formula: string) => void;
   showPendiente: boolean;
 }) {
+  const [editing, setEditing] = useState(false);
   const pills = [
     fb.sensacion_sabor,
     fb.experiencia_lumo,
@@ -239,29 +240,50 @@ function FeedbackCard({ fb, matchedFormula, formulaNames, onAsignar, showPendien
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-inter text-sm font-medium truncate" style={{ color: "#F5F0E8" }}>{fb.nombre}</span>
-          {matchedFormula && (
-            <span className="font-inter text-xs px-2 py-0.5 rounded-full shrink-0"
-              style={{ background: `${matchedFormula.color}20`, color: matchedFormula.color, border: `1px solid ${matchedFormula.color}40` }}>
+          {matchedFormula && !editing && (
+            <button
+              onClick={() => setEditing(true)}
+              className="flex items-center gap-1.5 font-inter text-xs px-2 py-0.5 rounded-full shrink-0 transition-all group"
+              style={{ background: `${matchedFormula.color}20`, color: matchedFormula.color, border: `1px solid ${matchedFormula.color}40` }}
+              title="Cambiar fórmula"
+            >
               {matchedFormula.nombre}
-            </span>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="opacity-40 group-hover:opacity-100 transition-opacity">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
           )}
         </div>
         <span className="font-inter text-xs shrink-0" style={{ color: "#555" }}>{fb.submitted_at}</span>
       </div>
 
-      {/* Pendiente: formula selector */}
-      {showPendiente && !matchedFormula && (
+      {/* Formula selector: shown when pending or editing */}
+      {(editing || (showPendiente && !matchedFormula)) && (
         <div className="flex items-center gap-2">
-          <span className="font-inter text-xs" style={{ color: "#B8860B" }}>Sin fórmula asignada:</span>
+          <span className="font-inter text-xs" style={{ color: "#B8860B" }}>
+            {matchedFormula ? "Cambiar fórmula:" : "Sin fórmula asignada:"}
+          </span>
           <div className="flex gap-1.5">
             {formulaNames.map((name) => (
-              <button key={name} onClick={() => onAsignar(fb.id, name)}
+              <button key={name} onClick={() => { onAsignar(fb.id, name); setEditing(false); }}
                 className="font-inter text-xs px-2.5 py-1 rounded-lg transition-all"
-                style={{ background: "rgba(255,255,255,0.06)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.1)" }}>
+                style={{
+                  background: matchedFormula?.nombre === name ? `${matchedFormula.color}20` : "rgba(255,255,255,0.06)",
+                  color: matchedFormula?.nombre === name ? matchedFormula.color : "#8A8A8A",
+                  border: matchedFormula?.nombre === name ? `1px solid ${matchedFormula.color}40` : "1px solid rgba(255,255,255,0.1)",
+                }}>
                 {name}
               </button>
             ))}
           </div>
+          {editing && (
+            <button onClick={() => setEditing(false)}
+              className="font-inter text-xs px-2 py-1 rounded-lg transition-all"
+              style={{ color: "#555" }}>
+              ✕
+            </button>
+          )}
         </div>
       )}
 
