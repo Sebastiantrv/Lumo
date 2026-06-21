@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
       precio_justo: body.precio_justo ?? "",
       razon_adopcion: body.razon_adopcion ?? "",
       mejora_abierta: body.mejora_abierta || null,
+      pedido_token: body.pedido_token || null,
       submitted_at: body.submitted_at ?? new Date().toISOString(),
     });
 
