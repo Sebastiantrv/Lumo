@@ -71,6 +71,7 @@ export default function AdminHoy() {
   useEffect(() => { load(); }, []);
 
   async function toggleEstadoGroup(ids: string[], estadoActual: string) {
+    if (estadoActual === "cancelado") return;
     const siguiente =
       estadoActual === "pendiente" ? "confirmado"
       : estadoActual === "confirmado" ? "preparado"
@@ -93,6 +94,14 @@ export default function AdminHoy() {
     setUpdating(null);
   }
 
+  async function cancelarGroup(ids: string[]) {
+    if (!confirm("¿Cancelar este pedido? Esta accion no se puede deshacer.")) return;
+    setUpdating(ids[0]);
+    await supabase.from("pedidos").update({ estado: "cancelado" }).in("id", ids);
+    await load();
+    setUpdating(null);
+  }
+
   async function confirmarEnvasadoGroup(ids: string[], horaEntrega: string) {
     setShowDeliveryPicker(null);
     setUpdating(ids[0]);
@@ -106,7 +115,7 @@ export default function AdminHoy() {
   }
 
   async function marcarTodoEntregado() {
-    const ids = pedidos.filter((p) => p.estado !== "entregado").map((p) => p.id);
+    const ids = pedidos.filter((p) => p.estado !== "entregado" && p.estado !== "cancelado").map((p) => p.id);
     if (!ids.length) return;
     await supabase.from("pedidos").update({ estado: "entregado" }).in("id", ids);
     await load();
@@ -131,7 +140,9 @@ export default function AdminHoy() {
     }));
   }
 
-  const resumen = pedidos.reduce<Record<string, { nombre: string; color: string; total: number }>>(
+  const pedidosActivos = pedidos.filter((p) => p.estado !== "cancelado");
+
+  const resumen = pedidosActivos.reduce<Record<string, { nombre: string; color: string; total: number }>>(
     (acc, p) => {
       const slug = p.formulas?.slug ?? "?";
       if (!acc[slug]) acc[slug] = { nombre: p.formulas?.nombre ?? slug, color: p.formulas?.color_acento ?? "#888", total: 0 };
@@ -141,7 +152,7 @@ export default function AdminHoy() {
   );
 
   const desglose: Record<string, { gramos: number; unidad: string }> = {};
-  for (const p of pedidos) {
+  for (const p of pedidosActivos) {
     const excluidos = p.ingredientes_excluidos ?? [];
     const recetasFormula = recetas.filter((r) => r.formula_id === p.formula_id);
     for (const r of recetasFormula) {
@@ -153,8 +164,8 @@ export default function AdminHoy() {
     }
   }
 
-  const totalBotellas = pedidos.reduce((s, p) => s + p.cantidad, 0);
-  const pendientes = pedidos.filter((p) => p.estado !== "entregado").length;
+  const totalBotellas = pedidosActivos.reduce((s, p) => s + p.cantidad, 0);
+  const pendientes = pedidosActivos.filter((p) => p.estado !== "entregado").length;
 
   if (loading) return <PageLoader />;
 
@@ -253,9 +264,12 @@ export default function AdminHoy() {
                   style={{
                     background: group.estado === "entregado"
                       ? "rgba(74,94,58,0.08)"
+                      : group.estado === "cancelado"
+                      ? "rgba(122,32,48,0.06)"
                       : "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.06)",
-                    opacity: group.estado === "entregado" ? 0.6 : 1,
+                    border: group.estado === "cancelado" ? "1px solid rgba(122,32,48,0.15)" : "1px solid rgba(255,255,255,0.06)",
+                    opacity: group.estado === "entregado" || group.estado === "cancelado" ? 0.5 : 1,
+                    textDecoration: group.estado === "cancelado" ? "line-through" : "none",
                     borderBottomLeftRadius: showDeliveryPicker === firstPed.id ? 0 : undefined,
                     borderBottomRightRadius: showDeliveryPicker === firstPed.id ? 0 : undefined,
                   }}
@@ -313,6 +327,20 @@ export default function AdminHoy() {
                     >
                       {updating === firstPed.id ? "..." : estadoLabel(group.estado)}
                     </button>
+                    {group.estado === "confirmado" && group.cliente?.telefono && (
+                      <button
+                        onClick={() => {
+                          const jugoLabel = multiFormula ? `pedido (${formulaNames})` : (firstPed.formulas?.nombre ?? "LUMO");
+                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} ha sido confirmado para el dia de manana.\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${firstPed.token}`;
+                          window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
+                        }}
+                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
+                        title="Enviar WhatsApp - Confirmado"
+                      >
+                        <WhatsAppIcon />
+                      </button>
+                    )}
                     {group.estado === "preparado" && group.cliente?.telefono && firstPed.hora_preparado && (
                       <button
                         onClick={() => {
@@ -340,6 +368,19 @@ export default function AdminHoy() {
                         title="Enviar WhatsApp - Entregado"
                       >
                         <WhatsAppIcon />
+                      </button>
+                    )}
+                    {group.estado !== "entregado" && group.estado !== "cancelado" && (
+                      <button
+                        onClick={() => cancelarGroup(group.ids)}
+                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        style={{ background: "rgba(122,32,48,0.1)", border: "1px solid rgba(122,32,48,0.2)" }}
+                        title="Cancelar pedido"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7A2030" strokeWidth="2.5" strokeLinecap="round">
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
                       </button>
                     )}
                   </div>
@@ -436,6 +477,7 @@ function estadoLabel(estado: string) {
   if (estado === "pendiente") return "Pendiente";
   if (estado === "confirmado") return "Confirmado";
   if (estado === "preparado") return "Envasado";
+  if (estado === "cancelado") return "Cancelado";
   return "Entregado";
 }
 
@@ -443,6 +485,7 @@ function estadoBadgeStyle(estado: string): React.CSSProperties {
   if (estado === "pendiente") return { background: "rgba(255,255,255,0.1)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.15)" };
   if (estado === "confirmado") return { background: "rgba(74,94,58,0.15)", color: "#4A5E3A", border: "1px solid rgba(74,94,58,0.3)" };
   if (estado === "preparado") return { background: "rgba(184,134,11,0.25)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.4)" };
+  if (estado === "cancelado") return { background: "rgba(122,32,48,0.15)", color: "#7A2030", border: "1px solid rgba(122,32,48,0.3)", cursor: "default" };
   return { background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" };
 }
 
