@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { localStr, getWeekDays, formatDateShort } from "@/lib/dates";
 
 type Pedido = {
   id: string;
@@ -20,22 +21,6 @@ type Pedido = {
 };
 
 type Formula = { id: string; nombre: string; slug: string; color_acento: string };
-
-function localStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function getWeekDays(offset = 0): string[] {
-  const now = new Date();
-  const day = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day + 1 + offset * 7);
-  return Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return localStr(d);
-  });
-}
 
 export default function SemanaPage() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
@@ -88,12 +73,9 @@ export default function SemanaPage() {
     .filter((p) => p.tipo_pedido !== "extra" || p.estado_extra === "aceptado")
     .reduce((s, p) => s + p.cantidad, 0);
 
-  const todayStr = localStr(new Date());
+  const today = localStr(new Date());
 
-  // Week label
-  const mondayLabel = new Date(monday + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-  const saturdayLabel = new Date(saturday + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-  const weekLabel = `${mondayLabel} – ${saturdayLabel}`;
+  const weekLabel = `${formatDateShort(monday)} – ${formatDateShort(saturday)}`;
 
   return (
     <div className="max-w-2xl">
@@ -126,7 +108,7 @@ export default function SemanaPage() {
             const totalDia = pedidosDia
               .filter((p) => p.tipo_pedido !== "extra" || p.estado_extra === "aceptado")
               .reduce((s, p) => s + p.cantidad, 0);
-            const isToday = dia === todayStr;
+            const isToday = dia === today;
             const dateObj = new Date(dia + "T12:00:00");
             const dayName = dateObj.toLocaleDateString("es-MX", { weekday: "long" });
             const dayNum = dateObj.getDate();

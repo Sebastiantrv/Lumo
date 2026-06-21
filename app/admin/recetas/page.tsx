@@ -34,7 +34,7 @@ export default function RecetasPage() {
       ...f,
       recetas: (rList ?? [])
         .filter((r) => r.formula_id === f.id)
-        .map((r) => ({ ...r, ingredientes: r.ingredientes as any }))
+        .map((r) => ({ ...r, ingredientes: r.ingredientes as unknown as { id: string; nombre: string; unidad: string } }))
         .sort((a, b) => (b.gramos - a.gramos)),
     }));
 

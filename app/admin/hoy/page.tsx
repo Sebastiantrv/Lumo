@@ -2,6 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { DELIVERY_RANGES, LUMO_DOMAIN, WHATSAPP_BATCH_DELAY_MS } from "@/lib/constants";
+import { todayStr, formatDateLabel, formatHora, greeting } from "@/lib/dates";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { fmtGramos } from "@/lib/format";
 
 type Pedido = {
   id: string;
@@ -27,25 +31,6 @@ type Receta = {
   ingredientes: { nombre: string; unidad: string } | null;
 };
 
-const DELIVERY_RANGES = ["6:30 - 7:00", "7:00 - 7:30", "7:30 - 8:00"];
-
-function today() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Buenos dias";
-  if (h < 19) return "Buenas tardes";
-  return "Buenas noches";
-}
-
-function fmt(g: number) {
-  if (g >= 1000) return `${(g / 1000).toFixed(2)} kg`;
-  return `${Math.round(g)} g`;
-}
-
 export default function AdminHoy() {
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [recetas, setRecetas] = useState<Receta[]>([]);
@@ -53,10 +38,8 @@ export default function AdminHoy() {
   const [updating, setUpdating] = useState<string | null>(null);
   const [showDeliveryPicker, setShowDeliveryPicker] = useState<string | null>(null);
 
-  const fecha = today();
-  const fechaLabel = new Date(fecha + "T12:00:00").toLocaleDateString("es-MX", {
-    weekday: "long", day: "numeric", month: "long",
-  });
+  const fecha = todayStr();
+  const fechaLabel = formatDateLabel(fecha);
 
   async function load() {
     const [{ data: p }, { data: r }] = await Promise.all([
@@ -240,7 +223,7 @@ export default function AdminHoy() {
                   .map(([nombre, { gramos }]) => (
                     <div key={nombre} className="flex items-center justify-between">
                       <span className="font-inter text-sm" style={{ color: "#C0B8AE" }}>{nombre}</span>
-                      <span className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>{fmt(gramos)}</span>
+                      <span className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>{fmtGramos(gramos)}</span>
                     </div>
                   ))}
               </div>
@@ -331,7 +314,7 @@ export default function AdminHoy() {
                       <button
                         onClick={() => {
                           const jugoLabel = multiFormula ? `pedido (${formulaNames})` : (firstPed.formulas?.nombre ?? "LUMO");
-                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} ha sido confirmado para el dia de manana.\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${firstPed.token}`;
+                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} ha sido confirmado para el dia de manana.\n\nPuedes seguir tu entrega aqui:\n${LUMO_DOMAIN}/mi-pedido/${firstPed.token}`;
                           window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
@@ -344,10 +327,10 @@ export default function AdminHoy() {
                     {group.estado === "preparado" && group.cliente?.telefono && firstPed.hora_preparado && (
                       <button
                         onClick={() => {
-                          const hora = new Date(firstPed.hora_preparado!).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City" });
+                          const hora = formatHora(firstPed.hora_preparado!);
                           const entregaLine = firstPed.hora_entrega_estimada ? `\nEntrega estimada: ${firstPed.hora_entrega_estimada}` : "";
                           const jugoLabel = multiFormula ? `pedido (${formulaNames})` : (firstPed.formulas?.nombre ?? "LUMO");
-                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${firstPed.token}`;
+                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\n${LUMO_DOMAIN}/mi-pedido/${firstPed.token}`;
                           window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
@@ -360,7 +343,7 @@ export default function AdminHoy() {
                     {group.estado === "entregado" && group.cliente?.telefono && (
                       <button
                         onClick={() => {
-                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu pedido LUMO ha sido entregado.\nEsperamos que lo disfrutes.\n\nCuentanos tu experiencia:\nhttps://lumo-three-beta.vercel.app/feedback?pedido=${firstPed.token}`;
+                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu pedido LUMO ha sido entregado.\nEsperamos que lo disfrutes.\n\nCuentanos tu experiencia:\n${LUMO_DOMAIN}/feedback?pedido=${firstPed.token}`;
                           window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
@@ -435,11 +418,11 @@ export default function AdminHoy() {
                 const listos = pedidos.filter((p) => p.estado === "preparado" && p.clientes?.telefono && p.hora_preparado);
                 listos.forEach((p, i) => {
                   setTimeout(() => {
-                    const hora = new Date(p.hora_preparado!).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City" });
+                    const hora = formatHora(p.hora_preparado!);
                     const entregaLine = p.hora_entrega_estimada ? `\nEntrega estimada: ${p.hora_entrega_estimada}` : "";
-                    const msg = `Hola, ${p.clientes!.nombre}.\n\nTu ${p.formulas?.nombre ?? "LUMO"} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${p.token}`;
+                    const msg = `Hola, ${p.clientes!.nombre}.\n\nTu ${p.formulas?.nombre ?? "LUMO"} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\n${LUMO_DOMAIN}/mi-pedido/${p.token}`;
                     window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
-                  }, i * 500);
+                  }, i * WHATSAPP_BATCH_DELAY_MS);
                 });
               }}
               className="w-full rounded-xl py-3.5 font-inter text-sm font-medium transition-opacity flex items-center justify-center gap-2 mt-3"
@@ -453,16 +436,6 @@ export default function AdminHoy() {
       )}
     </div>
   );
-}
-
-function cleanPhone(tel: string): string {
-  const cleaned = tel.replace(/[\s\-()]/g, "");
-  if (!/^\+/.test(cleaned) && !/^52/.test(cleaned)) return "52" + cleaned;
-  return cleaned.replace(/^\+/, "");
-}
-
-function buildWhatsAppUrl(phone: string, message: string): string {
-  return `https://wa.me/${cleanPhone(phone)}?text=${encodeURIComponent(message)}`;
 }
 
 function WhatsAppIcon() {

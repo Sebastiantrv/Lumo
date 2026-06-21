@@ -2,28 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { getWeekRange } from "@/lib/dates";
+import { fmtGramos } from "@/lib/format";
 
 type Item = {
   ingrediente: string;
   unidad: string;
   gramos: number;
 };
-
-function getWeekRange(offset = 0) {
-  const now = new Date();
-  const day = now.getDay();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - day + 1 + offset * 7);
-  const saturday = new Date(monday);
-  saturday.setDate(monday.getDate() + 5);
-  return {
-    inicio: monday.toISOString().split("T")[0],
-    fin: saturday.toISOString().split("T")[0],
-    label: monday.toLocaleDateString("es-MX", { day: "numeric", month: "long" }) +
-      " – " +
-      saturday.toLocaleDateString("es-MX", { day: "numeric", month: "long" }),
-  };
-}
 
 export default function ComprasPage() {
   const [items, setItems] = useState<Item[]>([]);
@@ -60,7 +46,7 @@ export default function ComprasPage() {
     for (const pedido of pedidos) {
       const recetasFormula = recetas?.filter((r) => r.formula_id === pedido.formula_id) ?? [];
       for (const r of recetasFormula) {
-        const ing = (r.ingredientes as any);
+        const ing = r.ingredientes as unknown as { nombre: string; unidad: string };
         const key = ing.nombre;
         if (!totales[key]) totales[key] = { gramos: 0, unidad: ing.unidad };
         totales[key].gramos += r.gramos * pedido.cantidad;
@@ -79,7 +65,7 @@ export default function ComprasPage() {
 
   function copiarLista() {
     const texto = `Lista de compras LUMO — ${label}\n\n` +
-      items.map((i) => `${i.ingrediente}: ${formatGramos(i.gramos, i.unidad)}`).join("\n");
+      items.map((i) => `${i.ingrediente}: ${fmtGramos(i.gramos, i.unidad)}`).join("\n");
     navigator.clipboard.writeText(texto);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
@@ -126,7 +112,7 @@ export default function ComprasPage() {
                   {item.ingrediente}
                 </span>
                 <span className="font-cormorant text-lg font-light" style={{ color: "#4A5E3A" }}>
-                  {formatGramos(item.gramos, item.unidad)}
+                  {fmtGramos(item.gramos, item.unidad)}
                 </span>
               </div>
             ))}
@@ -158,13 +144,6 @@ export default function ComprasPage() {
       )}
     </div>
   );
-}
-
-function formatGramos(g: number, unidad: string) {
-  if (unidad === "g") {
-    return g >= 1000 ? `${(g / 1000).toFixed(1)} kg` : `${g} g`;
-  }
-  return `${g} ${unidad}`;
 }
 
 function EmptyState() {

@@ -106,7 +106,7 @@ function FeedbackContent() {
       .eq("token", pedidoToken)
       .single()
       .then(({ data }) => {
-        const nombre = (data as any)?.clientes?.nombre;
+        const nombre = (data as { clientes: { nombre: string } | null } | null)?.clientes?.nombre;
         if (nombre) {
           setClientName(nombre);
           setData((d) => ({ ...d, nombre }));

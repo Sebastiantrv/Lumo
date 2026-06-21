@@ -2,40 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-
-/* ---------- helpers ---------- */
-
-function formatDeliveryDate(dateStr: string): string {
-  const d = new Date(dateStr + "T12:00:00");
-  return d.toLocaleDateString("es-MX", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-}
-
-function formatHora(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleString("es-MX", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "America/Mexico_City",
-  });
-}
-
-function formatCreatedDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-MX", {
-    day: "numeric",
-    month: "long",
-    timeZone: "America/Mexico_City",
-  });
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
+import { LUMO_WHATSAPP, POLL_INTERVAL_MS } from "@/lib/constants";
+import { formatDateLabel, formatHora, formatCreatedDate, capitalize, isCutoffPassed } from "@/lib/dates";
 
 /* ---------- types ---------- */
 
@@ -270,7 +238,7 @@ export default function MiPedidoPage({
     }
 
     fetchPedidos();
-    const interval = setInterval(fetchPedidos, 15000);
+    const interval = setInterval(fetchPedidos, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -331,7 +299,7 @@ export default function MiPedidoPage({
   const nombre = p.clientes?.nombre ?? "amigo";
   const multiFormula = pedidos.length > 1;
   const accentColor = multiFormula ? "#4A5E3A" : (p.formulas?.color_acento ?? "#4A5E3A");
-  const lumoWhatsApp = "5215542779362";
+  const lumoWhatsApp = LUMO_WHATSAPP;
   const orderLabel = p.numero_pedido ? `#${p.numero_pedido}` : p.token.slice(0, 8).toUpperCase();
   const isCancelado = pedidos.some((ped) => ped.estado === "cancelado");
   const globalEstado = isCancelado ? "cancelado" : pedidos.reduce((worst, ped) => {
@@ -340,18 +308,7 @@ export default function MiPedidoPage({
   }, "entregado");
 
   const canAdjust = !isCancelado && globalEstado !== "entregado" && globalEstado !== "preparado";
-  const cutoffPassed = (() => {
-    if (!p.dia_entrega) return true;
-    const now = new Date();
-    const mexicoOffset = -6;
-    const utcNow = now.getTime() + now.getTimezoneOffset() * 60000;
-    const mexicoNow = new Date(utcNow + mexicoOffset * 3600000);
-    const delivery = new Date(p.dia_entrega + "T00:00:00");
-    const cutoff = new Date(delivery);
-    cutoff.setDate(cutoff.getDate() - 1);
-    cutoff.setHours(20, 0, 0, 0);
-    return mexicoNow >= cutoff;
-  })();
+  const cutoffPassed = !p.dia_entrega || isCutoffPassed(p.dia_entrega);
 
   return (
     <main
@@ -499,7 +456,7 @@ export default function MiPedidoPage({
           {p.dia_entrega && (
             <>
               <span style={{ color: "#D4D0C8" }}>·</span>
-              <span>{capitalize(formatDeliveryDate(p.dia_entrega))}</span>
+              <span>{capitalize(formatDateLabel(p.dia_entrega))}</span>
             </>
           )}
         </div>
