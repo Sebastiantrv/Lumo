@@ -16,6 +16,7 @@ type Pedido = {
   formula_id: string;
   token: string | null;
   hora_preparado: string | null;
+  hora_entrega_estimada: string | null;
   clientes: { nombre: string; telefono: string | null } | null;
   formulas: { nombre: string; slug: string; color_acento: string } | null;
 };
@@ -26,6 +27,8 @@ type Receta = {
   ingredientes: { nombre: string; unidad: string } | null;
 };
 
+const DELIVERY_RANGES = ["6:30 - 7:00", "7:00 - 7:30", "7:30 - 8:00"];
+
 function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -33,7 +36,7 @@ function today() {
 
 function greeting() {
   const h = new Date().getHours();
-  if (h < 12) return "Buenos días";
+  if (h < 12) return "Buenos dias";
   if (h < 19) return "Buenas tardes";
   return "Buenas noches";
 }
@@ -48,6 +51,7 @@ export default function AdminHoy() {
   const [recetas, setRecetas] = useState<Receta[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [showDeliveryPicker, setShowDeliveryPicker] = useState<string | null>(null);
 
   const fecha = today();
   const fechaLabel = new Date(fecha + "T12:00:00").toLocaleDateString("es-MX", {
@@ -68,18 +72,35 @@ export default function AdminHoy() {
 
   async function toggleEstado(id: string, estadoActual: string) {
     const siguiente =
-      estadoActual === "pendiente" ? "preparado"
+      estadoActual === "pendiente" ? "confirmado"
+      : estadoActual === "confirmado" ? "preparado"
       : estadoActual === "preparado" ? "entregado"
       : "pendiente";
+
+    if (siguiente === "preparado") {
+      setShowDeliveryPicker(id);
+      return;
+    }
+
     setUpdating(id);
     const updateData: Record<string, unknown> = { estado: siguiente };
-    if (siguiente === "preparado") {
-      updateData.hora_preparado = new Date().toISOString();
-    }
     if (siguiente === "pendiente") {
       updateData.hora_preparado = null;
+      updateData.hora_entrega_estimada = null;
     }
     await supabase.from("pedidos").update(updateData).eq("id", id);
+    await load();
+    setUpdating(null);
+  }
+
+  async function confirmarEnvasado(id: string, horaEntrega: string) {
+    setShowDeliveryPicker(null);
+    setUpdating(id);
+    await supabase.from("pedidos").update({
+      estado: "preparado",
+      hora_preparado: new Date().toISOString(),
+      hora_entrega_estimada: horaEntrega,
+    }).eq("id", id);
     await load();
     setUpdating(null);
   }
@@ -91,7 +112,6 @@ export default function AdminHoy() {
     await load();
   }
 
-  // Per-formula totals
   const resumen = pedidos.reduce<Record<string, { nombre: string; color: string; total: number }>>(
     (acc, p) => {
       const slug = p.formulas?.slug ?? "?";
@@ -101,7 +121,6 @@ export default function AdminHoy() {
     }, {}
   );
 
-  // Ingredient gram breakdown, skipping excluded ingredients
   const desglose: Record<string, { gramos: number; unidad: string }> = {};
   for (const p of pedidos) {
     const excluidos = p.ingredientes_excluidos ?? [];
@@ -136,7 +155,7 @@ export default function AdminHoy() {
         <EmptyDay />
       ) : (
         <>
-          {/* Resumen de producción */}
+          {/* Resumen de produccion */}
           <div
             className="rounded-2xl p-6 mb-5"
             style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
@@ -144,7 +163,7 @@ export default function AdminHoy() {
             <div className="flex items-center justify-between mb-5">
               <div>
                 <p className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#8A8A8A" }}>
-                  Producción de hoy
+                  Produccion de hoy
                 </p>
                 <p className="font-cormorant font-light" style={{ fontSize: "2.8rem", color: "#F5F0E8", lineHeight: 1 }}>
                   {totalBotellas}
@@ -204,84 +223,122 @@ export default function AdminHoy() {
               Pedidos
             </p>
             {pedidos.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-start justify-between rounded-xl px-4 py-3.5 transition-all"
-                style={{
-                  background: p.estado === "entregado"
-                    ? "rgba(74,94,58,0.08)"
-                    : "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  opacity: p.estado === "entregado" ? 0.6 : 1,
-                }}
-              >
-                <div className="flex-1 min-w-0 mr-3">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
-                      {p.clientes?.nombre ?? "Sin nombre"}
+              <div key={p.id}>
+                <div
+                  className="flex items-start justify-between rounded-xl px-4 py-3.5 transition-all"
+                  style={{
+                    background: p.estado === "entregado"
+                      ? "rgba(74,94,58,0.08)"
+                      : "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(255,255,255,0.06)",
+                    opacity: p.estado === "entregado" ? 0.6 : 1,
+                    borderBottomLeftRadius: showDeliveryPicker === p.id ? 0 : undefined,
+                    borderBottomRightRadius: showDeliveryPicker === p.id ? 0 : undefined,
+                  }}
+                >
+                  <div className="flex-1 min-w-0 mr-3">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
+                        {p.clientes?.nombre ?? "Sin nombre"}
+                      </p>
+                      {p.es_sorpresa && (
+                        <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>Sorpresa</span>
+                      )}
+                      {p.tipo_pedido === "domingo" && (
+                        <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>Domingo</span>
+                      )}
+                      {p.tipo_pedido === "extra" && (
+                        <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(122,32,48,0.15)", color: "#7A2030" }}>Extra</span>
+                      )}
+                    </div>
+                    <p className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
+                      {p.formulas?.nombre} x {p.cantidad}
+                      {p.notas ? ` · ${p.notas}` : ""}
                     </p>
-                    {p.es_sorpresa && (
-                      <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲 Sorpresa</span>
+                    {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
+                      <p className="font-inter text-xs mt-0.5" style={{ color: "#E05070" }}>
+                        Sin: {p.ingredientes_excluidos.join(", ")}
+                      </p>
                     )}
-                    {p.tipo_pedido === "domingo" && (
-                      <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>Domingo</span>
+                    {p.preferencia_sorpresa && (
+                      <p className="font-inter text-xs mt-0.5" style={{ color: "#B8860B" }}>
+                        Prefiere: {p.preferencia_sorpresa}
+                      </p>
                     )}
-                    {p.tipo_pedido === "extra" && (
-                      <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(122,32,48,0.15)", color: "#7A2030" }}>Extra</span>
+                    {p.hora_entrega_estimada && (p.estado === "preparado" || p.estado === "entregado") && (
+                      <p className="font-inter text-xs mt-0.5" style={{ color: "#4A5E3A" }}>
+                        Entrega estimada: {p.hora_entrega_estimada}
+                      </p>
                     )}
                   </div>
-                  <p className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
-                    {p.formulas?.nombre} × {p.cantidad}
-                    {p.notas ? ` · ${p.notas}` : ""}
-                  </p>
-                  {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
-                    <p className="font-inter text-xs mt-0.5" style={{ color: "#E05070" }}>
-                      Sin: {p.ingredientes_excluidos.join(", ")}
-                    </p>
-                  )}
-                  {p.preferencia_sorpresa && (
-                    <p className="font-inter text-xs mt-0.5" style={{ color: "#B8860B" }}>
-                      Prefiere: {p.preferencia_sorpresa}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => toggleEstado(p.id, p.estado)}
+                      disabled={updating === p.id}
+                      className="flex items-center gap-2 rounded-full px-3 py-1.5 font-inter text-xs transition-all"
+                      style={estadoBadgeStyle(p.estado)}
+                    >
+                      {updating === p.id ? "..." : estadoLabel(p.estado)}
+                    </button>
+                    {p.estado === "preparado" && p.clientes?.telefono && p.hora_preparado && (
+                      <button
+                        onClick={() => {
+                          const hora = new Date(p.hora_preparado!).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City" });
+                          const entregaLine = p.hora_entrega_estimada ? `\nEntrega estimada: ${p.hora_entrega_estimada}` : "";
+                          const msg = `Hola, ${p.clientes!.nombre}.\n\nTu ${p.formulas?.nombre ?? "LUMO"} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${p.token}`;
+                          window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
+                        }}
+                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
+                        title="Enviar WhatsApp - Listo"
+                      >
+                        <WhatsAppIcon />
+                      </button>
+                    )}
+                    {p.estado === "entregado" && p.clientes?.telefono && (
+                      <button
+                        onClick={() => {
+                          const msg = `Hola, ${p.clientes!.nombre}.\n\nTu ${p.formulas?.nombre ?? "LUMO"} ha sido entregado.\nEsperamos que lo disfrutes.\n\nCuentanos tu experiencia:\nhttps://lumo-three-beta.vercel.app/feedback`;
+                          window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
+                        }}
+                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
+                        title="Enviar WhatsApp - Entregado"
+                      >
+                        <WhatsAppIcon />
+                      </button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => toggleEstado(p.id, p.estado)}
-                    disabled={updating === p.id}
-                    className="flex items-center gap-2 rounded-full px-3 py-1.5 font-inter text-xs transition-all"
-                    style={estadoBadgeStyle(p.estado)}
+
+                {/* Delivery time picker */}
+                {showDeliveryPicker === p.id && (
+                  <div
+                    className="rounded-b-xl px-4 py-3"
+                    style={{ background: "rgba(74,94,58,0.08)", border: "1px solid rgba(255,255,255,0.06)", borderTop: "none" }}
                   >
-                    {updating === p.id ? "..." : estadoLabel(p.estado)}
-                  </button>
-                  {p.estado === "preparado" && p.clientes?.telefono && p.hora_preparado && (
+                    <p className="font-inter text-xs mb-2.5" style={{ color: "#8A8A8A" }}>Hora estimada de entrega:</p>
+                    <div className="flex gap-2 flex-wrap">
+                      {DELIVERY_RANGES.map((range) => (
+                        <button
+                          key={range}
+                          onClick={() => confirmarEnvasado(p.id, range)}
+                          className="rounded-lg px-3 py-1.5 font-inter text-xs font-medium transition-all"
+                          style={{ background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" }}
+                        >
+                          {range}
+                        </button>
+                      ))}
+                    </div>
                     <button
-                      onClick={() => {
-                        const hora = new Date(p.hora_preparado!).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City" });
-                        const msg = `Hola ${p.clientes!.nombre} ☀️\n\nTu LUMO ${p.formulas?.nombre ?? ""} está listo.\nEnvasado hoy a las ${hora}.\n\nSigue tu pedido aquí:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${p.token}`;
-                        window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
-                      }}
-                      className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
-                      style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
-                      title="Enviar WhatsApp - Listo"
+                      onClick={() => setShowDeliveryPicker(null)}
+                      className="font-inter text-xs mt-2"
+                      style={{ color: "#555" }}
                     >
-                      <WhatsAppIcon />
+                      Cancelar
                     </button>
-                  )}
-                  {p.estado === "entregado" && p.clientes?.telefono && (
-                    <button
-                      onClick={() => {
-                        const msg = `Hola ${p.clientes!.nombre} ☀️\n\nTu LUMO ${p.formulas?.nombre ?? ""} ha sido entregado.\n¡Esperamos que lo disfrutes!\n\nCuéntanos tu experiencia:\nhttps://lumo-three-beta.vercel.app/feedback`;
-                        window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
-                      }}
-                      className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
-                      style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
-                      title="Enviar WhatsApp - Entregado"
-                    >
-                      <WhatsAppIcon />
-                    </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -303,7 +360,8 @@ export default function AdminHoy() {
                 listos.forEach((p, i) => {
                   setTimeout(() => {
                     const hora = new Date(p.hora_preparado!).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City" });
-                    const msg = `Hola ${p.clientes!.nombre} ☀️\n\nTu LUMO ${p.formulas?.nombre ?? ""} está listo.\nEnvasado hoy a las ${hora}.\n\nSigue tu pedido aquí:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${p.token}`;
+                    const entregaLine = p.hora_entrega_estimada ? `\nEntrega estimada: ${p.hora_entrega_estimada}` : "";
+                    const msg = `Hola, ${p.clientes!.nombre}.\n\nTu ${p.formulas?.nombre ?? "LUMO"} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${p.token}`;
                     window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
                   }, i * 500);
                 });
@@ -341,12 +399,14 @@ function WhatsAppIcon() {
 
 function estadoLabel(estado: string) {
   if (estado === "pendiente") return "Pendiente";
-  if (estado === "preparado") return "Preparado";
-  return "Entregado ✓";
+  if (estado === "confirmado") return "Confirmado";
+  if (estado === "preparado") return "Envasado";
+  return "Entregado";
 }
 
 function estadoBadgeStyle(estado: string): React.CSSProperties {
   if (estado === "pendiente") return { background: "rgba(255,255,255,0.1)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.15)" };
+  if (estado === "confirmado") return { background: "rgba(74,94,58,0.15)", color: "#4A5E3A", border: "1px solid rgba(74,94,58,0.3)" };
   if (estado === "preparado") return { background: "rgba(184,134,11,0.25)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.4)" };
   return { background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" };
 }
@@ -358,7 +418,7 @@ function EmptyDay() {
       style={{ border: "1px dashed rgba(255,255,255,0.08)" }}
     >
       <p className="font-cormorant text-2xl mb-2" style={{ color: "#F5F0E8" }}>Sin pedidos hoy</p>
-      <p className="font-inter text-sm" style={{ color: "#555" }}>Agrega pedidos desde la sección Clientes.</p>
+      <p className="font-inter text-sm" style={{ color: "#555" }}>Agrega pedidos desde la seccion Clientes.</p>
     </div>
   );
 }

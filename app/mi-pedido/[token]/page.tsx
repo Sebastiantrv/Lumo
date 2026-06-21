@@ -39,6 +39,7 @@ interface Pedido {
   cantidad: number;
   dia_entrega: string;
   hora_preparado?: string | null;
+  hora_entrega_estimada?: string | null;
   ingredientes_excluidos?: string[] | null;
   notas?: string | null;
   clientes: { nombre: string; telefono: string };
@@ -48,12 +49,13 @@ interface Pedido {
 /* ---------- estado badge ---------- */
 
 function EstadoBadge({ estado }: { estado: string }) {
-  const config: Record<string, { label: string; bg: string; color: string; icon: string }> = {
-    confirmado: { label: "Confirmado", bg: "rgba(74,94,58,0.12)", color: "#4A5E3A", icon: "M5 13l4 4L19 7" },
-    preparado:  { label: "Listo para ti", bg: "rgba(74,94,58,0.18)", color: "#4A5E3A", icon: "M5 13l4 4L19 7" },
-    entregado:  { label: "Entregado", bg: "rgba(74,94,58,0.10)", color: "#6A6A6A", icon: "M5 13l4 4L19 7" },
+  const config: Record<string, { label: string; bg: string; color: string }> = {
+    pendiente:  { label: "Recibido", bg: "rgba(138,133,128,0.12)", color: "#8A8580" },
+    confirmado: { label: "Confirmado", bg: "rgba(74,94,58,0.12)", color: "#4A5E3A" },
+    preparado:  { label: "Listo para ti", bg: "rgba(74,94,58,0.18)", color: "#4A5E3A" },
+    entregado:  { label: "Entregado", bg: "rgba(74,94,58,0.10)", color: "#6A6A6A" },
   };
-  const c = config[estado] ?? config.confirmado;
+  const c = config[estado] ?? config.pendiente;
 
   return (
     <div
@@ -68,7 +70,7 @@ function EstadoBadge({ estado }: { estado: string }) {
       }}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d={c.icon} />
+        <path d="M5 13l4 4L19 7" />
       </svg>
       <span className="font-inter" style={{ fontSize: 13, fontWeight: 600, color: c.color, letterSpacing: "0.02em" }}>
         {c.label}
@@ -79,15 +81,21 @@ function EstadoBadge({ estado }: { estado: string }) {
 
 /* ---------- timeline ---------- */
 
-function Timeline({ estado, hora_preparado, accentColor }: { estado: string; hora_preparado?: string | null; accentColor: string }) {
+function Timeline({ estado, hora_preparado, hora_entrega_estimada, accentColor }: {
+  estado: string;
+  hora_preparado?: string | null;
+  hora_entrega_estimada?: string | null;
+  accentColor: string;
+}) {
   const steps = [
-    { key: "confirmado", label: "Pedido confirmado", sub: "Recibimos tu pedido" },
+    { key: "pendiente",  label: "Pedido recibido", sub: "Estamos organizando tu entrega" },
+    { key: "confirmado", label: "Confirmado", sub: "Tu pedido ha sido confirmado" },
     { key: "preparado",  label: "Envasado", sub: null },
-    { key: "entregado",  label: "Entregado", sub: "Disfrútalo" },
+    { key: "entregado",  label: "Entregado", sub: null },
   ];
 
-  const activeIndex =
-    estado === "entregado" ? 2 : estado === "preparado" ? 1 : 0;
+  const stateOrder = ["pendiente", "confirmado", "preparado", "entregado"];
+  const activeIndex = stateOrder.indexOf(estado);
 
   const baseDelay = 0.8;
 
@@ -98,6 +106,8 @@ function Timeline({ estado, hora_preparado, accentColor }: { estado: string; hor
         const isCurrent = i === activeIndex;
         const isLast = i === steps.length - 1;
         const showTimestamp = step.key === "preparado" && isActive && hora_preparado;
+        const showDeliveryRange = step.key === "entregado" && !isActive && estado === "preparado" && hora_entrega_estimada;
+        const showDeliveredSub = step.key === "entregado" && isActive;
         const delay = baseDelay + i * 0.15;
 
         return (
@@ -138,7 +148,7 @@ function Timeline({ estado, hora_preparado, accentColor }: { estado: string; hor
                   style={{
                     width: 2,
                     flexGrow: 1,
-                    minHeight: 36,
+                    minHeight: 32,
                     background: i < activeIndex ? accentColor : "transparent",
                     borderLeft: i < activeIndex ? "none" : "2px dashed #D4D0C8",
                     transformOrigin: "top",
@@ -153,7 +163,7 @@ function Timeline({ estado, hora_preparado, accentColor }: { estado: string; hor
             {/* Text content */}
             <div
               style={{
-                paddingBottom: isLast ? 0 : 22,
+                paddingBottom: isLast ? 0 : 20,
                 animation: `timelineTextIn 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay + 0.1}s both`,
               }}
             >
@@ -182,7 +192,26 @@ function Timeline({ estado, hora_preparado, accentColor }: { estado: string; hor
                 </div>
               )}
 
-              {!showTimestamp && step.sub && isActive && (
+              {showDeliveryRange && (
+                <div
+                  className="font-inter"
+                  style={{ fontSize: 13, color: "#9A9A9A", marginTop: 2, display: "flex", alignItems: "center", gap: 5 }}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9A9A9A" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  Estimado: {hora_entrega_estimada}
+                </div>
+              )}
+
+              {showDeliveredSub && (
+                <div className="font-inter" style={{ fontSize: 13, color: "#9A9A9A", marginTop: 2 }}>
+                  Que lo disfrutes
+                </div>
+              )}
+
+              {!showTimestamp && !showDeliveryRange && !showDeliveredSub && step.sub && isActive && (
                 <div
                   className="font-inter"
                   style={{ fontSize: 13, color: "#9A9A9A", marginTop: 2 }}
@@ -195,33 +224,6 @@ function Timeline({ estado, hora_preparado, accentColor }: { estado: string; hor
         );
       })}
     </div>
-  );
-}
-
-/* ---------- decorative leaf ---------- */
-
-function LeafDecoration({ color }: { color: string }) {
-  return (
-    <svg
-      width="48"
-      height="48"
-      viewBox="0 0 48 48"
-      fill="none"
-      style={{
-        position: "absolute",
-        top: -16,
-        right: -12,
-        opacity: 0.08,
-        animation: "pedidoFadeUp 1s ease 1.5s both",
-      }}
-    >
-      <path
-        d="M24 4C24 4 38 10 38 26C38 34 32 42 24 44C16 42 10 34 10 26C10 10 24 4 24 4Z"
-        fill={color}
-      />
-      <path d="M24 12V36" stroke={color} strokeWidth="1.5" opacity="0.5" />
-      <path d="M24 20L18 26M24 26L30 32" stroke={color} strokeWidth="1" opacity="0.3" />
-    </svg>
   );
 }
 
@@ -272,6 +274,7 @@ export default async function MiPedidoPage({
   const nombre = p.clientes?.nombre ?? "amigo";
   const formula = p.formulas;
   const accentColor = formula?.color_acento ?? "#4A5E3A";
+  const lumoWhatsApp = "5215512345678";
 
   return (
     <main
@@ -347,8 +350,6 @@ export default async function MiPedidoPage({
           animation: "pedidoCardIn 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.35s both",
         }}
       >
-        <LeafDecoration color={accentColor} />
-
         {/* Formula name with accent dot */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
           <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
@@ -379,7 +380,7 @@ export default async function MiPedidoPage({
             className="font-cormorant"
             style={{ fontSize: 26, fontWeight: 600, color: "#1A1A1A" }}
           >
-            {formula?.nombre ?? "Fórmula"}
+            {formula?.nombre ?? "Formula"}
           </span>
         </div>
 
@@ -393,9 +394,10 @@ export default async function MiPedidoPage({
             color: "#7A7570",
             fontSize: 14,
             margin: "0 0 0 24px",
+            flexWrap: "wrap",
           }}
         >
-          <span>× {p.cantidad ?? 1} botella{(p.cantidad ?? 1) !== 1 ? "s" : ""}</span>
+          <span>{p.cantidad ?? 1} botella{(p.cantidad ?? 1) !== 1 ? "s" : ""}</span>
           {p.dia_entrega && (
             <>
               <span style={{ color: "#D4D0C8" }}>·</span>
@@ -414,7 +416,12 @@ export default async function MiPedidoPage({
         />
 
         {/* Timeline */}
-        <Timeline estado={p.estado} hora_preparado={p.hora_preparado} accentColor={accentColor} />
+        <Timeline
+          estado={p.estado}
+          hora_preparado={p.hora_preparado}
+          hora_entrega_estimada={p.hora_entrega_estimada}
+          accentColor={accentColor}
+        />
 
         {/* Exclusions & notes */}
         {(p.ingredientes_excluidos?.length || p.notas) && (
@@ -461,18 +468,65 @@ export default async function MiPedidoPage({
         )}
       </div>
 
+      {/* Freshness note */}
+      <div
+        className="font-inter"
+        style={{
+          maxWidth: 380,
+          textAlign: "center",
+          marginTop: 24,
+          padding: "14px 20px",
+          borderRadius: 16,
+          background: "rgba(74,94,58,0.06)",
+          border: "1px solid rgba(74,94,58,0.10)",
+          animation: "pedidoFadeUp 0.6s ease 1.5s both",
+        }}
+      >
+        <p style={{ fontSize: 13, color: "#6A6A5A", lineHeight: 1.5 }}>
+          Para conservar su frescura y nutrientes, te recomendamos consumirlo dentro de las primeras 4 horas.
+        </p>
+      </div>
+
+      {/* WhatsApp contact button */}
+      <a
+        href={`https://wa.me/${lumoWhatsApp}?text=${encodeURIComponent("Hola LUMO, tengo una consulta sobre mi pedido.")}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-inter"
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          marginTop: 20,
+          padding: "10px 20px",
+          borderRadius: 100,
+          background: "rgba(37,211,102,0.08)",
+          border: "1px solid rgba(37,211,102,0.18)",
+          color: "#25D366",
+          fontSize: 13,
+          fontWeight: 500,
+          textDecoration: "none",
+          animation: "pedidoFadeUp 0.6s ease 1.6s both",
+        }}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="#25D366">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+        </svg>
+        Contactar a LUMO
+      </a>
+
       {/* Footer */}
       <p
         className="font-inter"
         style={{
           color: "#B8B0A4",
           fontSize: 12,
-          marginTop: 48,
+          marginTop: 32,
           letterSpacing: "0.06em",
-          animation: "footerIn 0.8s ease 1.6s both",
+          animation: "footerIn 0.8s ease 1.8s both",
         }}
       >
-        Hecho con intención · LUMO
+        Hecho con intencion · LUMO
       </p>
     </main>
   );
