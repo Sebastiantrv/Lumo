@@ -70,7 +70,7 @@ export default function AdminHoy() {
 
   useEffect(() => { load(); }, []);
 
-  async function toggleEstado(id: string, estadoActual: string) {
+  async function toggleEstadoGroup(ids: string[], estadoActual: string) {
     const siguiente =
       estadoActual === "pendiente" ? "confirmado"
       : estadoActual === "confirmado" ? "preparado"
@@ -78,29 +78,29 @@ export default function AdminHoy() {
       : "pendiente";
 
     if (siguiente === "preparado") {
-      setShowDeliveryPicker(id);
+      setShowDeliveryPicker(ids[0]);
       return;
     }
 
-    setUpdating(id);
+    setUpdating(ids[0]);
     const updateData: Record<string, unknown> = { estado: siguiente };
     if (siguiente === "pendiente") {
       updateData.hora_preparado = null;
       updateData.hora_entrega_estimada = null;
     }
-    await supabase.from("pedidos").update(updateData).eq("id", id);
+    await supabase.from("pedidos").update(updateData).in("id", ids);
     await load();
     setUpdating(null);
   }
 
-  async function confirmarEnvasado(id: string, horaEntrega: string) {
+  async function confirmarEnvasadoGroup(ids: string[], horaEntrega: string) {
     setShowDeliveryPicker(null);
-    setUpdating(id);
+    setUpdating(ids[0]);
     await supabase.from("pedidos").update({
       estado: "preparado",
       hora_preparado: new Date().toISOString(),
       hora_entrega_estimada: horaEntrega,
-    }).eq("id", id);
+    }).in("id", ids);
     await load();
     setUpdating(null);
   }
@@ -110,6 +110,25 @@ export default function AdminHoy() {
     if (!ids.length) return;
     await supabase.from("pedidos").update({ estado: "entregado" }).in("id", ids);
     await load();
+  }
+
+  type PedidoGroup = { token: string; pedidos: Pedido[]; ids: string[]; estado: string; cliente: Pedido["clientes"]; totalBotellas: number };
+
+  function groupByToken(pedidos: Pedido[]): PedidoGroup[] {
+    const map = new Map<string, Pedido[]>();
+    for (const p of pedidos) {
+      const key = p.token ?? p.id;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    return Array.from(map.entries()).map(([token, peds]) => ({
+      token,
+      pedidos: peds,
+      ids: peds.map((p) => p.id),
+      estado: peds[0].estado,
+      cliente: peds[0].clientes,
+      totalBotellas: peds.reduce((s, p) => s + p.cantidad, 0),
+    }));
   }
 
   const resumen = pedidos.reduce<Record<string, { nombre: string; color: string; total: number }>>(
@@ -217,76 +236,91 @@ export default function AdminHoy() {
             </div>
           )}
 
-          {/* Lista de pedidos */}
+          {/* Lista de pedidos (agrupados por token) */}
           <div className="flex flex-col gap-2 mb-6">
             <p className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#555" }}>
               Pedidos
             </p>
-            {pedidos.map((p) => (
-              <div key={p.id}>
+            {groupByToken(pedidos).map((group) => {
+              const firstPed = group.pedidos[0];
+              const multiFormula = group.pedidos.length > 1;
+              const formulaNames = group.pedidos.map((p) => p.formulas?.nombre ?? "?").join(" + ");
+
+              return (
+              <div key={group.token}>
                 <div
                   className="flex items-start justify-between rounded-xl px-4 py-3.5 transition-all"
                   style={{
-                    background: p.estado === "entregado"
+                    background: group.estado === "entregado"
                       ? "rgba(74,94,58,0.08)"
                       : "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.06)",
-                    opacity: p.estado === "entregado" ? 0.6 : 1,
-                    borderBottomLeftRadius: showDeliveryPicker === p.id ? 0 : undefined,
-                    borderBottomRightRadius: showDeliveryPicker === p.id ? 0 : undefined,
+                    opacity: group.estado === "entregado" ? 0.6 : 1,
+                    borderBottomLeftRadius: showDeliveryPicker === firstPed.id ? 0 : undefined,
+                    borderBottomRightRadius: showDeliveryPicker === firstPed.id ? 0 : undefined,
                   }}
                 >
                   <div className="flex-1 min-w-0 mr-3">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
-                        {p.clientes?.nombre ?? "Sin nombre"}
+                        {group.cliente?.nombre ?? "Sin nombre"}
                       </p>
-                      {p.es_sorpresa && (
+                      {multiFormula && (
+                        <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(74,94,58,0.15)", color: "#4A5E3A" }}>
+                          {group.totalBotellas} bot.
+                        </span>
+                      )}
+                      {firstPed.es_sorpresa && (
                         <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>Sorpresa</span>
                       )}
-                      {p.tipo_pedido === "domingo" && (
+                      {firstPed.tipo_pedido === "domingo" && (
                         <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}>Domingo</span>
                       )}
-                      {p.tipo_pedido === "extra" && (
+                      {firstPed.tipo_pedido === "extra" && (
                         <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(122,32,48,0.15)", color: "#7A2030" }}>Extra</span>
                       )}
                     </div>
-                    <p className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
-                      {p.formulas?.nombre} x {p.cantidad}
-                      {p.notas ? ` · ${p.notas}` : ""}
-                    </p>
-                    {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
-                      <p className="font-inter text-xs mt-0.5" style={{ color: "#E05070" }}>
-                        Sin: {p.ingredientes_excluidos.join(", ")}
+                    {group.pedidos.map((p) => (
+                      <p key={p.id} className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
+                        {p.formulas?.nombre} x {p.cantidad}
+                        {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
+                          <span style={{ color: "#E05070" }}> · Sin: {p.ingredientes_excluidos.join(", ")}</span>
+                        )}
+                      </p>
+                    ))}
+                    {firstPed.notas && (
+                      <p className="font-inter text-xs mt-0.5" style={{ color: "#8A8A8A" }}>
+                        {firstPed.notas}
                       </p>
                     )}
-                    {p.preferencia_sorpresa && (
+                    {firstPed.preferencia_sorpresa && (
                       <p className="font-inter text-xs mt-0.5" style={{ color: "#B8860B" }}>
-                        Prefiere: {p.preferencia_sorpresa}
+                        Prefiere: {firstPed.preferencia_sorpresa}
                       </p>
                     )}
-                    {p.hora_entrega_estimada && (p.estado === "preparado" || p.estado === "entregado") && (
+                    {firstPed.hora_entrega_estimada && (firstPed.estado === "preparado" || firstPed.estado === "entregado") && (
                       <p className="font-inter text-xs mt-0.5" style={{ color: "#4A5E3A" }}>
-                        Entrega estimada: {p.hora_entrega_estimada}
+                        Entrega estimada: {firstPed.hora_entrega_estimada}
                       </p>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <button
-                      onClick={() => toggleEstado(p.id, p.estado)}
-                      disabled={updating === p.id}
+                      onClick={() => toggleEstadoGroup(group.ids, group.estado)}
+                      disabled={updating === firstPed.id}
                       className="flex items-center gap-2 rounded-full px-3 py-1.5 font-inter text-xs transition-all"
-                      style={estadoBadgeStyle(p.estado)}
+                      style={estadoBadgeStyle(group.estado)}
                     >
-                      {updating === p.id ? "..." : estadoLabel(p.estado)}
+                      {updating === firstPed.id ? "..." : estadoLabel(group.estado)}
                     </button>
-                    {p.estado === "preparado" && p.clientes?.telefono && p.hora_preparado && (
+                    {group.estado === "preparado" && group.cliente?.telefono && firstPed.hora_preparado && (
                       <button
                         onClick={() => {
-                          const hora = new Date(p.hora_preparado!).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City" });
-                          const entregaLine = p.hora_entrega_estimada ? `\nEntrega estimada: ${p.hora_entrega_estimada}` : "";
-                          const msg = `Hola, ${p.clientes!.nombre}.\n\nTu ${p.formulas?.nombre ?? "LUMO"} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${p.token}`;
-                          window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
+                          const hora = new Date(firstPed.hora_preparado!).toLocaleTimeString("es-MX", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "America/Mexico_City" });
+                          const entregaLine = firstPed.hora_entrega_estimada ? `\nEntrega estimada: ${firstPed.hora_entrega_estimada}` : "";
+                          const jugoLabel = multiFormula ? `pedido (${formulaNames})` : (firstPed.formulas?.nombre ?? "LUMO");
+                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\nhttps://lumo-three-beta.vercel.app/mi-pedido/${firstPed.token}`;
+                          window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
                         style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
@@ -295,11 +329,11 @@ export default function AdminHoy() {
                         <WhatsAppIcon />
                       </button>
                     )}
-                    {p.estado === "entregado" && p.clientes?.telefono && (
+                    {group.estado === "entregado" && group.cliente?.telefono && (
                       <button
                         onClick={() => {
-                          const msg = `Hola, ${p.clientes!.nombre}.\n\nTu ${p.formulas?.nombre ?? "LUMO"} ha sido entregado.\nEsperamos que lo disfrutes.\n\nCuentanos tu experiencia:\nhttps://lumo-three-beta.vercel.app/feedback`;
-                          window.open(buildWhatsAppUrl(p.clientes!.telefono!, msg), "_blank");
+                          const msg = `Hola, ${group.cliente!.nombre}.\n\nTu pedido LUMO ha sido entregado.\nEsperamos que lo disfrutes.\n\nCuentanos tu experiencia:\nhttps://lumo-three-beta.vercel.app/feedback?pedido=${firstPed.token}`;
+                          window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
                         style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
@@ -312,7 +346,7 @@ export default function AdminHoy() {
                 </div>
 
                 {/* Delivery time picker */}
-                {showDeliveryPicker === p.id && (
+                {showDeliveryPicker === firstPed.id && (
                   <div
                     className="rounded-b-xl px-4 py-3"
                     style={{ background: "rgba(74,94,58,0.08)", border: "1px solid rgba(255,255,255,0.06)", borderTop: "none" }}
@@ -322,7 +356,7 @@ export default function AdminHoy() {
                       {DELIVERY_RANGES.map((range) => (
                         <button
                           key={range}
-                          onClick={() => confirmarEnvasado(p.id, range)}
+                          onClick={() => confirmarEnvasadoGroup(group.ids, range)}
                           className="rounded-lg px-3 py-1.5 font-inter text-xs font-medium transition-all"
                           style={{ background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" }}
                         >
@@ -340,7 +374,8 @@ export default function AdminHoy() {
                   </div>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {pendientes > 0 && (
