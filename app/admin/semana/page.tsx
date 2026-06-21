@@ -13,6 +13,7 @@ type Pedido = {
   estado_extra: string | null;
   es_sorpresa: boolean;
   formula_id: string;
+  token: string | null;
   ingredientes_excluidos: string[] | null;
   preferencia_sorpresa: string | null;
   notas: string | null;
@@ -52,14 +53,14 @@ export default function SemanaPage() {
     await load();
   }
 
-  async function aplazar(id: string, fecha: string) {
-    await supabase.from("pedidos").update({ dia_entrega: fecha, estado_extra: "aplazado" }).eq("id", id);
+  async function aplazar(ids: string[], fecha: string) {
+    await supabase.from("pedidos").update({ dia_entrega: fecha, estado_extra: "aplazado" }).in("id", ids);
     setAplazarPickerFor(null);
     await load();
   }
 
-  async function moverFecha(id: string, fecha: string) {
-    await supabase.from("pedidos").update({ dia_entrega: fecha }).eq("id", id);
+  async function moverFecha(ids: string[], fecha: string) {
+    await supabase.from("pedidos").update({ dia_entrega: fecha }).in("id", ids);
     setMoverPickerFor(null);
     await load();
   }
@@ -67,6 +68,16 @@ export default function SemanaPage() {
   async function cambiarFormula(id: string, formulaId: string) {
     await supabase.from("pedidos").update({ formula_id: formulaId }).eq("id", id);
     await load();
+  }
+
+  function groupByToken(list: Pedido[]) {
+    const map = new Map<string, Pedido[]>();
+    for (const p of list) {
+      const key = p.token ?? p.id;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(p);
+    }
+    return Array.from(map.values());
   }
 
   const totalSemana = pedidos
@@ -140,23 +151,28 @@ export default function SemanaPage() {
 
                 {pedidosDia.length > 0 && (
                   <div className="flex flex-col gap-2 mt-2 pl-12">
-                    {pedidosDia.map((p) => (
-                      <PedidoRow
-                        key={p.id}
-                        p={p}
-                        formulas={formulas}
-                        onSetExtra={setExtra}
-                        onAplazar={aplazar}
-                        onMoverFecha={moverFecha}
-                        onCambiarFormula={cambiarFormula}
-                        showAplazarPicker={aplazarPickerFor === p.id}
-                        onOpenAplazar={() => setAplazarPickerFor(p.id)}
-                        onCloseAplazar={() => setAplazarPickerFor(null)}
-                        showMoverPicker={moverPickerFor === p.id}
-                        onOpenMover={() => setMoverPickerFor(p.id)}
-                        onCloseMover={() => setMoverPickerFor(null)}
-                      />
-                    ))}
+                    {groupByToken(pedidosDia).map((group) => {
+                      const first = group[0];
+                      const groupKey = first.token ?? first.id;
+                      const ids = group.map((p) => p.id);
+                      return (
+                        <PedidoRow
+                          key={groupKey}
+                          group={group}
+                          formulas={formulas}
+                          onSetExtra={setExtra}
+                          onAplazar={(fecha) => aplazar(ids, fecha)}
+                          onMoverFecha={(fecha) => moverFecha(ids, fecha)}
+                          onCambiarFormula={cambiarFormula}
+                          showAplazarPicker={aplazarPickerFor === groupKey}
+                          onOpenAplazar={() => setAplazarPickerFor(groupKey)}
+                          onCloseAplazar={() => setAplazarPickerFor(null)}
+                          showMoverPicker={moverPickerFor === groupKey}
+                          onOpenMover={() => setMoverPickerFor(groupKey)}
+                          onCloseMover={() => setMoverPickerFor(null)}
+                        />
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -169,13 +185,13 @@ export default function SemanaPage() {
 }
 
 function PedidoRow({
-  p, formulas, onSetExtra, onAplazar, onMoverFecha, onCambiarFormula, showAplazarPicker, onOpenAplazar, onCloseAplazar, showMoverPicker, onOpenMover, onCloseMover,
+  group, formulas, onSetExtra, onAplazar, onMoverFecha, onCambiarFormula, showAplazarPicker, onOpenAplazar, onCloseAplazar, showMoverPicker, onOpenMover, onCloseMover,
 }: {
-  p: Pedido;
+  group: Pedido[];
   formulas: Formula[];
   onSetExtra: (id: string, estado: string) => void;
-  onAplazar: (id: string, fecha: string) => void;
-  onMoverFecha: (id: string, fecha: string) => void;
+  onAplazar: (fecha: string) => void;
+  onMoverFecha: (fecha: string) => void;
   onCambiarFormula: (id: string, formulaId: string) => void;
   showAplazarPicker: boolean;
   onOpenAplazar: () => void;
@@ -184,28 +200,27 @@ function PedidoRow({
   onOpenMover: () => void;
   onCloseMover: () => void;
 }) {
-  const tipo = p.tipo_pedido ?? "normal";
-  const rechazado = p.estado_extra === "rechazado";
-  const aplazado = p.estado_extra === "aplazado";
-  const acento = p.formulas?.color_acento ?? "#8A8A8A";
+  const first = group[0];
+  const tipo = first.tipo_pedido ?? "normal";
+  const rechazado = first.estado_extra === "rechazado";
+  const aplazado = first.estado_extra === "aplazado";
+  const multiFormula = group.length > 1;
+  const acento = multiFormula ? "#4A5E3A" : (first.formulas?.color_acento ?? "#8A8A8A");
+  const totalBotellas = group.reduce((s, p) => s + p.cantidad, 0);
 
-  function borderColor() { return `1px solid ${acento}44`; }
-
-  // Next 7 days from tomorrow for aplazar picker
   const nextDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i + 1);
     return localStr(d);
   });
 
-  // Next 14 days from today for mover picker
   const moverDays = Array.from({ length: 14 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i);
     return localStr(d);
   });
 
-  const showDecisionButtons = (tipo === "extra" || p.es_sorpresa) && !p.estado_extra && !showAplazarPicker;
+  const showDecisionButtons = (tipo === "extra" || first.es_sorpresa) && !first.estado_extra && !showAplazarPicker;
 
   return (
     <div
@@ -213,36 +228,41 @@ function PedidoRow({
       style={{
         background: rechazado ? "rgba(122,32,48,0.08)" : aplazado ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.04)",
         opacity: rechazado || aplazado ? 0.5 : 1,
-        border: borderColor(),
+        border: `1px solid ${acento}44`,
         transition: "border-color 0.3s ease",
       }}
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-start gap-2 flex-1 min-w-0">
-          {/* Accent bar */}
           <div className="w-1.5 h-5 rounded-full shrink-0 mt-0.5" style={{ backgroundColor: acento }} />
           <div className="flex-1 min-w-0">
-            <span className="font-inter text-xs font-medium" style={{ color: "#F5F0E8" }}>
-              {p.clientes?.nombre ?? "—"}
-            </span>
-            <p className="font-inter text-xs mt-0.5" style={{ color: acento }}>
-              {p.formulas?.nombre} × {p.cantidad}
-              {p.notas ? ` · ${p.notas}` : ""}
-            </p>
-            {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
-              <p className="font-inter text-xs mt-0.5" style={{ color: "#E05070" }}>
-                Sin: {p.ingredientes_excluidos.join(", ")}
+            <div className="flex items-center gap-2">
+              <span className="font-inter text-xs font-medium" style={{ color: "#F5F0E8" }}>
+                {first.clientes?.nombre ?? "—"}
+              </span>
+              {totalBotellas > 1 && (
+                <span className="font-inter text-xs px-1.5 py-0.5 rounded-full" style={{ background: "rgba(74,94,58,0.15)", color: "#4A5E3A" }}>
+                  {totalBotellas} bot.
+                </span>
+              )}
+            </div>
+            {group.map((p) => (
+              <p key={p.id} className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
+                {p.formulas?.nombre} × {p.cantidad}
+                {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
+                  <span style={{ color: "#E05070" }}> · Sin: {p.ingredientes_excluidos.join(", ")}</span>
+                )}
+                {p.notas ? ` · ${p.notas}` : ""}
               </p>
-            )}
-            {p.preferencia_sorpresa && (
+            ))}
+            {first.preferencia_sorpresa && (
               <p className="font-inter text-xs mt-0.5" style={{ color: "#B8860B" }}>
-                Prefiere: {p.preferencia_sorpresa}
+                Prefiere: {first.preferencia_sorpresa}
               </p>
             )}
           </div>
         </div>
 
-        {/* Badges */}
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             onClick={showMoverPicker ? onCloseMover : onOpenMover}
@@ -257,19 +277,18 @@ function PedidoRow({
               <line x1="11" y1="1" x2="11" y2="4" />
             </svg>
           </button>
-          {p.es_sorpresa && (
+          {first.es_sorpresa && (
             <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲</span>
           )}
           <TipoBadge tipo={tipo} />
-          <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={estadoBadge(p.estado)}>
-            {p.estado}
+          <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={estadoBadge(first.estado)}>
+            {first.estado}
           </span>
         </div>
       </div>
 
-      {/* Sorpresa formula selector */}
-      {p.es_sorpresa && !showAplazarPicker && (
-        <div className="flex items-center gap-2 pt-1">
+      {first.es_sorpresa && !showAplazarPicker && group.map((p) => (
+        <div key={p.id} className="flex items-center gap-2 pt-1">
           <span style={{ color: "#555", fontSize: "0.7rem" }}>Fórmula asignada:</span>
           <select
             value={p.formula_id}
@@ -281,13 +300,12 @@ function PedidoRow({
             ))}
           </select>
         </div>
-      )}
+      ))}
 
-      {/* Decision buttons */}
       {showDecisionButtons && (
         <div className="flex items-center gap-2 mt-0.5">
           <button
-            onClick={() => onSetExtra(p.id, "aceptado")}
+            onClick={() => group.forEach((p) => onSetExtra(p.id, "aceptado"))}
             className="rounded-lg px-3 py-1 font-inter text-xs font-semibold"
             style={{ background: "rgba(74,94,58,0.35)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.5)" }}
           >
@@ -301,7 +319,7 @@ function PedidoRow({
             Aplazar
           </button>
           <button
-            onClick={() => onSetExtra(p.id, "rechazado")}
+            onClick={() => group.forEach((p) => onSetExtra(p.id, "rechazado"))}
             className="rounded-lg px-3 py-1 font-inter text-xs font-semibold"
             style={{ background: "rgba(122,32,48,0.35)", color: "#E05070", border: "1px solid rgba(122,32,48,0.5)" }}
           >
@@ -310,7 +328,6 @@ function PedidoRow({
         </div>
       )}
 
-      {/* Aplazar date picker */}
       {showAplazarPicker && (
         <div className="flex flex-col gap-2 mt-1">
           <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Elegir nuevo día:</p>
@@ -319,28 +336,18 @@ function PedidoRow({
               const d = new Date(dia + "T12:00:00");
               const label = d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric" });
               return (
-                <button
-                  key={dia}
-                  onClick={() => onAplazar(p.id, dia)}
+                <button key={dia} onClick={() => onAplazar(dia)}
                   className="rounded-lg px-2.5 py-1 font-inter text-xs"
-                  style={{ background: "rgba(255,255,255,0.07)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.1)" }}
-                >
+                  style={{ background: "rgba(255,255,255,0.07)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.1)" }}>
                   {label}
                 </button>
               );
             })}
           </div>
-          <button
-            onClick={onCloseAplazar}
-            className="font-inter text-xs text-left mt-0.5"
-            style={{ color: "#555" }}
-          >
-            Cancelar
-          </button>
+          <button onClick={onCloseAplazar} className="font-inter text-xs text-left mt-0.5" style={{ color: "#555" }}>Cancelar</button>
         </div>
       )}
 
-      {/* Mover date picker */}
       {showMoverPicker && (
         <div className="flex flex-col gap-2 mt-1">
           <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Mover a:</p>
@@ -349,35 +356,25 @@ function PedidoRow({
               const d = new Date(dia + "T12:00:00");
               const label = d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric" });
               return (
-                <button
-                  key={dia}
-                  onClick={() => onMoverFecha(p.id, dia)}
+                <button key={dia} onClick={() => onMoverFecha(dia)}
                   className="rounded-lg px-2.5 py-1 font-inter text-xs"
-                  style={{ background: "rgba(255,255,255,0.07)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.1)" }}
-                >
+                  style={{ background: "rgba(255,255,255,0.07)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.1)" }}>
                   {label}
                 </button>
               );
             })}
           </div>
-          <button
-            onClick={onCloseMover}
-            className="font-inter text-xs text-left mt-0.5"
-            style={{ color: "#555" }}
-          >
-            Cancelar
-          </button>
+          <button onClick={onCloseMover} className="font-inter text-xs text-left mt-0.5" style={{ color: "#555" }}>Cancelar</button>
         </div>
       )}
 
-      {/* Estado extra badge when already decided */}
-      {p.estado_extra && !showAplazarPicker && (
+      {first.estado_extra && !showAplazarPicker && (
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={extraDecisionStyle(p.estado_extra)}>
-            {p.estado_extra}
+          <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={extraDecisionStyle(first.estado_extra)}>
+            {first.estado_extra}
           </span>
           <button
-            onClick={() => onSetExtra(p.id, "")}
+            onClick={() => group.forEach((p) => onSetExtra(p.id, ""))}
             className="font-inter text-xs"
             style={{ color: "#444" }}
           >
