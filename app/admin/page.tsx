@@ -3,26 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-
-const SORPRESA_ID = "__sorpresa__";
+import { SORPRESA_ID } from "@/lib/constants";
+import { todayStr, addDays, formatDateLabel, greeting, getWeekRange, getTipoPedido, localStr } from "@/lib/dates";
+import { fmtGramos } from "@/lib/format";
 
 type ClienteOption = { id: string; nombre: string };
 type FormulaOption = { id: string; nombre: string };
-
-function getTipoPedido(diaEntrega: string): "normal" | "domingo" | "extra" {
-  const hoy = new Date();
-  const dow = hoy.getDay();
-  if (dow === 0) return "domingo";
-  if (dow === 6) return "normal";
-  const lunes = new Date(hoy);
-  lunes.setDate(hoy.getDate() - dow + 1);
-  const sabado = new Date(lunes);
-  sabado.setDate(lunes.getDate() + 5);
-  const lunesStr = `${lunes.getFullYear()}-${String(lunes.getMonth()+1).padStart(2,"0")}-${String(lunes.getDate()).padStart(2,"0")}`;
-  const sabadoStr = `${sabado.getFullYear()}-${String(sabado.getMonth()+1).padStart(2,"0")}-${String(sabado.getDate()).padStart(2,"0")}`;
-  if (diaEntrega >= lunesStr && diaEntrega <= sabadoStr) return "extra";
-  return "normal";
-}
 
 type Pedido = {
   id: string;
@@ -33,40 +19,6 @@ type Pedido = {
   clientes: { nombre: string } | null;
   formulas: { nombre: string; slug: string; color_acento: string } | null;
 };
-
-function localStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function addDays(base: string, n: number) {
-  const d = new Date(base + "T12:00:00");
-  d.setDate(d.getDate() + n);
-  return localStr(d);
-}
-
-function todayStr() {
-  return localStr(new Date());
-}
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return "Buenos días";
-  if (h < 19) return "Buenas tardes";
-  return "Buenas noches";
-}
-
-function getWeekRange(offset = 0) {
-  const now = new Date();
-  const monday = new Date(now);
-  monday.setDate(now.getDate() - now.getDay() + 1 + offset * 7);
-  const saturday = new Date(monday);
-  saturday.setDate(monday.getDate() + 5);
-  return {
-    inicio: localStr(monday),
-    fin: localStr(saturday),
-    label: `${monday.toLocaleDateString("es-MX", { day: "numeric", month: "short" })} – ${saturday.toLocaleDateString("es-MX", { day: "numeric", month: "short" })}`,
-  };
-}
 
 export default function AdminInicio() {
   const [pedidosHoy, setPedidosHoy] = useState<Pedido[]>([]);
@@ -82,7 +34,7 @@ export default function AdminInicio() {
 
   const baseToday = todayStr();
   const fecha = addDays(baseToday, dayOffset);
-  const fechaLabel = new Date(fecha + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" });
+  const fechaLabel = formatDateLabel(fecha);
   const isActualToday = dayOffset === 0;
 
   const { inicio, fin, label: weekLabel } = getWeekRange(weekOffset);
@@ -105,9 +57,9 @@ export default function AdminInicio() {
     setFormulas(formulasListRes.data ?? []);
 
     const totales: Record<string, { gramos: number; unidad: string }> = {};
-    for (const pedido of semanaRes.data ?? []) {
-      for (const r of (recetasRes.data ?? []).filter((r) => r.formula_id === (pedido as any).formula_id)) {
-        const ing = r.ingredientes as any;
+    for (const pedido of (semanaRes.data ?? []) as Pedido[]) {
+      for (const r of (recetasRes.data ?? []).filter((r: { formula_id: string }) => r.formula_id === pedido.formula_id)) {
+        const ing = r.ingredientes as unknown as { nombre: string; unidad: string };
         if (!totales[ing.nombre]) totales[ing.nombre] = { gramos: 0, unidad: ing.unidad };
         totales[ing.nombre].gramos += r.gramos * pedido.cantidad;
       }
@@ -145,7 +97,7 @@ export default function AdminInicio() {
       <div className="mb-8">
         <p className="font-inter text-sm mb-1" style={{ color: "#4A5E3A", letterSpacing: "0.1em" }}>{greeting()}, Sebastián</p>
         <h1 className="font-cormorant font-light text-[#F5F0E8] capitalize" style={{ fontSize: "2.2rem" }}>
-          {new Date(localStr(new Date()) + "T12:00:00").toLocaleDateString("es-MX", { weekday: "long", day: "numeric", month: "long" })}
+          {formatDateLabel(todayStr())}
         </h1>
       </div>
 
@@ -257,7 +209,7 @@ export default function AdminInicio() {
               {compras.slice(0, 5).map((c) => (
                 <div key={c.ingrediente} className="flex items-center justify-between">
                   <span className="font-inter text-sm" style={{ color: "#F5F0E8" }}>{c.ingrediente}</span>
-                  <span className="font-cormorant text-base" style={{ color: "#4A5E3A" }}>{fmt(c.gramos, c.unidad)}</span>
+                  <span className="font-cormorant text-base" style={{ color: "#4A5E3A" }}>{fmtGramos(c.gramos, c.unidad)}</span>
                 </div>
               ))}
               {compras.length > 5 && <p className="font-inter text-xs mt-1" style={{ color: "#555" }}>+{compras.length - 5} más</p>}
@@ -302,10 +254,6 @@ function NavBtn({ onClick, children }: { onClick: () => void; children: React.Re
   );
 }
 
-function fmt(g: number, u: string) {
-  if (u === "g") return g >= 1000 ? `${(g / 1000).toFixed(1)} kg` : `${g} g`;
-  return `${g} ${u}`;
-}
 
 function MetricCard({ label, value, unit, sub, accent, href }: { label: string; value: number; unit: string; sub: string; accent: string; href: string }) {
   return (
@@ -393,7 +341,7 @@ function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
       if (linea.formulaId && linea.formulaId !== SORPRESA_ID && linea.ingredientes.length === 0) {
         supabase.from("recetas").select("ingredientes(nombre)").eq("formula_id", linea.formulaId)
           .then(({ data }) => {
-            const ings = (data ?? []).map((r: any) => r.ingredientes as { nombre: string } | null).filter(Boolean) as { nombre: string }[];
+            const ings = (data ?? []).map((r) => (r.ingredientes as unknown as { nombre: string })).filter(Boolean) as { nombre: string }[];
             updateLinea(idx, { ingredientes: ings });
           });
       }

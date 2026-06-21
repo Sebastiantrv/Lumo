@@ -69,8 +69,8 @@ export default function AdminFeedbackPage() {
 
     const clienteMap = new Map<string, ClienteConFormula>();
     for (const p of pedidos ?? []) {
-      const c = p.clientes as any;
-      const f = p.formulas as any;
+      const c = p.clientes as unknown as { nombre: string } | null;
+      const f = p.formulas as unknown as { nombre: string; color_acento: string } | null;
       if (c?.nombre && f?.nombre && !clienteMap.has(c.nombre)) {
         clienteMap.set(c.nombre, { nombre: c.nombre, formula_nombre: f.nombre, formula_color: f.color_acento });
       }

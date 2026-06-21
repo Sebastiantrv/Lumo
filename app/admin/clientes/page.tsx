@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { SORPRESA_ID } from "@/lib/constants";
+import { getTipoPedido } from "@/lib/dates";
 
 type Cliente = {
   id: string;
@@ -15,23 +17,6 @@ type Cliente = {
 };
 
 type Formula = { id: string; nombre: string; slug: string; color_acento: string };
-
-const SORPRESA_ID = "__sorpresa__";
-
-function getTipoPedido(diaEntrega: string): "normal" | "domingo" | "extra" {
-  const hoy = new Date();
-  const dow = hoy.getDay();
-  if (dow === 0) return "domingo";
-  if (dow === 6) return "normal";
-  const lunes = new Date(hoy);
-  lunes.setDate(hoy.getDate() - dow + 1);
-  const sabado = new Date(lunes);
-  sabado.setDate(lunes.getDate() + 5);
-  const lunesStr = `${lunes.getFullYear()}-${String(lunes.getMonth()+1).padStart(2,"0")}-${String(lunes.getDate()).padStart(2,"0")}`;
-  const sabadoStr = `${sabado.getFullYear()}-${String(sabado.getMonth()+1).padStart(2,"0")}-${String(sabado.getDate()).padStart(2,"0")}`;
-  if (diaEntrega >= lunesStr && diaEntrega <= sabadoStr) return "extra";
-  return "normal";
-}
 
 export default function ClientesPage() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
