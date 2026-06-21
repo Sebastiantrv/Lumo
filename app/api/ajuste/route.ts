@@ -43,6 +43,12 @@ export async function POST(req: NextRequest) {
 
     const pedido_id = pedidos[0].id;
 
+    await supabase
+      .from("ajustes_pedido")
+      .update({ status: "superseded" })
+      .eq("pedido_id", pedido_id)
+      .eq("status", "pending_review");
+
     const { error } = await supabase.from("ajustes_pedido").insert({
       pedido_id,
       adjustment_type,

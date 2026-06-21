@@ -48,6 +48,17 @@ create table if not exists pedidos (
   created_at timestamptz default now()
 );
 
+-- Ajustes de pedido (solicitudes de cambio de fecha o crédito)
+create table if not exists ajustes_pedido (
+  id uuid primary key default gen_random_uuid(),
+  pedido_id uuid references pedidos(id) on delete cascade not null,
+  adjustment_type text not null check (adjustment_type in ('date_change', 'credit_request')),
+  requested_date date,
+  credit_validity_days int,
+  status text not null default 'pending_review' check (status in ('pending_review', 'approved', 'rejected', 'superseded')),
+  created_at timestamptz default now()
+);
+
 -- ── Datos iniciales ──────────────────────────────────────────
 
 -- Ingredientes

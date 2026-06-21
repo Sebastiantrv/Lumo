@@ -210,6 +210,7 @@ export default function MiPedidoPage({
   const [adjustStep, setAdjustStep] = useState<"choose" | "date" | "credit" | "sent">("choose");
   const [adjustDate, setAdjustDate] = useState("");
   const [adjustSending, setAdjustSending] = useState(false);
+  const [adjustSent, setAdjustSent] = useState(false);
 
   useEffect(() => {
     if (params instanceof Promise) {
@@ -687,7 +688,7 @@ export default function MiPedidoPage({
                 cursor: "pointer",
               }}
             >
-              Ajustar pedido
+              {adjustSent ? "Cambiar solicitud" : "Ajustar pedido"}
             </button>
           )}
         </div>
@@ -824,6 +825,7 @@ export default function MiPedidoPage({
                       }),
                     });
                     setAdjustSending(false);
+                    setAdjustSent(true);
                     setAdjustStep("sent");
                   }}
                   disabled={!adjustDate || adjustSending}
@@ -874,6 +876,7 @@ export default function MiPedidoPage({
                       }),
                     });
                     setAdjustSending(false);
+                    setAdjustSent(true);
                     setAdjustStep("sent");
                   }}
                   disabled={adjustSending}
@@ -904,8 +907,16 @@ export default function MiPedidoPage({
 
             {adjustStep === "sent" && (
               <>
-                <div style={{ textAlign: "center", padding: "12px 0" }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+                <div style={{ textAlign: "center", padding: "20px 0 8px" }}>
+                  <div style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: "50%", background: "rgba(74,94,58,0.10)", marginBottom: 16, animation: "checkCirclePulse 0.6s cubic-bezier(0.34,1.56,0.64,1) both" }}>
+                    <svg
+                      width="28" height="28" viewBox="0 0 24 24" fill="none"
+                      stroke="#4A5E3A" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                      style={{ animation: "checkDraw 0.6s cubic-bezier(0.65,0,0.35,1) 0.2s both" }}
+                    >
+                      <path d="M5 13l4 4L19 7" style={{ strokeDasharray: 24, strokeDashoffset: 24, animation: "checkStroke 0.5s cubic-bezier(0.65,0,0.35,1) 0.3s forwards" }} />
+                    </svg>
+                  </div>
                   <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 8 }}>
                     Solicitud enviada
                   </h2>
