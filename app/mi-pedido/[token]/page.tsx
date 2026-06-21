@@ -407,49 +407,60 @@ export default function MiPedidoPage({
           animation: "pedidoCardIn 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.35s both",
         }}
       >
-        {/* Formula lines */}
-        {pedidos.map((ped, idx) => {
-          const fc = ped.formulas?.color_acento ?? "#4A5E3A";
-          return (
-            <div key={ped.id} style={{ marginBottom: idx < pedidos.length - 1 ? 12 : 6 }}>
+        {/* Formula lines (grouped) */}
+        {(() => {
+          const grouped = pedidos.reduce<{ nombre: string; color: string; cantidad: number }[]>((acc, ped) => {
+            const name = ped.formulas?.nombre ?? "Formula";
+            const existing = acc.find((g) => g.nombre === name);
+            if (existing) {
+              existing.cantidad += ped.cantidad ?? 1;
+            } else {
+              acc.push({ nombre: name, color: ped.formulas?.color_acento ?? "#4A5E3A", cantidad: ped.cantidad ?? 1 });
+            }
+            return acc;
+          }, []);
+          const isSingle = grouped.length === 1;
+
+          return grouped.map((g, idx) => (
+            <div key={g.nombre} style={{ marginBottom: idx < grouped.length - 1 ? 12 : 6 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
                 <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
-                  {idx === 0 && (
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: -3,
-                        borderRadius: "50%",
-                        background: fc,
-                        animation: "accentPulse 3s ease-in-out infinite",
-                        opacity: 0.3,
-                      }}
-                    />
-                  )}
+                  <div
+                    style={{
+                      position: "absolute",
+                      inset: -3,
+                      borderRadius: "50%",
+                      background: g.color,
+                      animation: `accentPulse 3s ease-in-out ${idx * 0.8}s infinite`,
+                      opacity: 0.3,
+                    }}
+                  />
                   <div
                     style={{
                       position: "relative",
                       width: 12,
                       height: 12,
                       borderRadius: "50%",
-                      background: fc,
-                      boxShadow: `0 0 8px ${fc}44`,
+                      background: g.color,
+                      boxShadow: `0 0 8px ${g.color}44`,
                     }}
                   />
                 </div>
                 <span
                   className="font-cormorant"
-                  style={{ fontSize: multiFormula ? 22 : 26, fontWeight: 600, color: "#1A1A1A" }}
+                  style={{ fontSize: isSingle ? 26 : 22, fontWeight: 600, color: "#1A1A1A" }}
                 >
-                  {ped.formulas?.nombre ?? "Formula"}
+                  {g.nombre}
                 </span>
-                <span className="font-inter" style={{ fontSize: 13, color: "#9A9490", marginLeft: "auto" }}>
-                  {ped.cantidad ?? 1} bot.
-                </span>
+                {(!isSingle || g.cantidad > 1) && (
+                  <span className="font-inter" style={{ fontSize: 13, color: "#9A9490", marginLeft: "auto" }}>
+                    ×{g.cantidad}
+                  </span>
+                )}
               </div>
             </div>
-          );
-        })}
+          ));
+        })()}
 
         {/* Details row */}
         <div
