@@ -232,14 +232,18 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
 export default function MiPedidoPage({
   params,
 }: {
-  params: Promise<{ token: string }>;
+  params: { token: string } | Promise<{ token: string }>;
 }) {
   const [token, setToken] = useState<string | null>(null);
   const [pedido, setPedido] = useState<Pedido | null>(null);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    params.then((p) => setToken(p.token));
+    if (params instanceof Promise) {
+      params.then((p) => setToken(p.token));
+    } else {
+      setToken((params as { token: string }).token);
+    }
   }, [params]);
 
   useEffect(() => {
