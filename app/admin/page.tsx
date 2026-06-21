@@ -12,12 +12,13 @@ type FormulaOption = { id: string; nombre: string };
 
 type Ajuste = {
   id: string;
+  pedido_id: string;
   adjustment_type: string;
   requested_date: string | null;
   credit_validity_days: number | null;
   status: string;
   created_at: string;
-  pedidos: { token: string; dia_entrega: string; clientes: { nombre: string } | null } | null;
+  pedidos: { id: string; token: string; dia_entrega: string; clientes: { nombre: string } | null } | null;
 };
 
 type Pedido = {
@@ -59,7 +60,7 @@ export default function AdminInicio() {
       supabase.from("recetas").select("formula_id, gramos, ingredientes(nombre, unidad)"),
       supabase.from("clientes").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("formulas").select("id, nombre").order("nombre"),
-      supabase.from("ajustes_pedido").select("*, pedidos(token, dia_entrega, clientes(nombre))").eq("status", "pending_review").order("created_at", { ascending: false }),
+      supabase.from("ajustes_pedido").select("id, pedido_id, adjustment_type, requested_date, credit_validity_days, status, created_at").eq("status", "pending_review").order("created_at", { ascending: false }),
     ]);
 
     setPedidosHoy(hoyRes.data ?? []);
@@ -67,7 +68,16 @@ export default function AdminInicio() {
     setNumClientes(clientesRes.count ?? 0);
     setClientes(clientesListRes.data ?? []);
     setFormulas(formulasListRes.data ?? []);
-    setAjustes((ajustesRes.data ?? []) as unknown as Ajuste[]);
+
+    const rawAjustes = (ajustesRes.data ?? []) as unknown as { id: string; pedido_id: string; adjustment_type: string; requested_date: string | null; credit_validity_days: number | null; status: string; created_at: string }[];
+    if (rawAjustes.length > 0) {
+      const pedidoIds = Array.from(new Set(rawAjustes.map((a) => a.pedido_id)));
+      const { data: pedidoData } = await supabase.from("pedidos").select("id, token, dia_entrega, clientes(nombre)").in("id", pedidoIds);
+      const pedidoMap = new Map((pedidoData ?? []).map((p: Record<string, unknown>) => [p.id as string, p]));
+      setAjustes(rawAjustes.map((a) => ({ ...a, pedidos: pedidoMap.get(a.pedido_id) ?? null })) as unknown as Ajuste[]);
+    } else {
+      setAjustes([]);
+    }
 
     const totales: Record<string, { gramos: number; unidad: string }> = {};
     for (const pedido of (semanaRes.data ?? []) as Pedido[]) {
@@ -132,7 +142,9 @@ export default function AdminInicio() {
           </p>
           <div className="flex flex-col gap-3">
             {ajustes.map((a) => {
-              const cliente = (a.pedidos as unknown as { clientes: { nombre: string } | null })?.clientes?.nombre ?? "—";
+              const pedidoInfo = a.pedidos as unknown as { clientes: { nombre: string } | { nombre: string }[] | null } | null;
+              const clientesRaw = pedidoInfo?.clientes;
+              const cliente = Array.isArray(clientesRaw) ? clientesRaw[0]?.nombre ?? "—" : clientesRaw?.nombre ?? "—";
               const isDate = a.adjustment_type === "date_change";
               return (
                 <div key={a.id} className="flex items-center justify-between rounded-xl px-4 py-3"
