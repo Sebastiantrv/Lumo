@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -70,6 +70,14 @@ const RAZON_OPTIONS = [
 ];
 
 export default function FeedbackPage() {
+  return (
+    <Suspense fallback={<div style={{ background: "#F4EFE7", minHeight: "100svh" }} />}>
+      <FeedbackContent />
+    </Suspense>
+  );
+}
+
+function FeedbackContent() {
   const searchParams = useSearchParams();
   const pedidoToken = searchParams.get("pedido") ?? undefined;
   const [step, setStep] = useState(0);
