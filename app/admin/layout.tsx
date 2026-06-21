@@ -1,11 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { SessionProvider } from "next-auth/react";
 
-function AdminNav() {
+function AdminNav({ open, onClose }: { open: boolean; onClose: () => void }) {
   const path = usePathname();
 
   const links = [
@@ -20,81 +21,135 @@ function AdminNav() {
   ];
 
   return (
-    <aside
-      className="fixed left-0 top-0 bottom-0 z-40 flex flex-col justify-between py-6 px-3"
-      style={{
-        width: 220,
-        background: "#111",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
-      }}
-    >
-      <div>
-        <div className="px-3 mb-8">
-          <span
-            className="font-cormorant tracking-[0.35em] font-semibold"
-            style={{ fontSize: "1.3rem", color: "#F5F0E8" }}
-          >
-            L U M O
-          </span>
-          <p style={{ fontSize: "0.65rem", color: "#4A5E3A", letterSpacing: "0.15em", marginTop: 2 }}>
-            ADMIN
-          </p>
+    <>
+      {/* Backdrop for mobile */}
+      {open && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={`fixed left-0 top-0 bottom-0 z-50 flex flex-col justify-between py-6 px-3 transition-transform duration-300 md:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        style={{
+          width: 220,
+          background: "#111",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+        }}
+      >
+        <div>
+          <div className="px-3 mb-8">
+            <span
+              className="font-cormorant tracking-[0.35em] font-semibold"
+              style={{ fontSize: "1.3rem", color: "#F5F0E8" }}
+            >
+              L U M O
+            </span>
+            <p style={{ fontSize: "0.65rem", color: "#4A5E3A", letterSpacing: "0.15em", marginTop: 2 }}>
+              ADMIN
+            </p>
+          </div>
+
+          <nav className="flex flex-col gap-1">
+            {links.map(({ href, label, icon: Icon }) => {
+              const active = path === href;
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-inter text-sm transition-all"
+                  style={{
+                    background: active ? "rgba(74,94,58,0.18)" : "transparent",
+                    color: active ? "#F5F0E8" : "#8A8A8A",
+                    fontWeight: active ? 500 : 400,
+                  }}
+                >
+                  <Icon size={16} color={active ? "#4A5E3A" : "#555"} />
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
 
-        <nav className="flex flex-col gap-1">
-          {links.map(({ href, label, icon: Icon }) => {
-            const active = path === href;
-            return (
-              <Link
-                key={href}
-                href={href}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-inter text-sm transition-all"
-                style={{
-                  background: active ? "rgba(74,94,58,0.18)" : "transparent",
-                  color: active ? "#F5F0E8" : "#8A8A8A",
-                  fontWeight: active ? 500 : 400,
-                }}
-              >
-                <Icon size={16} color={active ? "#4A5E3A" : "#555"} />
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      <div className="px-3">
-        <div
-          className="h-px mb-4"
-          style={{ background: "rgba(255,255,255,0.06)" }}
-        />
-        <Link
-          href="/"
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-inter text-sm mb-1 transition-colors"
-          style={{ color: "#555" }}
-        >
-          <ExternalIcon size={15} color="#555" />
-          Ver sitio público
-        </Link>
-        <button
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-inter text-sm w-full text-left transition-colors"
-          style={{ color: "#555" }}
-        >
-          <LogoutIcon size={15} color="#555" />
-          Cerrar sesión
-        </button>
-      </div>
-    </aside>
+        <div className="px-3">
+          <div
+            className="h-px mb-4"
+            style={{ background: "rgba(255,255,255,0.06)" }}
+          />
+          <Link
+            href="/"
+            onClick={onClose}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-inter text-sm mb-1 transition-colors"
+            style={{ color: "#555" }}
+          >
+            <ExternalIcon size={15} color="#555" />
+            Ver sitio público
+          </Link>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-inter text-sm w-full text-left transition-colors"
+            style={{ color: "#555" }}
+          >
+            <LogoutIcon size={15} color="#555" />
+            Cerrar sesión
+          </button>
+        </div>
+      </aside>
+    </>
   );
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <SessionProvider>
       <div style={{ background: "#0D0D0D", minHeight: "100svh" }}>
-        <AdminNav />
-        <main style={{ marginLeft: 220, padding: "2rem 2.5rem", minHeight: "100svh" }}>
+        {/* Mobile top bar */}
+        <div
+          className="flex items-center justify-between px-4 md:hidden"
+          style={{
+            height: 56,
+            background: "#111",
+            borderBottom: "1px solid rgba(255,255,255,0.06)",
+          }}
+        >
+          <div>
+            <span
+              className="font-cormorant tracking-[0.35em] font-semibold"
+              style={{ fontSize: "1.1rem", color: "#F5F0E8" }}
+            >
+              L U M O
+            </span>
+            <span
+              style={{ fontSize: "0.55rem", color: "#4A5E3A", letterSpacing: "0.15em", marginLeft: 8 }}
+            >
+              ADMIN
+            </span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            aria-label="Toggle menu"
+            className="p-2"
+          >
+            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#F5F0E8" strokeWidth="1.8" strokeLinecap="round">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <AdminNav open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+        <main
+          className="md:ml-[220px] md:p-[2rem_2.5rem] p-4 pt-2 md:pt-[2rem]"
+          style={{ minHeight: "100svh" }}
+        >
           {children}
         </main>
       </div>
