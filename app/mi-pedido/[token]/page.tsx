@@ -63,6 +63,7 @@ function EstadoBadge({ estado }: { estado: string }) {
     confirmado: { label: "Confirmado", bg: "rgba(74,94,58,0.12)", color: "#4A5E3A" },
     preparado:  { label: "Listo para ti", bg: "rgba(74,94,58,0.18)", color: "#4A5E3A" },
     entregado:  { label: "Entregado", bg: "rgba(74,94,58,0.10)", color: "#6A6A6A" },
+    cancelado:  { label: "Pedido cancelado", bg: "rgba(122,32,48,0.10)", color: "#7A2030" },
   };
   const c = config[estado] ?? config.pendiente;
 
@@ -237,6 +238,10 @@ export default function MiPedidoPage({
   const [token, setToken] = useState<string | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[] | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [showAdjustModal, setShowAdjustModal] = useState(false);
+  const [adjustStep, setAdjustStep] = useState<"choose" | "date" | "credit" | "sent">("choose");
+  const [adjustDate, setAdjustDate] = useState("");
+  const [adjustSending, setAdjustSending] = useState(false);
 
   useEffect(() => {
     if (params instanceof Promise) {
@@ -328,10 +333,25 @@ export default function MiPedidoPage({
   const accentColor = multiFormula ? "#4A5E3A" : (p.formulas?.color_acento ?? "#4A5E3A");
   const lumoWhatsApp = "5215542779362";
   const orderLabel = p.numero_pedido ? `#${p.numero_pedido}` : p.token.slice(0, 8).toUpperCase();
-  const globalEstado = pedidos.reduce((worst, ped) => {
+  const isCancelado = pedidos.some((ped) => ped.estado === "cancelado");
+  const globalEstado = isCancelado ? "cancelado" : pedidos.reduce((worst, ped) => {
     const idx = stateOrder.indexOf(ped.estado);
     return idx < stateOrder.indexOf(worst) ? ped.estado : worst;
   }, "entregado");
+
+  const canAdjust = !isCancelado && globalEstado !== "entregado" && globalEstado !== "preparado";
+  const cutoffPassed = (() => {
+    if (!p.dia_entrega) return true;
+    const now = new Date();
+    const mexicoOffset = -6;
+    const utcNow = now.getTime() + now.getTimezoneOffset() * 60000;
+    const mexicoNow = new Date(utcNow + mexicoOffset * 3600000);
+    const delivery = new Date(p.dia_entrega + "T00:00:00");
+    const cutoff = new Date(delivery);
+    cutoff.setDate(cutoff.getDate() - 1);
+    cutoff.setHours(20, 0, 0, 0);
+    return mexicoNow >= cutoff;
+  })();
 
   return (
     <main
@@ -619,6 +639,330 @@ export default function MiPedidoPage({
         </svg>
         Contactar a LUMO
       </a>
+
+      {/* Adjustment section */}
+      {canAdjust && !cutoffPassed && (
+        <button
+          onClick={() => { setShowAdjustModal(true); setAdjustStep("choose"); }}
+          className="font-inter"
+          style={{
+            marginTop: 16,
+            padding: "8px 16px",
+            background: "transparent",
+            border: "none",
+            color: "#9A9490",
+            fontSize: 13,
+            cursor: "pointer",
+            textDecoration: "underline",
+            textUnderlineOffset: 3,
+            animation: "pedidoFadeUp 0.6s ease 1.65s both",
+          }}
+        >
+          ¿Necesitas ajustar tu pedido?
+        </button>
+      )}
+
+      {canAdjust && cutoffPassed && (
+        <div
+          className="font-inter"
+          style={{
+            marginTop: 16,
+            padding: "10px 18px",
+            borderRadius: 12,
+            background: "rgba(184,134,11,0.06)",
+            border: "1px solid rgba(184,134,11,0.12)",
+            fontSize: 13,
+            color: "#8A8070",
+            textAlign: "center",
+            maxWidth: 380,
+            animation: "pedidoFadeUp 0.6s ease 1.65s both",
+          }}
+        >
+          Lote confirmado — cambios ya no disponibles.{" "}
+          <a
+            href={`https://wa.me/${lumoWhatsApp}?text=${encodeURIComponent(`Hola LUMO, necesito ayuda con mi pedido ${orderLabel}.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#25D366", textDecoration: "underline", textUnderlineOffset: 2 }}
+          >
+            Contactar
+          </a>
+        </div>
+      )}
+
+      {/* Cancelado message */}
+      {isCancelado && (
+        <div
+          className="font-inter"
+          style={{
+            marginTop: 16,
+            padding: "12px 20px",
+            borderRadius: 12,
+            background: "rgba(122,32,48,0.06)",
+            border: "1px solid rgba(122,32,48,0.12)",
+            fontSize: 13,
+            color: "#7A2030",
+            textAlign: "center",
+            maxWidth: 380,
+            animation: "pedidoFadeUp 0.6s ease 1.65s both",
+          }}
+        >
+          Este pedido ha sido cancelado. Si tienes dudas,{" "}
+          <a
+            href={`https://wa.me/${lumoWhatsApp}?text=${encodeURIComponent(`Hola LUMO, tengo una consulta sobre mi pedido cancelado ${orderLabel}.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: "#25D366", textDecoration: "underline", textUnderlineOffset: 2 }}
+          >
+            contactanos
+          </a>
+          .
+        </div>
+      )}
+
+      {/* Adjustment Modal */}
+      {showAdjustModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            backdropFilter: "blur(6px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100,
+            padding: 20,
+          }}
+          onClick={() => setShowAdjustModal(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#F4EFE7",
+              borderRadius: 24,
+              padding: "32px 28px",
+              maxWidth: 400,
+              width: "100%",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
+              animation: "pedidoCardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
+            }}
+          >
+            {adjustStep === "choose" && (
+              <>
+                <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 6 }}>
+                  Ajustar pedido
+                </h2>
+                <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 24 }}>
+                  Selecciona una opcion:
+                </p>
+                <button
+                  onClick={() => setAdjustStep("date")}
+                  className="font-inter"
+                  style={{
+                    width: "100%",
+                    padding: "16px 20px",
+                    borderRadius: 16,
+                    background: "rgba(74,94,58,0.06)",
+                    border: "1px solid rgba(74,94,58,0.15)",
+                    textAlign: "left",
+                    cursor: "pointer",
+                    marginBottom: 12,
+                  }}
+                >
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", display: "block" }}>
+                    Cambiar fecha de entrega
+                  </span>
+                  <span style={{ fontSize: 13, color: "#8A8580", marginTop: 4, display: "block" }}>
+                    Recibir tu pedido en otra fecha
+                  </span>
+                </button>
+                <button
+                  onClick={() => setAdjustStep("credit")}
+                  className="font-inter"
+                  style={{
+                    width: "100%",
+                    padding: "16px 20px",
+                    borderRadius: 16,
+                    background: "rgba(184,134,11,0.06)",
+                    border: "1px solid rgba(184,134,11,0.12)",
+                    textAlign: "left",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", display: "block" }}>
+                    Solicitar credito LUMO
+                  </span>
+                  <span style={{ fontSize: 13, color: "#8A8580", marginTop: 4, display: "block" }}>
+                    Guardar el valor para un pedido futuro
+                  </span>
+                </button>
+                <button
+                  onClick={() => setShowAdjustModal(false)}
+                  className="font-inter"
+                  style={{ width: "100%", marginTop: 16, padding: 10, background: "none", border: "none", color: "#9A9490", fontSize: 13, cursor: "pointer" }}
+                >
+                  Volver
+                </button>
+              </>
+            )}
+
+            {adjustStep === "date" && (
+              <>
+                <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 6 }}>
+                  Nueva fecha
+                </h2>
+                <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 20 }}>
+                  Selecciona la fecha en la que te gustaria recibir tu pedido:
+                </p>
+                <input
+                  type="date"
+                  value={adjustDate}
+                  onChange={(e) => setAdjustDate(e.target.value)}
+                  min={(() => {
+                    const d = new Date();
+                    d.setDate(d.getDate() + 2);
+                    return d.toISOString().split("T")[0];
+                  })()}
+                  className="font-inter"
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    borderRadius: 12,
+                    border: "1px solid rgba(0,0,0,0.1)",
+                    background: "rgba(255,255,255,0.6)",
+                    fontSize: 15,
+                    color: "#1A1A1A",
+                    marginBottom: 20,
+                  }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!adjustDate) return;
+                    setAdjustSending(true);
+                    await fetch("/api/ajuste", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        pedido_id: p.id,
+                        token: p.token,
+                        adjustment_type: "date_change",
+                        requested_date: adjustDate,
+                      }),
+                    });
+                    setAdjustSending(false);
+                    setAdjustStep("sent");
+                  }}
+                  disabled={!adjustDate || adjustSending}
+                  className="font-inter"
+                  style={{
+                    width: "100%",
+                    padding: "14px 20px",
+                    borderRadius: 100,
+                    background: adjustDate ? "#4A5E3A" : "rgba(74,94,58,0.3)",
+                    color: "#F4EFE7",
+                    border: "none",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: adjustDate ? "pointer" : "default",
+                  }}
+                >
+                  {adjustSending ? "Enviando..." : "Confirmar cambio"}
+                </button>
+                <button
+                  onClick={() => setAdjustStep("choose")}
+                  className="font-inter"
+                  style={{ width: "100%", marginTop: 12, padding: 10, background: "none", border: "none", color: "#9A9490", fontSize: 13, cursor: "pointer" }}
+                >
+                  Volver
+                </button>
+              </>
+            )}
+
+            {adjustStep === "credit" && (
+              <>
+                <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 6 }}>
+                  Credito LUMO
+                </h2>
+                <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 20, lineHeight: 1.5 }}>
+                  El valor de tu pedido se guardara como credito LUMO, valido por 30 dias para tu proxima compra.
+                </p>
+                <button
+                  onClick={async () => {
+                    setAdjustSending(true);
+                    await fetch("/api/ajuste", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        pedido_id: p.id,
+                        token: p.token,
+                        adjustment_type: "credit_request",
+                        credit_validity_days: 30,
+                      }),
+                    });
+                    setAdjustSending(false);
+                    setAdjustStep("sent");
+                  }}
+                  disabled={adjustSending}
+                  className="font-inter"
+                  style={{
+                    width: "100%",
+                    padding: "14px 20px",
+                    borderRadius: 100,
+                    background: "#4A5E3A",
+                    color: "#F4EFE7",
+                    border: "none",
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                  }}
+                >
+                  {adjustSending ? "Enviando..." : "Solicitar credito"}
+                </button>
+                <button
+                  onClick={() => setAdjustStep("choose")}
+                  className="font-inter"
+                  style={{ width: "100%", marginTop: 12, padding: 10, background: "none", border: "none", color: "#9A9490", fontSize: 13, cursor: "pointer" }}
+                >
+                  Volver
+                </button>
+              </>
+            )}
+
+            {adjustStep === "sent" && (
+              <>
+                <div style={{ textAlign: "center", padding: "12px 0" }}>
+                  <div style={{ fontSize: 32, marginBottom: 12 }}>✓</div>
+                  <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 8 }}>
+                    Solicitud enviada
+                  </h2>
+                  <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", lineHeight: 1.5 }}>
+                    Revisaremos tu solicitud y te notificaremos pronto.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowAdjustModal(false)}
+                  className="font-inter"
+                  style={{
+                    width: "100%",
+                    marginTop: 20,
+                    padding: "14px 20px",
+                    borderRadius: 100,
+                    background: "#1A1A1A",
+                    color: "#F4EFE7",
+                    border: "none",
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cerrar
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <p
