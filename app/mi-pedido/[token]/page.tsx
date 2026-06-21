@@ -1,11 +1,7 @@
-import { supabaseAdmin } from "@/lib/supabase";
-import { Metadata } from "next";
+"use client";
 
-export const dynamic = "force-dynamic";
-
-export const metadata: Metadata = {
-  title: "Tu pedido · LUMO",
-};
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 /* ---------- helpers ---------- */
 
@@ -24,6 +20,15 @@ function formatHora(iso: string): string {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
+    timeZone: "America/Mexico_City",
+  });
+}
+
+function formatCreatedDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
     timeZone: "America/Mexico_City",
   });
 }
@@ -70,7 +75,6 @@ function EstadoBadge({ estado }: { estado: string }) {
         padding: "6px 14px",
         borderRadius: 100,
         background: c.bg,
-        animation: "pedidoFadeUp 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s both",
       }}
     >
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -84,15 +88,6 @@ function EstadoBadge({ estado }: { estado: string }) {
 }
 
 /* ---------- timeline ---------- */
-
-function formatCreatedDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("es-MX", {
-    day: "numeric",
-    month: "long",
-    timeZone: "America/Mexico_City",
-  });
-}
 
 function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, accentColor }: {
   estado: string;
@@ -114,8 +109,6 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
   const stateOrder = ["pendiente", "confirmado", "preparado", "entregado"];
   const activeIndex = stateOrder.indexOf(estado);
 
-  const baseDelay = 0.8;
-
   return (
     <div style={{ padding: "20px 0 8px" }}>
       {steps.map((step, i) => {
@@ -125,7 +118,6 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
         const showTimestamp = step.key === "preparado" && isActive && hora_preparado;
         const showDeliveryRange = step.key === "entregado" && !isActive && estado === "preparado" && hora_entrega_estimada;
         const showDeliveredSub = step.key === "entregado" && isActive;
-        const delay = baseDelay + i * 0.15;
 
         return (
           <div key={step.key} style={{ display: "flex", gap: 16 }}>
@@ -142,8 +134,8 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
                   alignItems: "center",
                   justifyContent: "center",
                   flexShrink: 0,
-                  animation: `timelineCircleIn 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay}s both`,
                   boxShadow: isCurrent ? `0 0 0 4px ${accentColor}22` : "none",
+                  transition: "all 0.5s ease",
                 }}
               >
                 {isActive && (
@@ -154,8 +146,6 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
                       strokeWidth="2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
-                      strokeDasharray="20"
-                      style={{ animation: `checkDraw 0.4s ease ${delay + 0.3}s both` }}
                     />
                   </svg>
                 )}
@@ -168,22 +158,14 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
                     minHeight: 32,
                     background: i < activeIndex ? accentColor : "transparent",
                     borderLeft: i < activeIndex ? "none" : "2px dashed #D4D0C8",
-                    transformOrigin: "top",
-                    animation: i < activeIndex
-                      ? `timelineLineGrow 0.4s ease ${delay + 0.2}s both`
-                      : `pedidoFadeUp 0.3s ease ${delay + 0.2}s both`,
+                    transition: "all 0.5s ease",
                   }}
                 />
               )}
             </div>
 
             {/* Text content */}
-            <div
-              style={{
-                paddingBottom: isLast ? 0 : 20,
-                animation: `timelineTextIn 0.5s cubic-bezier(0.34,1.56,0.64,1) ${delay + 0.1}s both`,
-              }}
-            >
+            <div style={{ paddingBottom: isLast ? 0 : 20 }}>
               <span
                 className="font-inter"
                 style={{
@@ -191,6 +173,7 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
                   fontWeight: isActive ? 600 : 400,
                   color: isActive ? "#1A1A1A" : "#A0A0A0",
                   display: "block",
+                  transition: "all 0.5s ease",
                 }}
               >
                 {step.label}
@@ -246,22 +229,44 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
 
 /* ---------- page ---------- */
 
-export default async function MiPedidoPage({
+export default function MiPedidoPage({
   params,
 }: {
   params: Promise<{ token: string }>;
 }) {
-  const { token } = await params;
+  const [token, setToken] = useState<string | null>(null);
+  const [pedido, setPedido] = useState<Pedido | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
-  const { data: pedido, error } = await supabaseAdmin
-    .from("pedidos")
-    .select(
-      "*, created_at, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento)"
-    )
-    .eq("token", token)
-    .single();
+  useEffect(() => {
+    params.then((p) => setToken(p.token));
+  }, [params]);
 
-  if (error || !pedido) {
+  useEffect(() => {
+    if (!token) return;
+
+    async function fetchPedido() {
+      const { data, error } = await supabase
+        .from("pedidos")
+        .select(
+          "*, created_at, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento)"
+        )
+        .eq("token", token)
+        .single();
+
+      if (error || !data) {
+        setNotFound(true);
+        return;
+      }
+      setPedido(data as unknown as Pedido);
+    }
+
+    fetchPedido();
+    const interval = setInterval(fetchPedido, 15000);
+    return () => clearInterval(interval);
+  }, [token]);
+
+  if (notFound) {
     return (
       <main
         style={{
@@ -287,7 +292,33 @@ export default async function MiPedidoPage({
     );
   }
 
-  const p = pedido as unknown as Pedido;
+  if (!pedido) {
+    return (
+      <main
+        style={{
+          background: "#F4EFE7",
+          minHeight: "100svh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div
+          className="font-cormorant"
+          style={{
+            fontSize: 14,
+            letterSpacing: "0.45em",
+            color: "#9A9490",
+            animation: "accentPulse 2s ease-in-out infinite",
+          }}
+        >
+          L U M O
+        </div>
+      </main>
+    );
+  }
+
+  const p = pedido;
   const nombre = p.clientes?.nombre ?? "amigo";
   const formula = p.formulas;
   const accentColor = formula?.color_acento ?? "#4A5E3A";
@@ -347,7 +378,7 @@ export default async function MiPedidoPage({
       </p>
 
       {/* Estado badge */}
-      <div style={{ marginBottom: 28 }}>
+      <div style={{ marginBottom: 28, animation: "pedidoFadeUp 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s both" }}>
         <EstadoBadge estado={p.estado} />
       </div>
 
@@ -371,7 +402,6 @@ export default async function MiPedidoPage({
         {/* Formula name with accent dot */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
           <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
-            {/* Pulse ring */}
             <div
               style={{
                 position: "absolute",
@@ -382,7 +412,6 @@ export default async function MiPedidoPage({
                 opacity: 0.3,
               }}
             />
-            {/* Solid dot */}
             <div
               style={{
                 position: "relative",
@@ -449,7 +478,6 @@ export default async function MiPedidoPage({
               borderTop: "1px solid rgba(0,0,0,0.05)",
               paddingTop: 16,
               marginTop: 8,
-              animation: "pedidoFadeUp 0.5s ease 1.4s both",
             }}
           >
             {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
