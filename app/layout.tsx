@@ -20,11 +20,32 @@ export const metadata: Metadata = {
   title: "LUMO — Prensados en frío",
   description:
     "Jugos naturales prensados en frío, hechos cada mañana en lotes limitados.",
+  metadataBase: new URL("https://lumo-three-beta.vercel.app"),
   openGraph: {
     title: "LUMO — Prensados en frío",
     description:
       "Jugos naturales prensados en frío, hechos cada mañana en lotes limitados.",
     type: "website",
+    locale: "es_MX",
+    siteName: "LUMO",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "LUMO — Jugos prensados en frío",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "LUMO — Prensados en frío",
+    description:
+      "Jugos naturales prensados en frío, hechos cada mañana en lotes limitados.",
+    images: ["/og-image.png"],
+  },
+  icons: {
+    icon: "/favicon.ico",
   },
 };
 
