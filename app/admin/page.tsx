@@ -405,6 +405,8 @@ function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
     if (!clienteId || lineas.length === 0) return;
     setSaving(true);
 
+    const sharedToken = crypto.randomUUID();
+
     const rows = lineas.map((linea) => {
       let realFormulaId = linea.formulaId;
       let esSorpresa = false;
@@ -417,6 +419,7 @@ function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
         dia_entrega: diaEntrega, notas: notas || null, tipo_pedido: getTipoPedido(diaEntrega),
         es_sorpresa: esSorpresa, ingredientes_excluidos: linea.excluidos.length > 0 ? linea.excluidos : null,
         preferencia_sorpresa: preferencia || null,
+        token: sharedToken,
       };
     });
 
