@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { DELIVERY_RANGES, LUMO_DOMAIN, WHATSAPP_BATCH_DELAY_MS } from "@/lib/constants";
-import { todayStr, formatDateLabel, formatHora, greeting } from "@/lib/dates";
+import { todayStr, localStr, formatDateLabel, formatHora, greeting } from "@/lib/dates";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { fmtGramos } from "@/lib/format";
 
@@ -38,6 +38,7 @@ export default function AdminHoy() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [showDeliveryPicker, setShowDeliveryPicker] = useState<string | null>(null);
+  const [showMoverPicker, setShowMoverPicker] = useState<string | null>(null);
 
   const fecha = todayStr();
   const fechaLabel = formatDateLabel(fecha);
@@ -61,6 +62,20 @@ export default function AdminHoy() {
     await load();
     setUpdating(null);
   }
+
+  async function moverFechaGroup(ids: string[], fecha: string) {
+    setShowMoverPicker(null);
+    setUpdating(ids[0]);
+    await supabase.from("pedidos").update({ dia_entrega: fecha }).in("id", ids);
+    await load();
+    setUpdating(null);
+  }
+
+  const moverDays = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i + 1);
+    return localStr(d);
+  });
 
   async function toggleEstadoGroup(ids: string[], estadoActual: string) {
     if (estadoActual === "cancelado") return;
@@ -262,8 +277,8 @@ export default function AdminHoy() {
                     border: group.estado === "cancelado" ? "1px solid rgba(122,32,48,0.15)" : "1px solid rgba(255,255,255,0.06)",
                     opacity: group.estado === "entregado" || group.estado === "cancelado" ? 0.5 : 1,
                     textDecoration: group.estado === "cancelado" ? "line-through" : "none",
-                    borderBottomLeftRadius: showDeliveryPicker === firstPed.id ? 0 : undefined,
-                    borderBottomRightRadius: showDeliveryPicker === firstPed.id ? 0 : undefined,
+                    borderBottomLeftRadius: (showDeliveryPicker === firstPed.id || showMoverPicker === firstPed.id) ? 0 : undefined,
+                    borderBottomRightRadius: (showDeliveryPicker === firstPed.id || showMoverPicker === firstPed.id) ? 0 : undefined,
                   }}
                 >
                   <div className="flex-1 min-w-0 mr-3">
@@ -369,6 +384,24 @@ export default function AdminHoy() {
                     )}
                     {group.estado !== "entregado" && group.estado !== "cancelado" && (
                       <button
+                        onClick={() => setShowMoverPicker(showMoverPicker === firstPed.id ? null : firstPed.id)}
+                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        style={{
+                          background: showMoverPicker === firstPed.id ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                        }}
+                        title="Mover fecha"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="#8A8A8A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="3" width="12" height="12" rx="2" />
+                          <line x1="2" y1="7" x2="14" y2="7" />
+                          <line x1="5" y1="1" x2="5" y2="4" />
+                          <line x1="11" y1="1" x2="11" y2="4" />
+                        </svg>
+                      </button>
+                    )}
+                    {group.estado !== "entregado" && group.estado !== "cancelado" && (
+                      <button
                         onClick={() => cancelarGroup(group.ids)}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
                         style={{ background: "rgba(122,32,48,0.1)", border: "1px solid rgba(122,32,48,0.2)" }}
@@ -418,6 +451,39 @@ export default function AdminHoy() {
                     </div>
                     <button
                       onClick={() => setShowDeliveryPicker(null)}
+                      className="font-inter text-xs mt-2"
+                      style={{ color: "#555" }}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+
+                {/* Mover fecha picker */}
+                {showMoverPicker === firstPed.id && (
+                  <div
+                    className="rounded-b-xl px-4 py-3"
+                    style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)", borderTop: "none" }}
+                  >
+                    <p className="font-inter text-xs mb-2.5" style={{ color: "#8A8A8A" }}>Mover a:</p>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {moverDays.map((dia) => {
+                        const d = new Date(dia + "T12:00:00");
+                        const label = d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric" });
+                        return (
+                          <button
+                            key={dia}
+                            onClick={() => moverFechaGroup(group.ids, dia)}
+                            className="rounded-lg px-2.5 py-1.5 font-inter text-xs transition-all"
+                            style={{ background: "rgba(255,255,255,0.07)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.1)" }}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      onClick={() => setShowMoverPicker(null)}
                       className="font-inter text-xs mt-2"
                       style={{ color: "#555" }}
                     >
