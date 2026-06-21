@@ -19,7 +19,7 @@ type Ajuste = {
   status: string;
   created_at?: string;
   requested_at?: string;
-  pedidos: { id: string; token: string; dia_entrega: string; clientes: { nombre: string } | null } | null;
+  pedidos: { id: string; token: string; numero_pedido: number | null; dia_entrega: string; clientes: { nombre: string } | null } | null;
 };
 
 type Pedido = {
@@ -73,7 +73,7 @@ export default function AdminInicio() {
     const rawAjustes = (ajustesRes.data ?? []) as unknown as { id: string; pedido_id: string; adjustment_type: string; requested_date: string | null; credit_validity_days: number | null; status: string; created_at: string }[];
     if (rawAjustes.length > 0) {
       const pedidoIds = Array.from(new Set(rawAjustes.map((a) => a.pedido_id)));
-      const { data: pedidoData } = await supabase.from("pedidos").select("id, token, dia_entrega, clientes(nombre)").in("id", pedidoIds);
+      const { data: pedidoData } = await supabase.from("pedidos").select("id, token, numero_pedido, dia_entrega, clientes(nombre)").in("id", pedidoIds);
       const pedidoMap = new Map((pedidoData ?? []).map((p: Record<string, unknown>) => [p.id as string, p]));
       setAjustes(rawAjustes.map((a) => ({ ...a, pedidos: pedidoMap.get(a.pedido_id) ?? null })) as unknown as Ajuste[]);
     } else {
@@ -143,9 +143,10 @@ export default function AdminInicio() {
           </p>
           <div className="flex flex-col gap-3">
             {ajustes.map((a) => {
-              const pedidoInfo = a.pedidos as unknown as { clientes: { nombre: string } | { nombre: string }[] | null } | null;
+              const pedidoInfo = a.pedidos as unknown as { numero_pedido: number | null; clientes: { nombre: string } | { nombre: string }[] | null } | null;
               const clientesRaw = pedidoInfo?.clientes;
               const cliente = Array.isArray(clientesRaw) ? clientesRaw[0]?.nombre ?? "—" : clientesRaw?.nombre ?? "—";
+              const numPedido = pedidoInfo?.numero_pedido;
               const isDate = a.adjustment_type === "date_change";
               return (
                 <div key={a.id} className="flex items-center justify-between rounded-xl px-4 py-3"
@@ -153,6 +154,11 @@ export default function AdminInicio() {
                   <div>
                     <p className="font-inter text-sm" style={{ color: "#F5F0E8" }}>
                       {cliente}
+                      {numPedido && (
+                        <span className="font-inter text-xs ml-1.5" style={{ color: "#8A8A8A", fontWeight: 400 }}>
+                          #{numPedido}
+                        </span>
+                      )}
                       <span className="font-inter text-xs ml-2 px-2 py-0.5 rounded-full"
                         style={{ background: isDate ? "rgba(74,94,58,0.15)" : "rgba(184,134,11,0.15)", color: isDate ? "#4A5E3A" : "#B8860B" }}>
                         {isDate ? "Cambio de fecha" : "Crédito LUMO"}
