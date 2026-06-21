@@ -424,9 +424,11 @@ function TipoBadge({ tipo }: { tipo: string }) {
 }
 
 function estadoBadge(estado: string): React.CSSProperties {
-  if (estado === "pendiente") return { background: "rgba(255,255,255,0.08)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
-  if (estado === "preparado") return { background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.35)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
-  return { background: "rgba(74,94,58,0.2)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.35)", borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" };
+  const base = { borderRadius: 20, padding: "2px 10px", fontSize: "0.7rem" } as React.CSSProperties;
+  if (estado === "pendiente") return { ...base, background: "rgba(255,255,255,0.08)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.12)" };
+  if (estado === "confirmado") return { ...base, background: "rgba(74,94,58,0.15)", color: "#4A5E3A", border: "1px solid rgba(74,94,58,0.3)" };
+  if (estado === "preparado") return { ...base, background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.35)" };
+  return { ...base, background: "rgba(74,94,58,0.2)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.35)" };
 }
 
 function extraDecisionStyle(estado: string): React.CSSProperties {
