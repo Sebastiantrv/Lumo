@@ -55,6 +55,7 @@ export async function POST(req: NextRequest) {
       requested_date: requested_date || null,
       credit_validity_days: credit_validity_days || null,
       status: "pending_review",
+      requested_at: new Date().toISOString(),
     });
 
     if (error) {

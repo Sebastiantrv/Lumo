@@ -17,7 +17,8 @@ type Ajuste = {
   requested_date: string | null;
   credit_validity_days: number | null;
   status: string;
-  created_at: string;
+  created_at?: string;
+  requested_at?: string;
   pedidos: { id: string; token: string; dia_entrega: string; clientes: { nombre: string } | null } | null;
 };
 
@@ -60,7 +61,7 @@ export default function AdminInicio() {
       supabase.from("recetas").select("formula_id, gramos, ingredientes(nombre, unidad)"),
       supabase.from("clientes").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("formulas").select("id, nombre").order("nombre"),
-      supabase.from("ajustes_pedido").select("id, pedido_id, adjustment_type, requested_date, credit_validity_days, status, created_at").eq("status", "pending_review").order("created_at", { ascending: false }),
+      supabase.from("ajustes_pedido").select("id, pedido_id, adjustment_type, requested_date, credit_validity_days, status, requested_at").eq("status", "pending_review").order("requested_at", { ascending: false }),
     ]);
 
     setPedidosHoy(hoyRes.data ?? []);
