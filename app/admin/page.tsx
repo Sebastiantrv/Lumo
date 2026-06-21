@@ -4,6 +4,26 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
+const SORPRESA_ID = "__sorpresa__";
+
+type ClienteOption = { id: string; nombre: string };
+type FormulaOption = { id: string; nombre: string };
+
+function getTipoPedido(diaEntrega: string): "normal" | "domingo" | "extra" {
+  const hoy = new Date();
+  const dow = hoy.getDay();
+  if (dow === 0) return "domingo";
+  if (dow === 6) return "normal";
+  const lunes = new Date(hoy);
+  lunes.setDate(hoy.getDate() - dow + 1);
+  const sabado = new Date(lunes);
+  sabado.setDate(lunes.getDate() + 5);
+  const lunesStr = `${lunes.getFullYear()}-${String(lunes.getMonth()+1).padStart(2,"0")}-${String(lunes.getDate()).padStart(2,"0")}`;
+  const sabadoStr = `${sabado.getFullYear()}-${String(sabado.getMonth()+1).padStart(2,"0")}-${String(sabado.getDate()).padStart(2,"0")}`;
+  if (diaEntrega >= lunesStr && diaEntrega <= sabadoStr) return "extra";
+  return "normal";
+}
+
 type Pedido = {
   id: string;
   cantidad: number;
@@ -56,6 +76,9 @@ export default function AdminInicio() {
   const [loading, setLoading] = useState(true);
   const [dayOffset, setDayOffset] = useState(0);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [showNuevoPedido, setShowNuevoPedido] = useState(false);
+  const [clientes, setClientes] = useState<ClienteOption[]>([]);
+  const [formulas, setFormulas] = useState<FormulaOption[]>([]);
 
   const baseToday = todayStr();
   const fecha = addDays(baseToday, dayOffset);
@@ -66,16 +89,20 @@ export default function AdminInicio() {
   const isCurrentWeek = weekOffset === 0;
 
   async function load() {
-    const [hoyRes, semanaRes, clientesRes, recetasRes] = await Promise.all([
+    const [hoyRes, semanaRes, clientesRes, recetasRes, clientesListRes, formulasListRes] = await Promise.all([
       supabase.from("pedidos").select("*, clientes(nombre), formulas(nombre, slug, color_acento)").eq("dia_entrega", fecha).order("created_at"),
       supabase.from("pedidos").select("*, clientes(nombre), formulas(nombre, slug, color_acento)").gte("dia_entrega", inicio).lte("dia_entrega", fin).order("dia_entrega"),
       supabase.from("clientes").select("id", { count: "exact", head: true }),
       supabase.from("recetas").select("formula_id, gramos, ingredientes(nombre, unidad)"),
+      supabase.from("clientes").select("id, nombre").eq("activo", true).order("nombre"),
+      supabase.from("formulas").select("id, nombre").order("nombre"),
     ]);
 
     setPedidosHoy(hoyRes.data ?? []);
     setPedidosSemana(semanaRes.data ?? []);
     setNumClientes(clientesRes.count ?? 0);
+    setClientes(clientesListRes.data ?? []);
+    setFormulas(formulasListRes.data ?? []);
 
     const totales: Record<string, { gramos: number; unidad: string }> = {};
     for (const pedido of semanaRes.data ?? []) {
@@ -241,13 +268,26 @@ export default function AdminInicio() {
         {/* Accesos rápidos */}
         <Panel title="Accesos rápidos">
           <div className="grid grid-cols-2 gap-2.5">
-            <QuickAction href="/admin/clientes" label="Nuevo pedido" color="#4A5E3A" />
+            <button onClick={() => setShowNuevoPedido(true)}
+              className="rounded-xl px-4 py-3.5 font-inter text-sm transition-all flex items-center gap-2"
+              style={{ background: "#4A5E3A14", border: "1px solid #4A5E3A30", color: "#F5F0E8" }}>
+              <span style={{ color: "#4A5E3A" }}>+</span> Nuevo pedido
+            </button>
             <QuickAction href="/admin/clientes" label="Nuevo cliente" color="#7A2030" />
             <QuickAction href="/admin/compras" label="Lista de compras" color="#B8860B" />
             <QuickAction href="/admin/recetas" label="Editar recetas" color="#8A8A8A" />
           </div>
         </Panel>
       </div>
+
+      {showNuevoPedido && (
+        <NuevoPedidoModal
+          clientes={clientes}
+          formulas={formulas}
+          onClose={() => setShowNuevoPedido(false)}
+          onSaved={() => { setShowNuevoPedido(false); load(); }}
+        />
+      )}
     </div>
   );
 }
@@ -311,6 +351,159 @@ function PageLoader() {
   return (
     <div className="flex items-center justify-center h-64">
       <div className="w-6 h-6 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#4A5E3A", borderTopColor: "transparent" }} />
+    </div>
+  );
+}
+
+function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
+  clientes: ClienteOption[]; formulas: FormulaOption[]; onClose: () => void; onSaved: () => void;
+}) {
+  const d = new Date();
+  const hoyStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  const [clienteId, setClienteId] = useState("");
+  const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
+  const [cantidad, setCantidad] = useState("1");
+  const [diaEntrega, setDiaEntrega] = useState(hoyStr);
+  const [notas, setNotas] = useState("");
+  const [excluidos, setExcluidos] = useState<string[]>([]);
+  const [ingredientes, setIngredientes] = useState<{ nombre: string }[]>([]);
+  const [preferencia, setPreferencia] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (formulaId && formulaId !== SORPRESA_ID) {
+      supabase.from("recetas").select("ingredientes(nombre)").eq("formula_id", formulaId)
+        .then(({ data }) => {
+          const ings = (data ?? []).map((r: any) => r.ingredientes as { nombre: string } | null).filter(Boolean) as { nombre: string }[];
+          setIngredientes(ings);
+          setExcluidos([]);
+        });
+    } else {
+      setIngredientes([]);
+      setExcluidos([]);
+    }
+  }, [formulaId]);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clienteId) return;
+    setSaving(true);
+    let realFormulaId = formulaId;
+    let esSorpresa = false;
+    if (formulaId === SORPRESA_ID) {
+      realFormulaId = formulas[Math.floor(Math.random() * formulas.length)]?.id ?? formulas[0]?.id ?? "";
+      esSorpresa = true;
+    }
+    await supabase.from("pedidos").insert({
+      cliente_id: clienteId, formula_id: realFormulaId, cantidad: parseInt(cantidad),
+      dia_entrega: diaEntrega, notas: notas || null, tipo_pedido: getTipoPedido(diaEntrega),
+      es_sorpresa: esSorpresa, ingredientes_excluidos: excluidos.length > 0 ? excluidos : null,
+      preferencia_sorpresa: preferencia || null,
+    });
+    onSaved();
+  }
+
+  const selectStyle: React.CSSProperties = {
+    background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8",
+    borderRadius: 12, padding: "12px 16px", fontSize: "0.875rem", width: "100%", outline: "none",
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(8px)" }}>
+      <div className="w-full max-w-md rounded-2xl p-6 max-h-[90vh] overflow-y-auto" style={{ background: "#171717", border: "1px solid rgba(255,255,255,0.08)" }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="font-cormorant text-xl font-light" style={{ color: "#F5F0E8" }}>Nuevo pedido</h2>
+          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.06)", color: "#8A8A8A" }}>✕</button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
+              Cliente<span style={{ color: "#7A2030" }}> *</span>
+            </label>
+            <select value={clienteId} onChange={(e) => setClienteId(e.target.value)} required style={selectStyle}>
+              <option value="" style={{ background: "#1a1a1a" }}>Seleccionar cliente...</option>
+              {clientes.map((c) => <option key={c.id} value={c.id} style={{ background: "#1a1a1a" }}>{c.nombre}</option>)}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Fórmula</label>
+            <select value={formulaId} onChange={(e) => setFormulaId(e.target.value)} style={selectStyle}>
+              {formulas.map((f) => <option key={f.id} value={f.id} style={{ background: "#1a1a1a" }}>{f.nombre}</option>)}
+              <option value={SORPRESA_ID} style={{ background: "#1a1a1a" }}>🎲 Sorpresa</option>
+            </select>
+          </div>
+
+          {formulaId === SORPRESA_ID && (
+            <div className="rounded-xl px-4 py-3" style={{ background: "rgba(184,134,11,0.12)", border: "1px solid rgba(184,134,11,0.25)" }}>
+              <p className="font-inter text-xs" style={{ color: "#E6A800" }}>🎲 Se asignará una fórmula al azar.</p>
+            </div>
+          )}
+
+          {formulaId !== SORPRESA_ID && ingredientes.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Excluir ingredientes</label>
+              <div className="flex flex-wrap gap-2">
+                {ingredientes.map((ing) => {
+                  const ex = excluidos.includes(ing.nombre);
+                  return (
+                    <button key={ing.nombre} type="button" onClick={() => setExcluidos((prev) => ex ? prev.filter((n) => n !== ing.nombre) : [...prev, ing.nombre])}
+                      className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
+                      style={{ background: ex ? "rgba(224,80,112,0.12)" : "rgba(255,255,255,0.06)", color: ex ? "#E05070" : "#8A8A8A", border: ex ? "1px solid rgba(224,80,112,0.3)" : "1px solid rgba(255,255,255,0.08)", textDecoration: ex ? "line-through" : "none" }}>
+                      {ing.nombre}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col gap-2">
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Preferencia de sabor</label>
+            <div className="flex gap-2">
+              {["Dulce", "Fresco", "Balanceado"].map((p) => (
+                <button key={p} type="button" onClick={() => setPreferencia((prev) => prev === p ? "" : p)}
+                  className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
+                  style={{ background: preferencia === p ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.06)", color: preferencia === p ? "#6DBF67" : "#8A8A8A", border: preferencia === p ? "1px solid rgba(74,94,58,0.4)" : "1px solid rgba(255,255,255,0.08)" }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Cantidad</label>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={() => setCantidad((v) => String(Math.max(1, parseInt(v) - 1)))}
+                className="w-10 h-10 rounded-xl font-inter text-lg" style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8" }}>−</button>
+              <span className="font-cormorant text-2xl flex-1 text-center" style={{ color: "#F5F0E8" }}>{cantidad}</span>
+              <button type="button" onClick={() => setCantidad((v) => String(parseInt(v) + 1))}
+                className="w-10 h-10 rounded-xl font-inter text-lg" style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8" }}>+</button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Día de entrega</label>
+            <input type="date" value={diaEntrega} onChange={(e) => setDiaEntrega(e.target.value)}
+              className="w-full rounded-xl px-4 py-3 font-inter text-sm outline-none"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8", colorScheme: "dark" }} />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Notas (opcional)</label>
+            <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Ej. doble betabel..."
+              className="w-full rounded-xl px-4 py-3 font-inter text-sm outline-none"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }} />
+          </div>
+
+          <button type="submit" disabled={saving || !clienteId} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
+            style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving || !clienteId ? 0.5 : 1 }}>
+            {saving ? "Guardando..." : "Crear pedido"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

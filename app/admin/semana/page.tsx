@@ -43,6 +43,7 @@ export default function SemanaPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [aplazarPickerFor, setAplazarPickerFor] = useState<string | null>(null);
+  const [moverPickerFor, setMoverPickerFor] = useState<string | null>(null);
 
   const days = getWeekDays(weekOffset);
   const monday = days[0];
@@ -69,6 +70,12 @@ export default function SemanaPage() {
   async function aplazar(id: string, fecha: string) {
     await supabase.from("pedidos").update({ dia_entrega: fecha, estado_extra: "aplazado" }).eq("id", id);
     setAplazarPickerFor(null);
+    await load();
+  }
+
+  async function moverFecha(id: string, fecha: string) {
+    await supabase.from("pedidos").update({ dia_entrega: fecha }).eq("id", id);
+    setMoverPickerFor(null);
     await load();
   }
 
@@ -158,10 +165,14 @@ export default function SemanaPage() {
                         formulas={formulas}
                         onSetExtra={setExtra}
                         onAplazar={aplazar}
+                        onMoverFecha={moverFecha}
                         onCambiarFormula={cambiarFormula}
                         showAplazarPicker={aplazarPickerFor === p.id}
                         onOpenAplazar={() => setAplazarPickerFor(p.id)}
                         onCloseAplazar={() => setAplazarPickerFor(null)}
+                        showMoverPicker={moverPickerFor === p.id}
+                        onOpenMover={() => setMoverPickerFor(p.id)}
+                        onCloseMover={() => setMoverPickerFor(null)}
                       />
                     ))}
                   </div>
@@ -176,16 +187,20 @@ export default function SemanaPage() {
 }
 
 function PedidoRow({
-  p, formulas, onSetExtra, onAplazar, onCambiarFormula, showAplazarPicker, onOpenAplazar, onCloseAplazar,
+  p, formulas, onSetExtra, onAplazar, onMoverFecha, onCambiarFormula, showAplazarPicker, onOpenAplazar, onCloseAplazar, showMoverPicker, onOpenMover, onCloseMover,
 }: {
   p: Pedido;
   formulas: Formula[];
   onSetExtra: (id: string, estado: string) => void;
   onAplazar: (id: string, fecha: string) => void;
+  onMoverFecha: (id: string, fecha: string) => void;
   onCambiarFormula: (id: string, formulaId: string) => void;
   showAplazarPicker: boolean;
   onOpenAplazar: () => void;
   onCloseAplazar: () => void;
+  showMoverPicker: boolean;
+  onOpenMover: () => void;
+  onCloseMover: () => void;
 }) {
   const tipo = p.tipo_pedido ?? "normal";
   const rechazado = p.estado_extra === "rechazado";
@@ -198,6 +213,13 @@ function PedidoRow({
   const nextDays = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() + i + 1);
+    return localStr(d);
+  });
+
+  // Next 14 days from today for mover picker
+  const moverDays = Array.from({ length: 14 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
     return localStr(d);
   });
 
@@ -240,6 +262,19 @@ function PedidoRow({
 
         {/* Badges */}
         <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            onClick={showMoverPicker ? onCloseMover : onOpenMover}
+            className="w-6 h-6 rounded-md flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.06)", color: showMoverPicker ? "#F5F0E8" : "#8A8A8A", border: "1px solid rgba(255,255,255,0.08)" }}
+            title="Mover fecha"
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="3" width="12" height="12" rx="2" />
+              <line x1="2" y1="7" x2="14" y2="7" />
+              <line x1="5" y1="1" x2="5" y2="4" />
+              <line x1="11" y1="1" x2="11" y2="4" />
+            </svg>
+          </button>
           {p.es_sorpresa && (
             <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲</span>
           )}
@@ -315,6 +350,36 @@ function PedidoRow({
           </div>
           <button
             onClick={onCloseAplazar}
+            className="font-inter text-xs text-left mt-0.5"
+            style={{ color: "#555" }}
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {/* Mover date picker */}
+      {showMoverPicker && (
+        <div className="flex flex-col gap-2 mt-1">
+          <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Mover a:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {moverDays.map((dia) => {
+              const d = new Date(dia + "T12:00:00");
+              const label = d.toLocaleDateString("es-MX", { weekday: "short", day: "numeric" });
+              return (
+                <button
+                  key={dia}
+                  onClick={() => onMoverFecha(p.id, dia)}
+                  className="rounded-lg px-2.5 py-1 font-inter text-xs"
+                  style={{ background: "rgba(255,255,255,0.07)", color: "#C0B8AE", border: "1px solid rgba(255,255,255,0.1)" }}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+          <button
+            onClick={onCloseMover}
             className="font-inter text-xs text-left mt-0.5"
             style={{ color: "#555" }}
           >
