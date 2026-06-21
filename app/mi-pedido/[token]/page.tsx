@@ -235,7 +235,7 @@ export default function MiPedidoPage({
   params: { token: string } | Promise<{ token: string }>;
 }) {
   const [token, setToken] = useState<string | null>(null);
-  const [pedido, setPedido] = useState<Pedido | null>(null);
+  const [pedidos, setPedidos] = useState<Pedido[] | null>(null);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
@@ -249,24 +249,23 @@ export default function MiPedidoPage({
   useEffect(() => {
     if (!token) return;
 
-    async function fetchPedido() {
+    async function fetchPedidos() {
       const { data, error } = await supabase
         .from("pedidos")
         .select(
           "*, created_at, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento)"
         )
-        .eq("token", token)
-        .single();
+        .eq("token", token);
 
-      if (error || !data) {
+      if (error || !data || data.length === 0) {
         setNotFound(true);
         return;
       }
-      setPedido(data as unknown as Pedido);
+      setPedidos(data as unknown as Pedido[]);
     }
 
-    fetchPedido();
-    const interval = setInterval(fetchPedido, 15000);
+    fetchPedidos();
+    const interval = setInterval(fetchPedidos, 15000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -296,7 +295,7 @@ export default function MiPedidoPage({
     );
   }
 
-  if (!pedido) {
+  if (!pedidos) {
     return (
       <main
         style={{
@@ -322,12 +321,17 @@ export default function MiPedidoPage({
     );
   }
 
-  const p = pedido;
+  const stateOrder = ["pendiente", "confirmado", "preparado", "entregado"];
+  const p = pedidos[0];
   const nombre = p.clientes?.nombre ?? "amigo";
-  const formula = p.formulas;
-  const accentColor = formula?.color_acento ?? "#4A5E3A";
+  const multiFormula = pedidos.length > 1;
+  const accentColor = multiFormula ? "#4A5E3A" : (p.formulas?.color_acento ?? "#4A5E3A");
   const lumoWhatsApp = "5215542779362";
   const orderLabel = p.numero_pedido ? `#${p.numero_pedido}` : p.token.slice(0, 8).toUpperCase();
+  const globalEstado = pedidos.reduce((worst, ped) => {
+    const idx = stateOrder.indexOf(ped.estado);
+    return idx < stateOrder.indexOf(worst) ? ped.estado : worst;
+  }, "entregado");
 
   return (
     <main
@@ -383,7 +387,7 @@ export default function MiPedidoPage({
 
       {/* Estado badge */}
       <div style={{ marginBottom: 28, animation: "pedidoFadeUp 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s both" }}>
-        <EstadoBadge estado={p.estado} />
+        <EstadoBadge estado={globalEstado} />
       </div>
 
       {/* Main card */}
@@ -403,37 +407,49 @@ export default function MiPedidoPage({
           animation: "pedidoCardIn 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.35s both",
         }}
       >
-        {/* Formula name with accent dot */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-          <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
-            <div
-              style={{
-                position: "absolute",
-                inset: -3,
-                borderRadius: "50%",
-                background: accentColor,
-                animation: "accentPulse 3s ease-in-out infinite",
-                opacity: 0.3,
-              }}
-            />
-            <div
-              style={{
-                position: "relative",
-                width: 12,
-                height: 12,
-                borderRadius: "50%",
-                background: accentColor,
-                boxShadow: `0 0 8px ${accentColor}44`,
-              }}
-            />
-          </div>
-          <span
-            className="font-cormorant"
-            style={{ fontSize: 26, fontWeight: 600, color: "#1A1A1A" }}
-          >
-            {formula?.nombre ?? "Formula"}
-          </span>
-        </div>
+        {/* Formula lines */}
+        {pedidos.map((ped, idx) => {
+          const fc = ped.formulas?.color_acento ?? "#4A5E3A";
+          return (
+            <div key={ped.id} style={{ marginBottom: idx < pedidos.length - 1 ? 12 : 6 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
+                <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
+                  {idx === 0 && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: -3,
+                        borderRadius: "50%",
+                        background: fc,
+                        animation: "accentPulse 3s ease-in-out infinite",
+                        opacity: 0.3,
+                      }}
+                    />
+                  )}
+                  <div
+                    style={{
+                      position: "relative",
+                      width: 12,
+                      height: 12,
+                      borderRadius: "50%",
+                      background: fc,
+                      boxShadow: `0 0 8px ${fc}44`,
+                    }}
+                  />
+                </div>
+                <span
+                  className="font-cormorant"
+                  style={{ fontSize: multiFormula ? 22 : 26, fontWeight: 600, color: "#1A1A1A" }}
+                >
+                  {ped.formulas?.nombre ?? "Formula"}
+                </span>
+                <span className="font-inter" style={{ fontSize: 13, color: "#9A9490", marginLeft: "auto" }}>
+                  {ped.cantidad ?? 1} bot.
+                </span>
+              </div>
+            </div>
+          );
+        })}
 
         {/* Details row */}
         <div
@@ -448,7 +464,7 @@ export default function MiPedidoPage({
             flexWrap: "wrap",
           }}
         >
-          <span>{p.cantidad ?? 1} botella{(p.cantidad ?? 1) !== 1 ? "s" : ""}</span>
+          <span>{pedidos.reduce((s, ped) => s + (ped.cantidad ?? 1), 0)} botella{pedidos.reduce((s, ped) => s + (ped.cantidad ?? 1), 0) !== 1 ? "s" : ""}</span>
           {p.dia_entrega && (
             <>
               <span style={{ color: "#D4D0C8" }}>·</span>
@@ -468,7 +484,7 @@ export default function MiPedidoPage({
 
         {/* Timeline */}
         <Timeline
-          estado={p.estado}
+          estado={globalEstado}
           hora_preparado={p.hora_preparado}
           hora_entrega_estimada={p.hora_entrega_estimada}
           created_at={p.created_at}
@@ -539,7 +555,7 @@ export default function MiPedidoPage({
       </div>
 
       {/* Feedback button (only when entregado) */}
-      {p.estado === "entregado" && (
+      {globalEstado === "entregado" && (
         <a
           href={`/feedback?pedido=${p.token}`}
           className="font-inter"
@@ -575,7 +591,7 @@ export default function MiPedidoPage({
           display: "inline-flex",
           alignItems: "center",
           gap: 8,
-          marginTop: p.estado === "entregado" ? 10 : 20,
+          marginTop: globalEstado === "entregado" ? 10 : 20,
           padding: "10px 20px",
           borderRadius: 100,
           background: "rgba(37,211,102,0.08)",

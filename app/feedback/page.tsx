@@ -623,26 +623,20 @@ function MultiOptionCards({
             className="w-full text-left px-5 py-4 rounded-2xl font-inter transition-all spring-press"
             style={{
               fontSize: "clamp(0.88rem, 3.4vw, 1rem)",
-              background: isSecond
-                ? "rgba(122,32,48,0.08)"
-                : isFirst
+              background: sel
                 ? "rgba(74,94,58,0.12)"
                 : "rgba(255,255,255,0.65)",
-              border: isSecond
-                ? "1.5px solid #7A2030"
-                : isFirst
+              border: sel
                 ? "1.5px solid #4A5E3A"
                 : "1px solid rgba(0,0,0,0.08)",
-              color: isSecond
-                ? "#7A2030"
-                : isFirst
+              color: sel
                 ? "#4A5E3A"
                 : disabled
                 ? "#C0C0C0"
                 : "#6A6A6A",
               backdropFilter: "blur(12px)",
               WebkitBackdropFilter: "blur(12px)",
-              boxShadow: sel ? `0 0 20px ${isSecond ? "rgba(122,32,48,0.12)" : "rgba(74,94,58,0.15)"}` : "0 2px 8px rgba(0,0,0,0.06)",
+              boxShadow: sel ? "0 0 20px rgba(74,94,58,0.15)" : "0 2px 8px rgba(0,0,0,0.06)",
               fontWeight: sel ? 500 : 400,
               opacity: disabled ? 0.5 : 1,
               cursor: disabled ? "default" : "pointer",
