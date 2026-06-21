@@ -10,6 +10,16 @@ import { fmtGramos } from "@/lib/format";
 type ClienteOption = { id: string; nombre: string };
 type FormulaOption = { id: string; nombre: string };
 
+type Ajuste = {
+  id: string;
+  adjustment_type: string;
+  requested_date: string | null;
+  credit_validity_days: number | null;
+  status: string;
+  created_at: string;
+  pedidos: { token: string; dia_entrega: string; clientes: { nombre: string } | null } | null;
+};
+
 type Pedido = {
   id: string;
   cantidad: number;
@@ -31,6 +41,7 @@ export default function AdminInicio() {
   const [showNuevoPedido, setShowNuevoPedido] = useState(false);
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
   const [formulas, setFormulas] = useState<FormulaOption[]>([]);
+  const [ajustes, setAjustes] = useState<Ajuste[]>([]);
 
   const baseToday = todayStr();
   const fecha = addDays(baseToday, dayOffset);
@@ -41,13 +52,14 @@ export default function AdminInicio() {
   const isCurrentWeek = weekOffset === 0;
 
   async function load() {
-    const [hoyRes, semanaRes, clientesRes, recetasRes, clientesListRes, formulasListRes] = await Promise.all([
+    const [hoyRes, semanaRes, clientesRes, recetasRes, clientesListRes, formulasListRes, ajustesRes] = await Promise.all([
       supabase.from("pedidos").select("*, clientes(nombre), formulas(nombre, slug, color_acento)").eq("dia_entrega", fecha).order("created_at"),
       supabase.from("pedidos").select("*, clientes(nombre), formulas(nombre, slug, color_acento)").gte("dia_entrega", inicio).lte("dia_entrega", fin).order("dia_entrega"),
       supabase.from("clientes").select("id", { count: "exact", head: true }),
       supabase.from("recetas").select("formula_id, gramos, ingredientes(nombre, unidad)"),
       supabase.from("clientes").select("id, nombre").eq("activo", true).order("nombre"),
       supabase.from("formulas").select("id, nombre").order("nombre"),
+      supabase.from("ajustes_pedido").select("*, pedidos(token, dia_entrega, clientes(nombre))").eq("status", "pending_review").order("created_at", { ascending: false }),
     ]);
 
     setPedidosHoy(hoyRes.data ?? []);
@@ -55,6 +67,7 @@ export default function AdminInicio() {
     setNumClientes(clientesRes.count ?? 0);
     setClientes(clientesListRes.data ?? []);
     setFormulas(formulasListRes.data ?? []);
+    setAjustes((ajustesRes.data ?? []) as unknown as Ajuste[]);
 
     const totales: Record<string, { gramos: number; unidad: string }> = {};
     for (const pedido of (semanaRes.data ?? []) as Pedido[]) {
@@ -110,6 +123,67 @@ export default function AdminInicio() {
         <MetricCard label="Clientes" value={numClientes} unit="registrados" accent="#7A2030"
           sub="Ver todos" href="/admin/clientes" />
       </div>
+
+      {/* Ajustes pendientes */}
+      {ajustes.length > 0 && (
+        <div className="rounded-2xl p-6 mb-5" style={{ background: "rgba(184,134,11,0.06)", border: "1px solid rgba(184,134,11,0.15)" }}>
+          <p className="font-inter text-xs uppercase tracking-widest mb-4" style={{ color: "#B8860B" }}>
+            Solicitudes de ajuste · {ajustes.length} pendiente{ajustes.length !== 1 ? "s" : ""}
+          </p>
+          <div className="flex flex-col gap-3">
+            {ajustes.map((a) => {
+              const cliente = (a.pedidos as unknown as { clientes: { nombre: string } | null })?.clientes?.nombre ?? "—";
+              const isDate = a.adjustment_type === "date_change";
+              return (
+                <div key={a.id} className="flex items-center justify-between rounded-xl px-4 py-3"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div>
+                    <p className="font-inter text-sm" style={{ color: "#F5F0E8" }}>
+                      {cliente}
+                      <span className="font-inter text-xs ml-2 px-2 py-0.5 rounded-full"
+                        style={{ background: isDate ? "rgba(74,94,58,0.15)" : "rgba(184,134,11,0.15)", color: isDate ? "#4A5E3A" : "#B8860B" }}>
+                        {isDate ? "Cambio de fecha" : "Crédito LUMO"}
+                      </span>
+                    </p>
+                    <p className="font-inter text-xs mt-1" style={{ color: "#8A8A8A" }}>
+                      {isDate && a.requested_date ? `Nueva fecha solicitada: ${formatDateLabel(a.requested_date)}` : `Crédito por ${a.credit_validity_days} días`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        if (isDate && a.requested_date) {
+                          const pedido = a.pedidos as unknown as { token: string };
+                          if (pedido?.token) {
+                            const { data: peds } = await supabase.from("pedidos").select("id").eq("token", pedido.token);
+                            if (peds?.length) {
+                              await supabase.from("pedidos").update({ dia_entrega: a.requested_date }).in("id", peds.map((p: { id: string }) => p.id));
+                            }
+                          }
+                        }
+                        await supabase.from("ajustes_pedido").update({ status: "approved" }).eq("id", a.id);
+                        load();
+                      }}
+                      className="rounded-lg px-3 py-1.5 font-inter text-xs font-semibold"
+                      style={{ background: "rgba(74,94,58,0.3)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.5)" }}>
+                      Aprobar
+                    </button>
+                    <button
+                      onClick={async () => {
+                        await supabase.from("ajustes_pedido").update({ status: "rejected" }).eq("id", a.id);
+                        load();
+                      }}
+                      className="rounded-lg px-3 py-1.5 font-inter text-xs font-semibold"
+                      style={{ background: "rgba(122,32,48,0.3)", color: "#E05070", border: "1px solid rgba(122,32,48,0.5)" }}>
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
