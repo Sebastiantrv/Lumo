@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Tu pedido · LUMO",
 };
@@ -35,9 +37,11 @@ function capitalize(s: string): string {
 interface Pedido {
   id: number;
   token: string;
+  numero_pedido?: number | null;
   estado: string;
   cantidad: number;
   dia_entrega: string;
+  created_at?: string | null;
   hora_preparado?: string | null;
   hora_entrega_estimada?: string | null;
   ingredientes_excluidos?: string[] | null;
@@ -81,14 +85,27 @@ function EstadoBadge({ estado }: { estado: string }) {
 
 /* ---------- timeline ---------- */
 
-function Timeline({ estado, hora_preparado, hora_entrega_estimada, accentColor }: {
+function formatCreatedDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Mexico_City",
+  });
+}
+
+function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, accentColor }: {
   estado: string;
   hora_preparado?: string | null;
   hora_entrega_estimada?: string | null;
+  created_at?: string | null;
   accentColor: string;
 }) {
+  const createdSub = created_at
+    ? `Recibido el ${formatCreatedDate(created_at)}`
+    : "Estamos organizando tu entrega";
   const steps = [
-    { key: "pendiente",  label: "Pedido recibido", sub: "Estamos organizando tu entrega" },
+    { key: "pendiente",  label: "Pedido recibido", sub: createdSub },
     { key: "confirmado", label: "Confirmado", sub: "Tu pedido ha sido confirmado" },
     { key: "preparado",  label: "Envasado", sub: null },
     { key: "entregado",  label: "Entregado", sub: null },
@@ -239,7 +256,7 @@ export default async function MiPedidoPage({
   const { data: pedido, error } = await supabaseAdmin
     .from("pedidos")
     .select(
-      "*, clientes(nombre, telefono), formulas(nombre, slug, color_acento)"
+      "*, created_at, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento)"
     )
     .eq("token", token)
     .single();
@@ -274,7 +291,8 @@ export default async function MiPedidoPage({
   const nombre = p.clientes?.nombre ?? "amigo";
   const formula = p.formulas;
   const accentColor = formula?.color_acento ?? "#4A5E3A";
-  const lumoWhatsApp = "5215512345678";
+  const lumoWhatsApp = "5215542779362";
+  const orderLabel = p.numero_pedido ? `#${p.numero_pedido}` : p.token.slice(0, 8).toUpperCase();
 
   return (
     <main
@@ -420,6 +438,7 @@ export default async function MiPedidoPage({
           estado={p.estado}
           hora_preparado={p.hora_preparado}
           hora_entrega_estimada={p.hora_entrega_estimada}
+          created_at={p.created_at}
           accentColor={accentColor}
         />
 
@@ -487,9 +506,36 @@ export default async function MiPedidoPage({
         </p>
       </div>
 
+      {/* Feedback button (only when entregado) */}
+      {p.estado === "entregado" && (
+        <a
+          href={`/feedback?pedido=${p.token}`}
+          className="font-inter"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 8,
+            marginTop: 20,
+            padding: "12px 24px",
+            borderRadius: 100,
+            background: "#0D0D0D",
+            color: "#F4EFE7",
+            fontSize: 14,
+            fontWeight: 500,
+            textDecoration: "none",
+            animation: "pedidoFadeUp 0.6s ease 1.55s both",
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+          </svg>
+          Compartir mi experiencia
+        </a>
+      )}
+
       {/* WhatsApp contact button */}
       <a
-        href={`https://wa.me/${lumoWhatsApp}?text=${encodeURIComponent("Hola LUMO, tengo una consulta sobre mi pedido.")}`}
+        href={`https://wa.me/${lumoWhatsApp}?text=${encodeURIComponent(`Hola LUMO, tengo una consulta sobre mi pedido ${orderLabel}.`)}`}
         target="_blank"
         rel="noopener noreferrer"
         className="font-inter"
@@ -497,7 +543,7 @@ export default async function MiPedidoPage({
           display: "inline-flex",
           alignItems: "center",
           gap: 8,
-          marginTop: 20,
+          marginTop: p.estado === "entregado" ? 10 : 20,
           padding: "10px 20px",
           borderRadius: 100,
           background: "rgba(37,211,102,0.08)",
@@ -515,13 +561,28 @@ export default async function MiPedidoPage({
         Contactar a LUMO
       </a>
 
+      {/* Subtle order number */}
+      <p
+        className="font-inter"
+        style={{
+          color: "#C8C0B4",
+          fontSize: 11,
+          marginTop: 24,
+          letterSpacing: "0.04em",
+          animation: "footerIn 0.8s ease 1.7s both",
+          userSelect: "all",
+        }}
+      >
+        Pedido {orderLabel}
+      </p>
+
       {/* Footer */}
       <p
         className="font-inter"
         style={{
           color: "#B8B0A4",
           fontSize: 12,
-          marginTop: 32,
+          marginTop: 8,
           letterSpacing: "0.06em",
           animation: "footerIn 0.8s ease 1.8s both",
         }}

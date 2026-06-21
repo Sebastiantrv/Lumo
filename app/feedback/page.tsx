@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 
@@ -69,6 +70,8 @@ const RAZON_OPTIONS = [
 ];
 
 export default function FeedbackPage() {
+  const searchParams = useSearchParams();
+  const pedidoToken = searchParams.get("pedido") ?? undefined;
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [animKey, setAnimKey] = useState(0);
@@ -122,6 +125,7 @@ export default function FeedbackPage() {
   async function submit() {
     const payload = {
       ...data,
+      pedido_token: pedidoToken || null,
       recomendacion: data.recomendacion.join(" | "),
       razon_adopcion: data.razon_adopcion.join(" | "),
       mejora_abierta: data.mejora_abierta.trim() || null,
