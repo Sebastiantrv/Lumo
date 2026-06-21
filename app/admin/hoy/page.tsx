@@ -19,6 +19,7 @@ type Pedido = {
   preferencia_sorpresa: string | null;
   formula_id: string;
   token: string | null;
+  numero_pedido: number | null;
   hora_preparado: string | null;
   hora_entrega_estimada: string | null;
   clientes: { nombre: string; telefono: string | null } | null;
@@ -43,7 +44,7 @@ export default function AdminHoy() {
 
   async function load() {
     const [{ data: p }, { data: r }] = await Promise.all([
-      supabase.from("pedidos").select("*, clientes(nombre, telefono), formulas(nombre, slug, color_acento)").eq("dia_entrega", fecha).order("created_at"),
+      supabase.from("pedidos").select("*, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento)").eq("dia_entrega", fecha).order("created_at"),
       supabase.from("recetas").select("formula_id, gramos, ingredientes(nombre, unidad)"),
     ]);
     setPedidos(p ?? []);
@@ -52,6 +53,14 @@ export default function AdminHoy() {
   }
 
   useEffect(() => { load(); }, []);
+
+  async function reactivarGroup(ids: string[]) {
+    if (!confirm("¿Reactivar este pedido? Se marcará como pendiente.")) return;
+    setUpdating(ids[0]);
+    await supabase.from("pedidos").update({ estado: "pendiente", hora_preparado: null, hora_entrega_estimada: null }).in("id", ids);
+    await load();
+    setUpdating(null);
+  }
 
   async function toggleEstadoGroup(ids: string[], estadoActual: string) {
     if (estadoActual === "cancelado") return;
@@ -78,7 +87,7 @@ export default function AdminHoy() {
   }
 
   async function cancelarGroup(ids: string[]) {
-    if (!confirm("¿Cancelar este pedido? Esta accion no se puede deshacer.")) return;
+    if (!confirm("¿Cancelar este pedido?")) return;
     setUpdating(ids[0]);
     await supabase.from("pedidos").update({ estado: "cancelado" }).in("id", ids);
     await load();
@@ -261,6 +270,11 @@ export default function AdminHoy() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
                         {group.cliente?.nombre ?? "Sin nombre"}
+                        {firstPed.numero_pedido && (
+                          <span className="font-inter text-xs ml-2" style={{ color: "#8A8A8A", fontWeight: 400 }}>
+                            #{firstPed.numero_pedido}
+                          </span>
+                        )}
                       </p>
                       {multiFormula && (
                         <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(74,94,58,0.15)", color: "#4A5E3A" }}>
@@ -363,6 +377,20 @@ export default function AdminHoy() {
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#7A2030" strokeWidth="2.5" strokeLinecap="round">
                           <line x1="18" y1="6" x2="6" y2="18" />
                           <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    )}
+                    {group.estado === "cancelado" && (
+                      <button
+                        onClick={() => reactivarGroup(group.ids)}
+                        disabled={updating === firstPed.id}
+                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        style={{ background: "rgba(74,94,58,0.15)", border: "1px solid rgba(74,94,58,0.3)" }}
+                        title="Reactivar pedido"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#4A5E3A" strokeWidth="2.5" strokeLinecap="round">
+                          <polyline points="1 4 1 10 7 10" />
+                          <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                         </svg>
                       </button>
                     )}

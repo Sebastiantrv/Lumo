@@ -99,8 +99,7 @@ export function isCutoffPassed(diaEntrega: string): boolean {
   const mexicoOffset = -6;
   const utcNow = now.getTime() + now.getTimezoneOffset() * 60000;
   const mexicoNow = new Date(utcNow + mexicoOffset * 3600000);
-  const cutoff = new Date(diaEntrega + "T00:00:00");
-  cutoff.setDate(cutoff.getDate() - 1);
-  cutoff.setHours(20, 0, 0, 0);
+  const [y, m, d] = diaEntrega.split("-").map(Number);
+  const cutoff = new Date(y, m - 1, d - 1, 20, 0, 0, 0);
   return mexicoNow >= cutoff;
 }
