@@ -378,7 +378,7 @@ export default function MiPedidoPage({
           animation: "pedidoFadeUp 0.7s ease 0.2s both",
         }}
       >
-        Tu jugo de hoy
+        Tu jugo de hoy · {orderLabel}
       </p>
 
       {/* Estado badge */}
@@ -593,28 +593,13 @@ export default function MiPedidoPage({
         Contactar a LUMO
       </a>
 
-      {/* Subtle order number */}
-      <p
-        className="font-inter"
-        style={{
-          color: "#C8C0B4",
-          fontSize: 11,
-          marginTop: 24,
-          letterSpacing: "0.04em",
-          animation: "footerIn 0.8s ease 1.7s both",
-          userSelect: "all",
-        }}
-      >
-        Pedido {orderLabel}
-      </p>
-
       {/* Footer */}
       <p
         className="font-inter"
         style={{
           color: "#B8B0A4",
           fontSize: 12,
-          marginTop: 8,
+          marginTop: 24,
           letterSpacing: "0.06em",
           animation: "footerIn 0.8s ease 1.8s both",
         }}

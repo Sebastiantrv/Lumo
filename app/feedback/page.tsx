@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
+import { supabase } from "@/lib/supabase";
 
 /* ── Design tokens ── */
 const T = {
@@ -83,6 +84,7 @@ function FeedbackContent() {
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [animKey, setAnimKey] = useState(0);
+  const [clientName, setClientName] = useState("");
   const [data, setData] = useState<FormData>({
     nombre: "",
     sabor_rating: 0,
@@ -95,6 +97,22 @@ function FeedbackContent() {
     mejora_abierta: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!pedidoToken) return;
+    supabase
+      .from("pedidos")
+      .select("clientes(nombre)")
+      .eq("token", pedidoToken)
+      .single()
+      .then(({ data }) => {
+        const nombre = (data as any)?.clientes?.nombre;
+        if (nombre) {
+          setClientName(nombre);
+          setData((d) => ({ ...d, nombre }));
+        }
+      });
+  }, [pedidoToken]);
 
   function goTo(next: number, dir: "forward" | "backward") {
     setDirection(dir);
@@ -212,7 +230,7 @@ function FeedbackContent() {
                   </p>
                 </div>
                 <button
-                  onClick={() => goTo(1, "forward")}
+                  onClick={() => goTo(clientName ? 2 : 1, "forward")}
                   className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
                   style={{
                     fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
