@@ -355,51 +355,72 @@ function PageLoader() {
   );
 }
 
+type LineaFormula = {
+  formulaId: string;
+  cantidad: string;
+  excluidos: string[];
+  ingredientes: { nombre: string }[];
+};
+
 function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
   clientes: ClienteOption[]; formulas: FormulaOption[]; onClose: () => void; onSaved: () => void;
 }) {
   const d = new Date();
   const hoyStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
   const [clienteId, setClienteId] = useState("");
-  const [formulaId, setFormulaId] = useState(formulas[0]?.id ?? "");
-  const [cantidad, setCantidad] = useState("1");
+  const [lineas, setLineas] = useState<LineaFormula[]>([
+    { formulaId: formulas[0]?.id ?? "", cantidad: "1", excluidos: [], ingredientes: [] },
+  ]);
   const [diaEntrega, setDiaEntrega] = useState(hoyStr);
   const [notas, setNotas] = useState("");
-  const [excluidos, setExcluidos] = useState<string[]>([]);
-  const [ingredientes, setIngredientes] = useState<{ nombre: string }[]>([]);
   const [preferencia, setPreferencia] = useState("");
   const [saving, setSaving] = useState(false);
 
+  function updateLinea(idx: number, patch: Partial<LineaFormula>) {
+    setLineas((prev) => prev.map((l, i) => i === idx ? { ...l, ...patch } : l));
+  }
+
+  function removeLinea(idx: number) {
+    setLineas((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  function addLinea() {
+    setLineas((prev) => [...prev, { formulaId: formulas[0]?.id ?? "", cantidad: "1", excluidos: [], ingredientes: [] }]);
+  }
+
   useEffect(() => {
-    if (formulaId && formulaId !== SORPRESA_ID) {
-      supabase.from("recetas").select("ingredientes(nombre)").eq("formula_id", formulaId)
-        .then(({ data }) => {
-          const ings = (data ?? []).map((r: any) => r.ingredientes as { nombre: string } | null).filter(Boolean) as { nombre: string }[];
-          setIngredientes(ings);
-          setExcluidos([]);
-        });
-    } else {
-      setIngredientes([]);
-      setExcluidos([]);
-    }
-  }, [formulaId]);
+    lineas.forEach((linea, idx) => {
+      if (linea.formulaId && linea.formulaId !== SORPRESA_ID && linea.ingredientes.length === 0) {
+        supabase.from("recetas").select("ingredientes(nombre)").eq("formula_id", linea.formulaId)
+          .then(({ data }) => {
+            const ings = (data ?? []).map((r: any) => r.ingredientes as { nombre: string } | null).filter(Boolean) as { nombre: string }[];
+            updateLinea(idx, { ingredientes: ings });
+          });
+      }
+    });
+  }, [lineas.map((l) => l.formulaId).join(",")]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!clienteId) return;
+    if (!clienteId || lineas.length === 0) return;
     setSaving(true);
-    let realFormulaId = formulaId;
-    let esSorpresa = false;
-    if (formulaId === SORPRESA_ID) {
-      realFormulaId = formulas[Math.floor(Math.random() * formulas.length)]?.id ?? formulas[0]?.id ?? "";
-      esSorpresa = true;
-    }
-    await supabase.from("pedidos").insert({
-      cliente_id: clienteId, formula_id: realFormulaId, cantidad: parseInt(cantidad),
-      dia_entrega: diaEntrega, notas: notas || null, tipo_pedido: getTipoPedido(diaEntrega),
-      es_sorpresa: esSorpresa, ingredientes_excluidos: excluidos.length > 0 ? excluidos : null,
-      preferencia_sorpresa: preferencia || null,
+
+    const rows = lineas.map((linea) => {
+      let realFormulaId = linea.formulaId;
+      let esSorpresa = false;
+      if (linea.formulaId === SORPRESA_ID) {
+        realFormulaId = formulas[Math.floor(Math.random() * formulas.length)]?.id ?? formulas[0]?.id ?? "";
+        esSorpresa = true;
+      }
+      return {
+        cliente_id: clienteId, formula_id: realFormulaId, cantidad: parseInt(linea.cantidad),
+        dia_entrega: diaEntrega, notas: notas || null, tipo_pedido: getTipoPedido(diaEntrega),
+        es_sorpresa: esSorpresa, ingredientes_excluidos: linea.excluidos.length > 0 ? linea.excluidos : null,
+        preferencia_sorpresa: preferencia || null,
+      };
     });
+
+    await supabase.from("pedidos").insert(rows);
     onSaved();
   }
 
@@ -428,37 +449,81 @@ function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Fórmula</label>
-            <select value={formulaId} onChange={(e) => setFormulaId(e.target.value)} style={selectStyle}>
-              {formulas.map((f) => <option key={f.id} value={f.id} style={{ background: "#1a1a1a" }}>{f.nombre}</option>)}
-              <option value={SORPRESA_ID} style={{ background: "#1a1a1a" }}>🎲 Sorpresa</option>
-            </select>
-          </div>
-
-          {formulaId === SORPRESA_ID && (
-            <div className="rounded-xl px-4 py-3" style={{ background: "rgba(184,134,11,0.12)", border: "1px solid rgba(184,134,11,0.25)" }}>
-              <p className="font-inter text-xs" style={{ color: "#E6A800" }}>🎲 Se asignará una fórmula al azar.</p>
+          {/* Líneas de fórmulas */}
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>
+                Fórmulas
+              </label>
+              {lineas.length > 0 && (
+                <span className="font-inter text-xs" style={{ color: "#555" }}>
+                  {lineas.reduce((s, l) => s + parseInt(l.cantidad || "0"), 0)} botella{lineas.reduce((s, l) => s + parseInt(l.cantidad || "0"), 0) !== 1 ? "s" : ""} total
+                </span>
+              )}
             </div>
-          )}
 
-          {formulaId !== SORPRESA_ID && ingredientes.length > 0 && (
-            <div className="flex flex-col gap-2">
-              <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Excluir ingredientes</label>
-              <div className="flex flex-wrap gap-2">
-                {ingredientes.map((ing) => {
-                  const ex = excluidos.includes(ing.nombre);
-                  return (
-                    <button key={ing.nombre} type="button" onClick={() => setExcluidos((prev) => ex ? prev.filter((n) => n !== ing.nombre) : [...prev, ing.nombre])}
-                      className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
-                      style={{ background: ex ? "rgba(224,80,112,0.12)" : "rgba(255,255,255,0.06)", color: ex ? "#E05070" : "#8A8A8A", border: ex ? "1px solid rgba(224,80,112,0.3)" : "1px solid rgba(255,255,255,0.08)", textDecoration: ex ? "line-through" : "none" }}>
-                      {ing.nombre}
+            {lineas.map((linea, idx) => (
+              <div key={idx} className="rounded-xl p-4" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <select
+                    value={linea.formulaId}
+                    onChange={(e) => updateLinea(idx, { formulaId: e.target.value, excluidos: [], ingredientes: [] })}
+                    className="flex-1"
+                    style={selectStyle}
+                  >
+                    {formulas.map((f) => <option key={f.id} value={f.id} style={{ background: "#1a1a1a" }}>{f.nombre}</option>)}
+                    <option value={SORPRESA_ID} style={{ background: "#1a1a1a" }}>Sorpresa</option>
+                  </select>
+                  {lineas.length > 1 && (
+                    <button type="button" onClick={() => removeLinea(idx)}
+                      className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ background: "rgba(122,32,48,0.12)", color: "#7A2030", border: "1px solid rgba(122,32,48,0.2)" }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
                     </button>
-                  );
-                })}
+                  )}
+                </div>
+
+                {/* Cantidad inline */}
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => updateLinea(idx, { cantidad: String(Math.max(1, parseInt(linea.cantidad) - 1)) })}
+                    className="w-8 h-8 rounded-lg font-inter text-sm" style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8" }}>−</button>
+                  <span className="font-cormorant text-lg w-8 text-center" style={{ color: "#F5F0E8" }}>{linea.cantidad}</span>
+                  <button type="button" onClick={() => updateLinea(idx, { cantidad: String(parseInt(linea.cantidad) + 1) })}
+                    className="w-8 h-8 rounded-lg font-inter text-sm" style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8" }}>+</button>
+                  <span className="font-inter text-xs ml-1" style={{ color: "#555" }}>botella{parseInt(linea.cantidad) !== 1 ? "s" : ""}</span>
+                </div>
+
+                {/* Excluir ingredientes */}
+                {linea.formulaId !== SORPRESA_ID && linea.ingredientes.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {linea.ingredientes.map((ing) => {
+                      const ex = linea.excluidos.includes(ing.nombre);
+                      return (
+                        <button key={ing.nombre} type="button"
+                          onClick={() => updateLinea(idx, { excluidos: ex ? linea.excluidos.filter((n) => n !== ing.nombre) : [...linea.excluidos, ing.nombre] })}
+                          className="rounded-md px-2 py-1 font-inter transition-all"
+                          style={{ fontSize: 11, background: ex ? "rgba(224,80,112,0.12)" : "rgba(255,255,255,0.04)", color: ex ? "#E05070" : "#666", border: ex ? "1px solid rgba(224,80,112,0.25)" : "1px solid rgba(255,255,255,0.06)", textDecoration: ex ? "line-through" : "none" }}>
+                          {ing.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {linea.formulaId === SORPRESA_ID && (
+                  <p className="font-inter text-xs mt-2" style={{ color: "#E6A800" }}>Se asignará una fórmula al azar.</p>
+                )}
               </div>
-            </div>
-          )}
+            ))}
+
+            <button type="button" onClick={addLinea}
+              className="w-full rounded-xl py-2.5 font-inter text-xs transition-all flex items-center justify-center gap-1.5"
+              style={{ background: "rgba(74,94,58,0.08)", border: "1px dashed rgba(74,94,58,0.25)", color: "#4A5E3A" }}>
+              <span>+</span> Agregar otra fórmula
+            </button>
+          </div>
 
           <div className="flex flex-col gap-2">
             <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Preferencia de sabor</label>
@@ -470,17 +535,6 @@ function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
                   {p}
                 </button>
               ))}
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <label className="font-inter text-xs uppercase tracking-widest" style={{ color: "#8A8A8A" }}>Cantidad</label>
-            <div className="flex items-center gap-3">
-              <button type="button" onClick={() => setCantidad((v) => String(Math.max(1, parseInt(v) - 1)))}
-                className="w-10 h-10 rounded-xl font-inter text-lg" style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8" }}>−</button>
-              <span className="font-cormorant text-2xl flex-1 text-center" style={{ color: "#F5F0E8" }}>{cantidad}</span>
-              <button type="button" onClick={() => setCantidad((v) => String(parseInt(v) + 1))}
-                className="w-10 h-10 rounded-xl font-inter text-lg" style={{ background: "rgba(255,255,255,0.06)", color: "#F5F0E8" }}>+</button>
             </div>
           </div>
 
@@ -500,7 +554,7 @@ function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
 
           <button type="submit" disabled={saving || !clienteId} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
             style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving || !clienteId ? 0.5 : 1 }}>
-            {saving ? "Guardando..." : "Crear pedido"}
+            {saving ? "Guardando..." : `Crear pedido · ${lineas.reduce((s, l) => s + parseInt(l.cantidad || "0"), 0)} botella${lineas.reduce((s, l) => s + parseInt(l.cantidad || "0"), 0) !== 1 ? "s" : ""}`}
           </button>
         </form>
       </div>
