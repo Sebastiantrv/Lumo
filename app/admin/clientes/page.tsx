@@ -57,12 +57,19 @@ export default function ClientesPage() {
     const [{ data: c }, { data: f }, { data: cr }, { data: pedidos }] = await Promise.all([
       supabase.from("clientes").select("*").order("nombre"),
       supabase.from("formulas").select("*").order("nombre"),
-      supabase.from("creditos_lumo").select("*").eq("estado", "activo"),
+      supabase.from("creditos_lumo").select("*"),
       supabase.from("pedidos").select("cliente_id, cantidad, dia_entrega, formula_id, formulas(nombre, color_acento)").order("dia_entrega", { ascending: false }),
     ]);
     setClientes(c ?? []);
     setFormulas(f ?? []);
-    setCreditos((cr ?? []) as unknown as Credito[]);
+    const allCreditos = (cr ?? []) as unknown as Credito[];
+    const today = new Date().toISOString().split("T")[0];
+    const expired = allCreditos.filter((c) => c.estado === "activo" && c.fecha_expiracion < today);
+    if (expired.length > 0) {
+      await Promise.all(expired.map((c) => supabase.from("creditos_lumo").update({ estado: "expirado" }).eq("id", c.id)));
+      expired.forEach((c) => { c.estado = "expirado"; });
+    }
+    setCreditos(allCreditos);
 
     const statsMap = new Map<string, PedidoStats>();
     for (const p of (pedidos ?? []) as unknown as { cliente_id: string; cantidad: number; dia_entrega: string; formula_id: string; formulas: { nombre: string; color_acento: string } | null }[]) {
@@ -115,15 +122,19 @@ export default function ClientesPage() {
     return creditos.filter((c) => c.cliente_id === clienteId);
   }
 
+  function getCreditosActivos(clienteId: string) {
+    return creditos.filter((c) => c.cliente_id === clienteId && c.estado === "activo");
+  }
+
   function getTotalCredito(clienteId: string) {
-    return getCreditosCliente(clienteId).reduce((s, c) => s + c.monto, 0);
+    return getCreditosActivos(clienteId).reduce((s, c) => s + c.monto, 0);
   }
 
   if (loading) return <Loader />;
 
   const activos = clientes.filter((c) => c.activo);
   const inactivos = clientes.filter((c) => !c.activo);
-  const totalCreditosActivos = creditos.reduce((s, c) => s + c.monto, 0);
+  const totalCreditosActivos = creditos.filter((c) => c.estado === "activo").reduce((s, c) => s + c.monto, 0);
 
   const filtrados = busqueda.trim()
     ? activos.filter((c) => c.nombre.toLowerCase().includes(busqueda.toLowerCase()) || c.telefono?.includes(busqueda))
@@ -163,7 +174,7 @@ export default function ClientesPage() {
           <p className="font-cormorant text-2xl mt-1" style={{ color: "#555" }}>{inactivos.length}</p>
         </div>
         <div className="rounded-xl p-4" style={{ background: totalCreditosActivos > 0 ? "rgba(184,134,11,0.06)" : "rgba(255,255,255,0.03)", border: totalCreditosActivos > 0 ? "1px solid rgba(184,134,11,0.15)" : "1px solid rgba(255,255,255,0.06)" }}>
-          <p className="font-inter text-xs uppercase tracking-widest" style={{ color: totalCreditosActivos > 0 ? "#B8860B" : "#8A8A8A" }}>Créditos activos</p>
+          <p className="font-inter text-xs uppercase tracking-widest" style={{ color: totalCreditosActivos > 0 ? "#B8860B" : "#8A8A8A" }}>Balance LUMO</p>
           <p className="font-cormorant text-2xl mt-1" style={{ color: totalCreditosActivos > 0 ? "#E6A800" : "#555" }}>${totalCreditosActivos}</p>
         </div>
       </div>
@@ -301,8 +312,9 @@ function ClienteCard({ cliente, stats, creditoTotal, onOpenFicha, onPedido, onEd
                 {cliente.nombre}
               </span>
               {creditoTotal > 0 && (
-                <span className="font-inter text-xs px-2 py-0.5 rounded-full shrink-0"
+                <span className="font-inter text-xs px-2 py-0.5 rounded-full shrink-0 inline-flex items-center gap-1"
                   style={{ background: "rgba(184,134,11,0.15)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 0-8 9.27-8 13a8 8 0 0 0 16 0c0-3.73-8-13-8-13z"/></svg>
                   ${creditoTotal}
                 </span>
               )}
@@ -407,7 +419,19 @@ function FichaCliente({ cliente, stats, creditos, onClose, onEditar, onPedido, o
     onReload();
   }
 
-  const totalCredito = creditos.reduce((s, c) => s + c.monto, 0);
+  async function renovarCredito(cr: Credito) {
+    const dias = parseInt(prompt("¿Cuántos días de vigencia?", "14") ?? "0");
+    if (!dias) return;
+    const exp = new Date();
+    exp.setDate(exp.getDate() + dias);
+    const fechaExp = `${exp.getFullYear()}-${String(exp.getMonth() + 1).padStart(2, "0")}-${String(exp.getDate()).padStart(2, "0")}`;
+    await supabase.from("creditos_lumo").update({ estado: "activo", fecha_expiracion: fechaExp }).eq("id", cr.id);
+    onReload();
+  }
+
+  const creditosActivos = creditos.filter((c) => c.estado === "activo");
+  const creditosInactivos = creditos.filter((c) => c.estado !== "activo");
+  const totalCredito = creditosActivos.reduce((s, c) => s + c.monto, 0);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
@@ -502,12 +526,20 @@ function FichaCliente({ cliente, stats, creditos, onClose, onEditar, onPedido, o
           </div>
         )}
 
-        {/* Credits section */}
+        {/* Balance LUMO section */}
         <div className="px-6 py-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
           <div className="flex items-center justify-between mb-3">
-            <p className="font-inter text-xs uppercase tracking-widest" style={{ color: totalCredito > 0 ? "#B8860B" : "#555" }}>
-              Créditos LUMO
-            </p>
+            <div className="flex items-center gap-2">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={totalCredito > 0 ? "#B8860B" : "#555"} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2c0 0-8 9.27-8 13a8 8 0 0 0 16 0c0-3.73-8-13-8-13z"/>
+              </svg>
+              <p className="font-inter text-xs uppercase tracking-widest" style={{ color: totalCredito > 0 ? "#B8860B" : "#555" }}>
+                Balance LUMO
+              </p>
+              {totalCredito > 0 && (
+                <span className="font-inter text-xs font-medium ml-1" style={{ color: "#E6A800" }}>${totalCredito}</span>
+              )}
+            </div>
             <button
               onClick={onNuevoCredito}
               className="font-inter text-xs px-2.5 py-1 rounded-lg"
@@ -516,11 +548,11 @@ function FichaCliente({ cliente, stats, creditos, onClose, onEditar, onPedido, o
               + Agregar
             </button>
           </div>
-          {creditos.length === 0 ? (
-            <p className="font-inter text-xs" style={{ color: "#444" }}>Sin créditos activos</p>
+          {creditosActivos.length === 0 && creditosInactivos.length === 0 ? (
+            <p className="font-inter text-xs" style={{ color: "#444" }}>Sin balance activo</p>
           ) : (
             <div className="flex flex-col gap-2">
-              {creditos.map((cr) => {
+              {creditosActivos.map((cr) => {
                 const expDate = new Date(cr.fecha_expiracion + "T12:00:00");
                 const isExpiringSoon = expDate.getTime() - Date.now() < 3 * 24 * 60 * 60 * 1000;
                 return (
@@ -536,26 +568,39 @@ function FichaCliente({ cliente, stats, creditos, onClose, onEditar, onPedido, o
                       )}
                     </div>
                     <div className="flex gap-1.5">
-                      <button
-                        onClick={() => marcarCreditoUsado(cr.id)}
+                      <button onClick={() => marcarCreditoUsado(cr.id)}
                         className="rounded-md px-2 py-1 font-inter text-xs"
-                        style={{ background: "rgba(74,94,58,0.2)", color: "#6DBF67" }}
-                        title="Marcar como usado"
-                      >
-                        Usar
-                      </button>
-                      <button
-                        onClick={() => marcarCreditoExpirado(cr.id)}
+                        style={{ background: "rgba(74,94,58,0.2)", color: "#6DBF67" }}>Usar</button>
+                      <button onClick={() => marcarCreditoExpirado(cr.id)}
                         className="rounded-md px-2 py-1 font-inter text-xs"
-                        style={{ background: "rgba(122,32,48,0.1)", color: "#7A2030" }}
-                        title="Marcar como expirado"
-                      >
-                        Expirar
-                      </button>
+                        style={{ background: "rgba(122,32,48,0.1)", color: "#7A2030" }}>Expirar</button>
                     </div>
                   </div>
                 );
               })}
+              {creditosInactivos.length > 0 && (
+                <div className="mt-1">
+                  <p className="font-inter text-xs mb-1.5" style={{ color: "#444" }}>Historial</p>
+                  {creditosInactivos.map((cr) => (
+                    <div key={cr.id} className="flex items-center justify-between rounded-lg px-3 py-2 mb-1 opacity-50"
+                      style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.04)" }}>
+                      <div>
+                        <span className="font-inter text-xs" style={{ color: "#8A8A8A", textDecoration: "line-through" }}>${cr.monto}</span>
+                        <span className="font-inter text-xs ml-2 px-1.5 py-0.5 rounded"
+                          style={{ background: cr.estado === "usado" ? "rgba(74,94,58,0.15)" : "rgba(122,32,48,0.1)", color: cr.estado === "usado" ? "#6DBF67" : "#7A2030" }}>
+                          {cr.estado === "usado" ? "Usado" : "Vencido"}
+                        </span>
+                        {cr.motivo && <span className="font-inter text-xs ml-2" style={{ color: "#444" }}>{cr.motivo}</span>}
+                      </div>
+                      {cr.estado === "expirado" && (
+                        <button onClick={() => renovarCredito(cr)}
+                          className="rounded-md px-2 py-1 font-inter text-xs"
+                          style={{ background: "rgba(184,134,11,0.12)", color: "#E6A800" }}>Renovar</button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -595,18 +640,21 @@ function NuevoCreditoModal({ clienteId, clienteNombre, onClose, onSaved }: {
   clienteId: string; clienteNombre: string; onClose: () => void; onSaved: () => void;
 }) {
   const [monto, setMonto] = useState("");
-  const [motivo, setMotivo] = useState("Crédito por pedido cancelado");
-  const [diasVigencia, setDiasVigencia] = useState("14");
+  const [motivo, setMotivo] = useState("Pedido convertido en Balance LUMO");
+  const defaultExp = (() => { const d = new Date(); d.setDate(d.getDate() + 30); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; })();
+  const [fechaExp, setFechaExp] = useState(defaultExp);
   const [saving, setSaving] = useState(false);
+
+  function setQuickDays(days: number) {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    setFechaExp(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!monto || parseFloat(monto) <= 0) return;
+    if (!monto || parseFloat(monto) <= 0 || !fechaExp) return;
     setSaving(true);
-    const expDate = new Date();
-    expDate.setDate(expDate.getDate() + parseInt(diasVigencia));
-    const fechaExp = `${expDate.getFullYear()}-${String(expDate.getMonth() + 1).padStart(2, "0")}-${String(expDate.getDate()).padStart(2, "0")}`;
-
     await supabase.from("creditos_lumo").insert({
       cliente_id: clienteId,
       monto: parseFloat(monto),
@@ -618,32 +666,33 @@ function NuevoCreditoModal({ clienteId, clienteNombre, onClose, onSaved }: {
   }
 
   return (
-    <Modal title={`Crédito — ${clienteNombre}`} onClose={onClose}>
+    <Modal title={`Balance LUMO — ${clienteNombre}`} onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <Field label="Monto ($)" required>
           <Input value={monto} onChange={setMonto} placeholder="Ej. 150" required />
         </Field>
         <Field label="Motivo">
-          <Input value={motivo} onChange={setMotivo} placeholder="Ej. Pedido cancelado #123" />
+          <Input value={motivo} onChange={setMotivo} placeholder="Ej. Pedido convertido en Balance LUMO" />
         </Field>
-        <Field label="Vigencia (días)">
-          <div className="flex gap-2">
-            {["7", "14", "30"].map((d) => (
-              <button key={d} type="button" onClick={() => setDiasVigencia(d)}
+        <Field label="Fecha de vencimiento" required>
+          <div className="flex gap-2 mb-2">
+            {[7, 14, 30].map((d) => (
+              <button key={d} type="button" onClick={() => setQuickDays(d)}
                 className="rounded-lg px-3 py-1.5 font-inter text-xs transition-all"
-                style={{
-                  background: diasVigencia === d ? "rgba(184,134,11,0.25)" : "rgba(255,255,255,0.06)",
-                  color: diasVigencia === d ? "#E6A800" : "#8A8A8A",
-                  border: diasVigencia === d ? "1px solid rgba(184,134,11,0.4)" : "1px solid rgba(255,255,255,0.08)",
-                }}>
+                style={{ background: "rgba(255,255,255,0.06)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.08)" }}>
                 {d} días
               </button>
             ))}
           </div>
+          <input type="date" value={fechaExp} onChange={(e) => setFechaExp(e.target.value)}
+            min={new Date().toISOString().split("T")[0]}
+            className="w-full rounded-xl px-4 py-3 font-inter text-sm outline-none"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8", colorScheme: "dark" }} />
         </Field>
-        <button type="submit" disabled={saving || !monto} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
-          style={{ background: "#E6A800", color: "#0D0D0D", opacity: saving || !monto ? 0.5 : 1 }}>
-          {saving ? "Guardando..." : "Crear crédito"}
+        <button type="submit" disabled={saving || !monto || !fechaExp} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2 flex items-center justify-center gap-2"
+          style={{ background: "#E6A800", color: "#0D0D0D", opacity: saving || !monto || !fechaExp ? 0.5 : 1 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 0-8 9.27-8 13a8 8 0 0 0 16 0c0-3.73-8-13-8-13z"/></svg>
+          {saving ? "Guardando..." : "Crear Balance LUMO"}
         </button>
       </form>
     </Modal>
@@ -770,16 +819,15 @@ function NuevoPedidoModal({ clienteId, clienteNombre, formulas, creditoDisponibl
 
   return (
     <Modal title={`Pedido — ${clienteNombre}`} onClose={onClose}>
-      {/* Credit banner */}
+      {/* Balance LUMO banner */}
       {creditoDisponible > 0 && (
         <div className="rounded-xl px-4 py-3 mb-4 flex items-center gap-2"
           style={{ background: "rgba(184,134,11,0.08)", border: "1px solid rgba(184,134,11,0.18)" }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E6A800" strokeWidth="2" strokeLinecap="round">
-            <line x1="12" y1="1" x2="12" y2="23" />
-            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#E6A800" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 2c0 0-8 9.27-8 13a8 8 0 0 0 16 0c0-3.73-8-13-8-13z"/>
           </svg>
           <span className="font-inter text-xs" style={{ color: "#E6A800" }}>
-            Crédito disponible: <strong>${creditoDisponible}</strong>
+            Balance LUMO disponible: <strong>${creditoDisponible}</strong>
           </span>
         </div>
       )}
