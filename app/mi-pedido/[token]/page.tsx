@@ -213,6 +213,15 @@ export default function MiPedidoPage({
   const [adjustSent, setAdjustSent] = useState(false);
 
   useEffect(() => {
+    document.documentElement.style.backgroundColor = "#F4EFE7";
+    document.body.style.backgroundColor = "#F4EFE7";
+    return () => {
+      document.documentElement.style.backgroundColor = "";
+      document.body.style.backgroundColor = "";
+    };
+  }, []);
+
+  useEffect(() => {
     if (params instanceof Promise) {
       params.then((p) => setToken(p.token));
     } else {

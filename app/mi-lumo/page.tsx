@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP } from "@/lib/constants";
@@ -70,6 +70,15 @@ const FORMULA_DESCRIPTIONS: Record<string, string> = {
 export default function MiLumoPage() {
   const [miembro, setMiembro] = useState<Miembro | null>(null);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    document.documentElement.style.backgroundColor = CREAM;
+    document.body.style.backgroundColor = CREAM;
+    return () => {
+      document.documentElement.style.backgroundColor = "";
+      document.body.style.backgroundColor = "";
+    };
+  }, []);
 
   useEffect(() => {
     const stored = localStorage.getItem("miembro_lumo");
@@ -236,6 +245,33 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   const [showReserva, setShowReserva] = useState(false);
   const [showRecarga, setShowRecarga] = useState(false);
   const [tab, setTab] = useState<"inicio" | "historial" | "perfil">("historial");
+  const [refreshing, setRefreshing] = useState(false);
+  const [pullDistance, setPullDistance] = useState(0);
+  const touchStartY = useRef(0);
+  const isPulling = useRef(false);
+  const PULL_THRESHOLD = 80;
+
+  function onTouchStart(e: React.TouchEvent) {
+    if (window.scrollY === 0) {
+      touchStartY.current = e.touches[0].clientY;
+      isPulling.current = true;
+    }
+  }
+  function onTouchMove(e: React.TouchEvent) {
+    if (!isPulling.current) return;
+    const dist = Math.max(0, e.touches[0].clientY - touchStartY.current);
+    setPullDistance(Math.min(dist * 0.5, 120));
+  }
+  async function onTouchEnd() {
+    if (!isPulling.current) return;
+    isPulling.current = false;
+    if (pullDistance >= PULL_THRESHOLD) {
+      setRefreshing(true);
+      await load();
+      setRefreshing(false);
+    }
+    setPullDistance(0);
+  }
 
   const load = useCallback(async () => {
     const [{ data: f }, { data: recetas }, { data: p }, { data: m }] = await Promise.all([
@@ -310,8 +346,26 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: CREAM }}>
+    <div className="min-h-screen flex flex-col" style={{ background: CREAM }} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
       <MiLumoNavbar showLogout onLogout={onLogout} />
+
+      {/* Pull-to-refresh indicator */}
+      {(pullDistance > 0 || refreshing) && (
+        <div className="flex justify-center overflow-hidden" style={{ height: refreshing ? 48 : pullDistance, transition: refreshing ? "none" : "height 0.1s ease" }}>
+          <div className="flex items-center justify-center py-2">
+            <div
+              className="w-5 h-5 rounded-full border-2"
+              style={{
+                borderColor: `${VERDE}30`,
+                borderTopColor: VERDE,
+                animation: refreshing ? "lumoSpin 0.6s linear infinite" : "none",
+                transform: refreshing ? "none" : `rotate(${pullDistance * 3}deg)`,
+                opacity: Math.min(pullDistance / PULL_THRESHOLD, 1),
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 pb-8">
         {/* Hero greeting */}

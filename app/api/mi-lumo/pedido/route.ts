@@ -58,6 +58,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  // Capacity check: count total bottles for this day
+  const { data: confRow } = await supabase
+    .from("configuracion")
+    .select("valor")
+    .eq("clave", "capacidad_diaria")
+    .single();
+
+  if (confRow?.valor) {
+    const capacidad = parseInt(confRow.valor);
+    if (capacidad > 0) {
+      const { data: pedidosDia } = await supabase
+        .from("pedidos")
+        .select("cantidad")
+        .eq("dia_entrega", dia_entrega)
+        .neq("estado", "cancelado");
+      const botellasUsadas = (pedidosDia ?? []).reduce((s: number, p: { cantidad: number }) => s + p.cantidad, 0);
+      if (botellasUsadas + cantidad > capacidad) {
+        return NextResponse.json(
+          { error: `Esta mañana acaba de llenarse. Solo quedan ${Math.max(0, capacidad - botellasUsadas)} lugares.` },
+          { status: 400 }
+        );
+      }
+    }
+  }
+
   const dow = new Date(dia_entrega + "T12:00:00").getDay();
   const tipoPedido = dow === 0 ? "domingo" : "normal";
   const token = crypto.randomUUID();
