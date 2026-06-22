@@ -235,7 +235,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   const [loading, setLoading] = useState(true);
   const [showReserva, setShowReserva] = useState(false);
   const [showRecarga, setShowRecarga] = useState(false);
-  const [tab, setTab] = useState<"inicio" | "historial" | "perfil">("inicio");
+  const [tab, setTab] = useState<"inicio" | "historial" | "perfil">("historial");
 
   const load = useCallback(async () => {
     const [{ data: f }, { data: recetas }, { data: p }, { data: m }] = await Promise.all([
@@ -477,7 +477,10 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
 /* ══════════════════════════════════════════════
    RESERVA FLOW — Full-screen 3-step experience
+   Supports multiple formulas for the same day
    ══════════════════════════════════════════════ */
+type ReservaLinea = { formulaId: string; cantidad: number };
+
 function ReservaFlow({
   clienteId,
   formulas,
@@ -492,68 +495,118 @@ function ReservaFlow({
   onSuccess: () => void;
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [formulaId, setFormulaId] = useState("");
-  const [cantidad, setCantidad] = useState(1);
+  const [lineas, setLineas] = useState<ReservaLinea[]>([]);
   const [diaEntrega, setDiaEntrega] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [showRecarga, setShowRecarga] = useState(false);
+  const [capacidadDiaria, setCapacidadDiaria] = useState<number | null>(null);
+  const [pedidosPorDia, setPedidosPorDia] = useState<Record<string, number>>({});
 
-  const formula = formulas.find((f) => f.id === formulaId);
-  const total = (formula?.precio ?? 0) * cantidad;
+  useEffect(() => {
+    (async () => {
+      const { data: conf } = await supabase.from("configuracion").select("valor").eq("clave", "capacidad_diaria").single();
+      if (conf?.valor) setCapacidadDiaria(parseInt(conf.valor));
+
+      const deliveryDays = getNextDeliveryDays();
+      if (deliveryDays.length > 0) {
+        const { data: peds } = await supabase
+          .from("pedidos")
+          .select("dia_entrega, cantidad")
+          .in("dia_entrega", deliveryDays.map((d) => d.value))
+          .neq("estado", "cancelado");
+        const counts: Record<string, number> = {};
+        for (const p of peds ?? []) counts[p.dia_entrega] = (counts[p.dia_entrega] ?? 0) + p.cantidad;
+        setPedidosPorDia(counts);
+      }
+    })();
+  }, []);
+
+  const total = lineas.reduce((s, l) => {
+    const f = formulas.find((f) => f.id === l.formulaId);
+    return s + (f?.precio ?? 0) * l.cantidad;
+  }, 0);
   const alcanza = balance >= total;
   const deliveryDays = getNextDeliveryDays();
+  const totalBotellas = lineas.reduce((s, l) => s + l.cantidad, 0);
+
+  function addFormula(formulaId: string) {
+    const existing = lineas.find((l) => l.formulaId === formulaId);
+    if (existing) {
+      setLineas(lineas.map((l) => l.formulaId === formulaId ? { ...l, cantidad: l.cantidad + 1 } : l));
+    } else {
+      setLineas([...lineas, { formulaId, cantidad: 1 }]);
+    }
+  }
+
+  function removeFormula(formulaId: string) {
+    const existing = lineas.find((l) => l.formulaId === formulaId);
+    if (!existing) return;
+    if (existing.cantidad <= 1) {
+      setLineas(lineas.filter((l) => l.formulaId !== formulaId));
+    } else {
+      setLineas(lineas.map((l) => l.formulaId === formulaId ? { ...l, cantidad: l.cantidad - 1 } : l));
+    }
+  }
+
+  function getAvailability(day: string): "disponible" | "pocos" | "completo" {
+    if (!capacidadDiaria) return "disponible";
+    const used = pedidosPorDia[day] ?? 0;
+    const remaining = capacidadDiaria - used;
+    if (remaining <= 0) return "completo";
+    if (remaining <= Math.ceil(capacidadDiaria * 0.25)) return "pocos";
+    return "disponible";
+  }
 
   async function handleConfirm() {
     setSaving(true);
     setError("");
     try {
-      const res = await fetch("/api/mi-lumo/pedido", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cliente_id: clienteId, formula_id: formulaId, cantidad, dia_entrega: diaEntrega }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.error?.includes("Balance insuficiente")) {
-          setError("Tu Balance LUMO no es suficiente para confirmar esta reserva.");
-        } else if (data.error?.includes("llenarse") || data.error?.includes("Completo")) {
-          setError("Esta mañana acaba de llenarse. Puedes elegir otra fecha disponible.");
-          setStep(2);
-        } else {
-          setError(data.error || "Error al confirmar la reserva");
+      for (const linea of lineas) {
+        const res = await fetch("/api/mi-lumo/pedido", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ cliente_id: clienteId, formula_id: linea.formulaId, cantidad: linea.cantidad, dia_entrega: diaEntrega }),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          if (data.error?.includes("Balance insuficiente")) {
+            setError("Tu Balance LUMO no es suficiente para confirmar esta reserva.");
+          } else if (data.error?.includes("llenarse") || data.error?.includes("Completo")) {
+            setError("Esta mañana acaba de llenarse. Puedes elegir otra fecha disponible.");
+            setStep(2);
+          } else {
+            setError(data.error || "Error al confirmar la reserva");
+          }
+          setSaving(false);
+          return;
         }
-        setSaving(false);
-        return;
       }
       setSuccess(true);
-      setTimeout(onSuccess, 3000);
     } catch {
       setError("Error de conexión");
       setSaving(false);
     }
   }
 
-  const stepLabels = ["Elige tu fórmula", "Elige tu mañana", "Confirmar reserva"];
+  const stepLabels = ["Elige tus fórmulas", "Elige tu mañana", "Confirmar reserva"];
 
-  // Success screen
   if (success) {
     const newBalance = balance - total;
     return (
       <div className="min-h-screen flex flex-col" style={{ background: CREAM }}>
         <div className="flex-1 flex flex-col items-center justify-center px-6">
           <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm">
-            {/* Check animation */}
             <div
               className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
               style={{
-                background: formula ? `${formula.color_acento}12` : "rgba(74,94,58,0.08)",
-                boxShadow: formula ? `0 0 40px ${formula.color_acento}15` : "none",
+                background: "rgba(74,94,58,0.08)",
+                boxShadow: `0 0 40px rgba(74,94,58,0.1)`,
                 animation: "lumoScaleIn 0.6s var(--spring) both",
               }}
             >
-              <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke={formula?.color_acento ?? VERDE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ animation: "checkStroke 0.6s ease 0.3s both" }}>
+              <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke={VERDE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" style={{ strokeDasharray: 20, strokeDashoffset: 20, animation: "checkStroke 0.6s ease 0.3s forwards" }} />
               </svg>
             </div>
@@ -575,28 +628,30 @@ function ReservaFlow({
               className="rounded-2xl p-5 text-left mb-6"
               style={{
                 background: "#fff",
-                boxShadow: `0 2px 16px ${formula?.color_acento ?? VERDE}08`,
-                border: `1px solid ${formula?.color_acento ?? VERDE}18`,
+                boxShadow: "0 2px 16px rgba(74,94,58,0.06)",
+                border: "1px solid rgba(74,94,58,0.12)",
                 animation: "lumoFadeUp 0.6s ease 0.6s both",
               }}
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-3 h-3 rounded-full" style={{ background: formula?.color_acento ?? VERDE }} />
-                <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
-                  {formula?.nombre}
-                </span>
-              </div>
-              <p className="font-inter text-sm mb-1" style={{ color: "#6B6B5E" }}>
+              {lineas.map((linea) => {
+                const f = formulas.find((fo) => fo.id === linea.formulaId);
+                return (
+                  <div key={linea.formulaId} className="flex items-center gap-3 mb-2">
+                    <div className="w-3 h-3 rounded-full" style={{ background: f?.color_acento ?? VERDE }} />
+                    <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
+                      {linea.cantidad}x {f?.nombre}
+                    </span>
+                  </div>
+                );
+              })}
+              <p className="font-inter text-sm mt-3" style={{ color: "#6B6B5E" }}>
                 <CalendarIcon size={13} color="#8A8A7A" />{" "}
                 {formatDate(diaEntrega)}
-              </p>
-              <p className="font-inter text-sm" style={{ color: "#6B6B5E" }}>
-                {cantidad} {cantidad === 1 ? "botella" : "botellas"}
               </p>
             </div>
 
             <div
-              className="flex items-center justify-center gap-2"
+              className="flex items-center justify-center gap-2 mb-8"
               style={{ animation: "lumoFadeUp 0.6s ease 0.7s both" }}
             >
               <DropIcon size={14} color={ACCENT} />
@@ -606,6 +661,14 @@ function ReservaFlow({
                 <span className="font-semibold" style={{ color: "#2D2D2D" }}>${newBalance.toLocaleString("es-MX")}</span>
               </span>
             </div>
+
+            <button
+              onClick={onSuccess}
+              className="w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press"
+              style={{ background: VERDE, color: CREAM, animation: "lumoFadeUp 0.6s ease 0.8s both" }}
+            >
+              Volver a Mi LUMO
+            </button>
           </div>
         </div>
       </div>
@@ -645,15 +708,39 @@ function ReservaFlow({
       <div className="flex-1 px-5 pb-8">
         {step === 1 && (
           <div className="flex flex-col gap-4 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
-            {formulas.map((f, i) => (
-              <FormulaCard
-                key={f.id}
-                formula={f}
-                selected={formulaId === f.id}
-                delay={i * 0.06}
-                onSelect={() => { setFormulaId(f.id); setStep(2); }}
-              />
-            ))}
+            {formulas.map((f, i) => {
+              const lineaCant = lineas.find((l) => l.formulaId === f.id)?.cantidad ?? 0;
+              return (
+                <FormulaCard
+                  key={f.id}
+                  formula={f}
+                  cantidad={lineaCant}
+                  delay={i * 0.06}
+                  onAdd={() => addFormula(f.id)}
+                  onRemove={() => removeFormula(f.id)}
+                />
+              );
+            })}
+
+            {lineas.length > 0 && (
+              <div style={{ animation: "lumoFadeUp 0.3s ease both" }}>
+                <div className="rounded-xl p-3 mb-3 flex items-center justify-between" style={{ background: "rgba(74,94,58,0.06)" }}>
+                  <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
+                    {lineas.length} {lineas.length === 1 ? "fórmula" : "fórmulas"} · {totalBotellas} {totalBotellas === 1 ? "botella" : "botellas"}
+                  </span>
+                  <span className="font-inter text-xs font-medium" style={{ color: VERDE }}>
+                    ${total.toLocaleString("es-MX")}
+                  </span>
+                </div>
+                <button
+                  onClick={() => setStep(2)}
+                  className="w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press"
+                  style={{ background: VERDE, color: CREAM }}
+                >
+                  Continuar
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -663,60 +750,58 @@ function ReservaFlow({
               Cada lote se prepara temprano y con cupo limitado.
             </p>
 
-            {/* Cantidad */}
-            <div className="rounded-2xl p-4" style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-              <p className="font-inter text-xs mb-3" style={{ color: "#8A8A7A" }}>
-                <BottleIcon size={12} color="#8A8A7A" /> Botellas
-              </p>
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setCantidad(Math.max(1, cantidad - 1))}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center spring-press"
-                  style={{ background: CREAM, border: "1px solid rgba(0,0,0,0.06)" }}
-                >
-                  <span style={{ color: "#2D2D2D", fontSize: "1.2rem" }}>−</span>
-                </button>
-                <span className="font-cormorant font-semibold text-2xl w-8 text-center" style={{ color: "#2D2D2D" }}>
-                  {cantidad}
-                </span>
-                <button
-                  onClick={() => setCantidad(cantidad + 1)}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center spring-press"
-                  style={{ background: CREAM, border: "1px solid rgba(0,0,0,0.06)" }}
-                >
-                  <span style={{ color: "#2D2D2D", fontSize: "1.2rem" }}>+</span>
-                </button>
-              </div>
+            {/* Selected formulas summary */}
+            <div className="rounded-xl p-3 flex flex-wrap gap-2" style={{ background: "rgba(74,94,58,0.04)" }}>
+              {lineas.map((l) => {
+                const f = formulas.find((fo) => fo.id === l.formulaId);
+                return (
+                  <span key={l.formulaId} className="flex items-center gap-1.5 font-inter text-xs px-2.5 py-1 rounded-full" style={{ background: "#fff", color: "#2D2D2D" }}>
+                    <span className="w-2 h-2 rounded-full" style={{ background: f?.color_acento ?? VERDE }} />
+                    {l.cantidad}x {f?.nombre}
+                  </span>
+                );
+              })}
             </div>
 
             {/* Dates */}
             <div className="flex flex-col gap-2">
-              {deliveryDays.map((d, i) => (
-                <button
-                  key={d.value}
-                  onClick={() => setDiaEntrega(d.value)}
-                  className="rounded-xl p-4 text-left flex items-center justify-between transition-all spring-press"
-                  style={{
-                    background: diaEntrega === d.value ? "#fff" : "rgba(255,255,255,0.6)",
-                    border: `1px solid ${diaEntrega === d.value ? `${VERDE}30` : "rgba(0,0,0,0.04)"}`,
-                    boxShadow: diaEntrega === d.value ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
-                    animation: "lumoFadeUp 0.3s ease both",
-                    animationDelay: `${i * 0.04}s`,
-                  }}
-                >
-                  <div>
-                    <p className="font-inter text-sm font-medium" style={{ color: "#2D2D2D" }}>
-                      {d.dayLabel}
-                    </p>
-                    <p className="font-inter text-xs flex items-center gap-1 mt-0.5" style={{ color: "#8A8A7A" }}>
-                      <ClockIcon size={11} color="#8A8A7A" /> {d.fullLabel}
-                    </p>
-                  </div>
-                  <span className="font-inter text-xs px-2.5 py-1 rounded-full" style={{ background: "rgba(74,94,58,0.06)", color: VERDE }}>
-                    Disponible
-                  </span>
-                </button>
-              ))}
+              {deliveryDays.map((d, i) => {
+                const avail = getAvailability(d.value);
+                const isCompleto = avail === "completo";
+                return (
+                  <button
+                    key={d.value}
+                    onClick={() => !isCompleto && setDiaEntrega(d.value)}
+                    disabled={isCompleto}
+                    className="rounded-xl p-4 text-left flex items-center justify-between transition-all spring-press disabled:opacity-50"
+                    style={{
+                      background: diaEntrega === d.value ? "#fff" : "rgba(255,255,255,0.6)",
+                      border: `1px solid ${diaEntrega === d.value ? `${VERDE}30` : "rgba(0,0,0,0.04)"}`,
+                      boxShadow: diaEntrega === d.value ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
+                      animation: "lumoFadeUp 0.3s ease both",
+                      animationDelay: `${i * 0.04}s`,
+                    }}
+                  >
+                    <div>
+                      <p className="font-inter text-sm font-medium" style={{ color: isCompleto ? "#B0B0A0" : "#2D2D2D" }}>
+                        {d.dayLabel}
+                      </p>
+                      <p className="font-inter text-xs flex items-center gap-1 mt-0.5" style={{ color: "#8A8A7A" }}>
+                        <ClockIcon size={11} color="#8A8A7A" /> {d.fullLabel}
+                      </p>
+                    </div>
+                    <span
+                      className="font-inter text-xs px-2.5 py-1 rounded-full"
+                      style={{
+                        background: isCompleto ? "rgba(122,32,48,0.06)" : avail === "pocos" ? "rgba(184,134,11,0.08)" : "rgba(74,94,58,0.06)",
+                        color: isCompleto ? ROJO : avail === "pocos" ? TROPICAL : VERDE,
+                      }}
+                    >
+                      {isCompleto ? "Completo" : avail === "pocos" ? "Últimos lugares" : "Disponible"}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {diaEntrega && (
@@ -733,34 +818,37 @@ function ReservaFlow({
 
         {step === 3 && (
           <div className="flex flex-col gap-5 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
-            {/* Reservation summary */}
             <div
               className="rounded-2xl p-5 relative overflow-hidden"
               style={{ background: "#fff", boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}
             >
-              {/* Color halo */}
               <div
                 className="absolute top-0 right-0 w-32 h-32 rounded-full"
-                style={{ background: formula?.color_acento ?? VERDE, opacity: 0.04, transform: "translate(30%, -30%)", filter: "blur(20px)" }}
+                style={{ background: VERDE, opacity: 0.04, transform: "translate(30%, -30%)", filter: "blur(20px)" }}
               />
 
               <p className="font-inter text-xs tracking-wide mb-4" style={{ color: "#8A8A7A" }}>TU RESERVA</p>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${formula?.color_acento ?? VERDE}10` }}>
-                  <BottleIcon size={20} color={formula?.color_acento ?? VERDE} />
-                </div>
-                <div>
-                  <p className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
-                    {formula?.nombre}
-                  </p>
-                  <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
-                    {cantidad} {cantidad === 1 ? "botella" : "botellas"}
-                  </p>
-                </div>
-              </div>
+              {lineas.map((linea) => {
+                const f = formulas.find((fo) => fo.id === linea.formulaId);
+                return (
+                  <div key={linea.formulaId} className="flex items-center gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${f?.color_acento ?? VERDE}10` }}>
+                      <BottleIcon size={20} color={f?.color_acento ?? VERDE} />
+                    </div>
+                    <div>
+                      <p className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
+                        {f?.nombre}
+                      </p>
+                      <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
+                        {linea.cantidad} {linea.cantidad === 1 ? "botella" : "botellas"}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
 
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 mt-1">
                 <CalendarIcon size={13} color="#8A8A7A" />
                 <span className="font-inter text-sm" style={{ color: "#2D2D2D" }}>
                   {formatDate(diaEntrega)}
@@ -817,7 +905,7 @@ function ReservaFlow({
                   <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white" style={{ animation: "lumoSpin 0.6s linear infinite" }} />
                   Confirmando…
                 </span>
-              ) : "Confirmar reserva"}
+              ) : `Confirmar reserva · $${total.toLocaleString("es-MX")}`}
             </button>
 
             <p className="font-inter text-xs text-center" style={{ color: "#A0A090" }}>
@@ -832,18 +920,19 @@ function ReservaFlow({
   );
 }
 
-/* ── Formula card (premium editorial) ── */
-function FormulaCard({ formula, selected, delay, onSelect }: {
+/* ── Formula card (premium editorial, multi-select) ── */
+function FormulaCard({ formula, cantidad, delay, onAdd, onRemove }: {
   formula: FormulaWithIngredients;
-  selected: boolean;
+  cantidad: number;
   delay: number;
-  onSelect: () => void;
+  onAdd: () => void;
+  onRemove: () => void;
 }) {
   const color = formula.color_acento;
+  const selected = cantidad > 0;
   return (
-    <button
-      onClick={onSelect}
-      className="rounded-2xl p-5 text-left relative overflow-hidden transition-all spring-press"
+    <div
+      className="rounded-2xl p-5 text-left relative overflow-hidden transition-all"
       style={{
         background: "#fff",
         border: `1px solid ${selected ? `${color}35` : "rgba(0,0,0,0.05)"}`,
@@ -857,11 +946,6 @@ function FormulaCard({ formula, selected, delay, onSelect }: {
         className="absolute top-0 right-0 w-28 h-28 rounded-full"
         style={{ background: color, opacity: 0.06, transform: "translate(30%, -40%)", filter: "blur(16px)" }}
       />
-
-      {/* Bottle silhouette — low opacity */}
-      <div className="absolute right-4 bottom-4 opacity-[0.06]">
-        <BottleIcon size={56} color={color} />
-      </div>
 
       {/* Left accent line */}
       <div
@@ -892,9 +976,22 @@ function FormulaCard({ formula, selected, delay, onSelect }: {
           <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
             ${formula.precio} por botella
           </span>
-          <span className="font-inter text-xs px-3 py-1 rounded-full" style={{ background: `${color}08`, color, border: `1px solid ${color}15` }}>
-            Seleccionar
-          </span>
+
+          {selected ? (
+            <div className="flex items-center gap-2">
+              <button onClick={onRemove} className="w-8 h-8 rounded-lg flex items-center justify-center spring-press" style={{ background: `${color}08`, border: `1px solid ${color}15` }}>
+                <span style={{ color, fontSize: "1.1rem" }}>−</span>
+              </button>
+              <span className="font-cormorant font-semibold text-lg w-6 text-center" style={{ color: "#2D2D2D" }}>{cantidad}</span>
+              <button onClick={onAdd} className="w-8 h-8 rounded-lg flex items-center justify-center spring-press" style={{ background: `${color}08`, border: `1px solid ${color}15` }}>
+                <span style={{ color, fontSize: "1.1rem" }}>+</span>
+              </button>
+            </div>
+          ) : (
+            <button onClick={onAdd} className="font-inter text-xs px-3 py-1.5 rounded-full spring-press" style={{ background: `${color}08`, color, border: `1px solid ${color}15` }}>
+              Agregar
+            </button>
+          )}
         </div>
       </div>
 
@@ -905,7 +1002,7 @@ function FormulaCard({ formula, selected, delay, onSelect }: {
           </svg>
         </div>
       )}
-    </button>
+    </div>
   );
 }
 
@@ -1173,7 +1270,7 @@ function PerfilTab({ miembro, pedidos, onLogout }: { miembro: Miembro; pedidos: 
 function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)", animation: "lumoFadeIn 0.3s ease both" }}
       onClick={onClose}
     >

@@ -310,6 +310,9 @@ export default function AdminInicio() {
           )}
         </Panel>
 
+        {/* Capacidad diaria */}
+        <CapacidadDiariaCard />
+
         {/* Accesos rápidos */}
         <Panel title="Accesos rápidos">
           <div className="grid grid-cols-2 gap-2.5">
@@ -386,6 +389,58 @@ function QuickAction({ href, label, color }: { href: string; label: string; colo
 
 function Empty({ texto }: { texto: string }) {
   return <p className="font-inter text-sm py-2" style={{ color: "#555" }}>{texto}</p>;
+}
+
+function CapacidadDiariaCard() {
+  const [capacidad, setCapacidad] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/configuracion")
+      .then((r) => r.json())
+      .then((data) => { setCapacidad(data.capacidad_diaria ?? ""); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  async function save() {
+    await fetch("/api/admin/configuracion", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clave: "capacidad_diaria", valor: capacidad }),
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className="rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+      <h2 className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#8A8A8A" }}>Capacidad diaria</h2>
+      <p className="font-inter text-xs mb-4" style={{ color: "#555" }}>
+        Botellas que puedes preparar por día. Aplica a todos los días.
+      </p>
+      {loading ? (
+        <Empty texto="Cargando..." />
+      ) : (
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            value={capacidad}
+            onChange={(e) => { setCapacidad(e.target.value); setSaved(false); }}
+            placeholder="Ej. 20"
+            className="w-24 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
+          />
+          <span className="font-inter text-xs" style={{ color: "#555" }}>botellas</span>
+          <button onClick={save}
+            className="rounded-lg px-3 py-1.5 font-inter text-xs font-medium ml-auto"
+            style={{ background: saved ? "rgba(109,191,103,0.2)" : "rgba(74,94,58,0.2)", color: saved ? "#6DBF67" : "#4A5E3A", border: `1px solid ${saved ? "rgba(109,191,103,0.4)" : "rgba(74,94,58,0.4)"}` }}>
+            {saved ? "✓ Guardado" : "Guardar"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PageLoader() {
