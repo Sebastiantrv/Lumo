@@ -65,36 +65,38 @@ export default function FormulasSection() {
   return (
     <section
       id="formulas"
-      className="px-5 md:px-12 py-14 md:py-24"
+      className="px-5 md:px-12 lg:px-20 py-14 md:py-24"
       aria-label="Nuestras fórmulas"
     >
-      <div className="mb-12 md:mb-16">
-        <h2
-          className="font-cormorant font-light italic text-[#F5F0E8] mb-3 spring-in"
-          style={{ fontSize: "clamp(2.6rem, 10vw, 4rem)", animationDelay: "0.04s" }}
-        >
-          Fórmulas
-        </h2>
+      <div className="max-w-6xl mx-auto">
+        <div className="mb-12 md:mb-16">
+          <h2
+            className="font-cormorant font-light italic text-[#F5F0E8] mb-3 spring-in"
+            style={{ fontSize: "clamp(2.6rem, 10vw, 4rem)", animationDelay: "0.04s" }}
+          >
+            Fórmulas
+          </h2>
+          <p
+            className="font-inter text-[#8A8A8A] spring-in"
+            style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.125rem)", animationDelay: "0.10s" }}
+          >
+            Lo que necesitas. Nada más.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
+          {products.map((product, i) => (
+            <ProductCard key={product.id} product={product} index={i} />
+          ))}
+        </div>
+
         <p
-          className="font-inter text-[#8A8A8A] spring-in"
-          style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.125rem)", animationDelay: "0.10s" }}
+          className="mt-12 font-inter text-[#8A8A8A] text-sm text-center spring-in"
+          style={{ animationDelay: "0.5s" }}
         >
-          Lo que necesitas. Nada más.
+          Sin conservadores. Sin sabores artificiales. Sin ingredientes innecesarios.
         </p>
       </div>
-
-      <div className="flex flex-col gap-4 md:gap-5">
-        {products.map((product, i) => (
-          <ProductCard key={product.id} product={product} index={i} />
-        ))}
-      </div>
-
-      <p
-        className="mt-12 font-inter text-[#8A8A8A] text-sm text-center spring-in"
-        style={{ animationDelay: "0.5s" }}
-      >
-        Sin conservadores. Sin sabores artificiales. Sin ingredientes innecesarios.
-      </p>
     </section>
   );
 }
@@ -105,7 +107,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
 
   return (
     <article
-      className={`rounded-2xl p-6 md:p-9 grid grid-cols-[1fr_auto] gap-6 items-center spring-press spring-in ${product.glassClass}`}
+      className={`rounded-2xl p-6 md:p-9 grid grid-cols-[1fr_auto] lg:grid-cols-1 gap-6 items-center spring-press spring-in ${product.glassClass}`}
       style={{
         animationDelay: `${0.18 + index * 0.12}s`,
         position: "relative",
@@ -158,7 +160,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
       </div>
 
       {/* Bottle image */}
-      <div className="relative flex-shrink-0 -my-2 -mr-1" style={{ width: 145, height: 231 }}>
+      <div className="relative flex-shrink-0 -my-2 -mr-1 lg:mx-auto lg:my-0" style={{ width: 145, height: 231 }}>
         {!imgError ? (
           <Image
             src={product.bottleImg}

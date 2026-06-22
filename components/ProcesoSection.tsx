@@ -22,7 +22,7 @@ export default function ProcesoSection() {
       {/* ── Image — wrapper centers vertically, inner img animates ── */}
       <div
         className="absolute pointer-events-none"
-        style={{ top: "50%", right: "0", transform: "translateY(-50%)", width: "48%" }}
+        style={{ top: "50%", right: "0", transform: "translateY(-50%)", width: "clamp(200px, 48%, 600px)" }}
       >
         {!imgError ? (
           <Image
@@ -58,8 +58,8 @@ export default function ProcesoSection() {
 
       {/* ── Content ── */}
       <div
-        className="relative z-10 flex flex-col justify-center px-6 py-10 gap-9"
-        style={{ minHeight: "calc(100svh - 68px)", maxWidth: "56%" }}
+        className="relative z-10 flex flex-col justify-center px-6 md:px-12 lg:px-20 py-10 gap-9"
+        style={{ minHeight: "calc(100svh - 68px)", maxWidth: "min(56%, 640px)" }}
       >
         <h2
           className="font-cormorant font-light text-[#F5F0E8] leading-tight spring-in"

@@ -386,7 +386,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
         </div>
       )}
 
-      <main className="flex-1 pb-8">
+      <main className="flex-1 pb-8 max-w-3xl mx-auto w-full">
         {/* Hero greeting */}
         <section className="px-5 pt-6 pb-8 text-center" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
           <div
@@ -671,7 +671,7 @@ function ReservaFlow({
     return (
       <div className="min-h-screen flex flex-col" style={{ background: CREAM, overscrollBehavior: "none" }}>
         <div className="flex-1 flex flex-col items-center justify-center px-6">
-          <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm">
+          <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm md:max-w-md">
             <div
               className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
               style={{
@@ -762,6 +762,7 @@ function ReservaFlow({
         </span>
       </div>
 
+      <div className="max-w-2xl mx-auto w-full">
       {/* Step indicator */}
       <div className="px-5 pt-4 pb-2">
         <div className="flex gap-2 mb-4">
@@ -781,7 +782,7 @@ function ReservaFlow({
       {/* Step content */}
       <div className="flex-1 px-5 pb-8">
         {step === 1 && (
-          <div className="flex flex-col gap-4 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
             {formulas.map((f, i) => {
               const lineaCant = lineas.find((l) => l.formulaId === f.id)?.cantidad ?? 0;
               return (
@@ -797,7 +798,7 @@ function ReservaFlow({
             })}
 
             {lineas.length > 0 && (
-              <div style={{ animation: "lumoFadeUp 0.3s ease both" }}>
+              <div className="md:col-span-2 lg:col-span-3" style={{ animation: "lumoFadeUp 0.3s ease both" }}>
                 <div className="rounded-xl p-3 mb-3 flex items-center justify-between" style={{ background: "rgba(74,94,58,0.06)" }}>
                   <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
                     {lineas.length} {lineas.length === 1 ? "fórmula" : "fórmulas"} · {totalBotellas} {totalBotellas === 1 ? "botella" : "botellas"}
@@ -998,6 +999,7 @@ function ReservaFlow({
         )}
       </div>
 
+      </div>
       {showRecarga && <RecargaPlaceholder onClose={() => setShowRecarga(false)} />}
     </div>
   );

@@ -26,7 +26,7 @@ export default function HeroSection() {
           style={{
             top: "-4%",
             right: "0",
-            width: "62%",
+            width: "clamp(280px, 62%, 700px)",
             height: "auto",
             maxWidth: "none",
             filter: "brightness(1.10) contrast(1.05)",
@@ -54,7 +54,7 @@ export default function HeroSection() {
 
       {/* ── Content ── */}
       <div
-        className="relative z-10 flex flex-col justify-between px-6 py-8 gap-10"
+        className="relative z-10 flex flex-col justify-between px-6 md:px-12 lg:px-20 py-8 gap-10 max-w-7xl mx-auto w-full"
         style={{ minHeight: "calc(100svh - 68px)" }}
       >
         {/* Top: heading + divider + body */}
@@ -94,10 +94,10 @@ export default function HeroSection() {
 
         {/* Bottom: buttons + lock */}
         <div
-          className="flex flex-col gap-4 spring-in"
+          className="flex flex-col gap-4 spring-in max-w-xs"
           style={{ animationDelay: "0.30s" }}
         >
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col sm:flex-row gap-3">
             <a
               href="/piloto"
               className="inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press"

@@ -329,6 +329,9 @@ export default function MiPedidoPage({
         flexDirection: "column",
         alignItems: "center",
         padding: "48px 20px 40px",
+        maxWidth: 640,
+        margin: "0 auto",
+        width: "100%",
       }}
     >
       {/* Back + Logo */}

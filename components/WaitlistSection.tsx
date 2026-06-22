@@ -124,7 +124,7 @@ export default function WaitlistSection() {
   return (
     <section
       id="piloto"
-      className="px-5 md:px-12 py-14 md:py-24 flex flex-col items-center"
+      className="px-5 md:px-12 lg:px-20 py-14 md:py-24 flex flex-col items-center"
       aria-label="Formulario del piloto"
     >
       <div className="w-full max-w-md flex flex-col gap-6">
