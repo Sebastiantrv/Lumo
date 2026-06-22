@@ -764,11 +764,12 @@ export default function MiPedidoPage({
                     cursor: "pointer",
                   }}
                 >
-                  <span style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", display: "block" }}>
-                    Solicitar credito LUMO
+                  <span style={{ fontSize: 15, fontWeight: 600, color: "#1A1A1A", display: "flex", alignItems: "center", gap: 8 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 0-8 9.27-8 13a8 8 0 0 0 16 0c0-3.73-8-13-8-13z"/></svg>
+                    Convertir en Balance LUMO
                   </span>
                   <span style={{ fontSize: 13, color: "#8A8580", marginTop: 4, display: "block" }}>
-                    Guardar el valor para un pedido futuro
+                    Guarda el valor de tu pedido para usarlo en un próximo lote
                   </span>
                 </button>
                 <button
@@ -856,11 +857,14 @@ export default function MiPedidoPage({
 
             {adjustStep === "credit" && (
               <>
-                <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 6 }}>
-                  Credito LUMO
-                </h2>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B8860B" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2c0 0-8 9.27-8 13a8 8 0 0 0 16 0c0-3.73-8-13-8-13z"/></svg>
+                  <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A" }}>
+                    Balance LUMO
+                  </h2>
+                </div>
                 <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 20, lineHeight: 1.5 }}>
-                  El valor de tu pedido se guardara como credito LUMO, valido por 14 dias para tu proxima compra.
+                  Guarda el valor de tu pedido para usarlo en un próximo lote disponible.
                 </p>
                 <button
                   onClick={async () => {
@@ -872,7 +876,7 @@ export default function MiPedidoPage({
                         pedido_id: p.id,
                         token: p.token,
                         adjustment_type: "credit_request",
-                        credit_validity_days: 14,
+                        credit_validity_days: 30,
                       }),
                     });
                     setAdjustSending(false);
@@ -893,7 +897,7 @@ export default function MiPedidoPage({
                     cursor: "pointer",
                   }}
                 >
-                  {adjustSending ? "Enviando..." : "Solicitar credito"}
+                  {adjustSending ? "Enviando..." : "Convertir en Balance LUMO"}
                 </button>
                 <button
                   onClick={() => setAdjustStep("choose")}
@@ -918,10 +922,10 @@ export default function MiPedidoPage({
                     </svg>
                   </div>
                   <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 8 }}>
-                    Solicitud enviada
+                    Solicitud recibida
                   </h2>
                   <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", lineHeight: 1.5 }}>
-                    Revisaremos tu solicitud y te notificaremos pronto.
+                    Tu solicitud está en revisión. Te confirmaremos pronto.
                   </p>
                 </div>
                 <button
