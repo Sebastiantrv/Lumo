@@ -322,18 +322,26 @@ export default function MiPedidoPage({
         padding: "48px 20px 40px",
       }}
     >
-      {/* Logo */}
-      <div
-        className="font-cormorant"
-        style={{
-          fontSize: 14,
-          letterSpacing: "0.45em",
-          color: "#9A9490",
-          marginBottom: 44,
-          animation: "pedidoFadeUp 0.7s ease 0s both",
-        }}
-      >
-        L U M O
+      {/* Back + Logo */}
+      <div style={{ width: "100%", maxWidth: 440, marginBottom: 44, animation: "pedidoFadeUp 0.7s ease 0s both" }}>
+        <button
+          onClick={() => {
+            if (window.history.length > 1) window.history.back();
+            else window.location.href = "/mi-lumo";
+          }}
+          className="font-inter spring-press flex items-center gap-1.5 mb-6"
+          style={{ fontSize: 13, color: "#9A9490" }}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          Regresar
+        </button>
+        <div className="text-center">
+          <span className="font-cormorant" style={{ fontSize: 14, letterSpacing: "0.45em", color: "#9A9490" }}>
+            L U M O
+          </span>
+        </div>
       </div>
 
       {/* Greeting */}

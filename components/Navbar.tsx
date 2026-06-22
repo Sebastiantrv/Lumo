@@ -100,6 +100,7 @@ export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" })
             {[
               { href: "/formulas", label: "Fórmulas" },
               { href: "/proceso",  label: "Proceso" },
+              { href: "/mi-lumo",  label: "Mi LUMO" },
               { href: "/piloto",   label: "Únete al piloto" },
             ].map((item, i) => (
               <Link
