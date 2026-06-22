@@ -627,9 +627,8 @@ function ReservaFlow({
         if (!res.ok) {
           if (data.error?.includes("Balance insuficiente")) {
             setError("Tu Balance LUMO no es suficiente para confirmar esta reserva.");
-          } else if (data.error?.includes("llenarse") || data.error?.includes("Completo")) {
-            setError("Esta mañana acaba de llenarse. Puedes elegir otra fecha disponible.");
-            setStep(2);
+          } else if (data.error?.includes("llenarse") || data.error?.includes("Completo") || data.error?.includes("quedan")) {
+            setError(data.error);
           } else {
             setError(data.error || "Error al confirmar la reserva");
           }
@@ -649,7 +648,7 @@ function ReservaFlow({
   if (success) {
     const newBalance = balance - total;
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: CREAM }}>
+      <div className="min-h-screen flex flex-col" style={{ background: CREAM, overscrollBehavior: "none" }}>
         <div className="flex-1 flex flex-col items-center justify-center px-6">
           <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm">
             <div
@@ -730,7 +729,7 @@ function ReservaFlow({
   }
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: CREAM }}>
+    <div className="min-h-screen flex flex-col" style={{ background: CREAM, overscrollBehavior: "none" }}>
       {/* Top bar */}
       <div className="sticky top-0 z-40 px-5 py-4 flex items-center justify-between" style={{ background: "rgba(244,239,231,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
         <button onClick={step === 1 ? onClose : () => setStep((step - 1) as 1 | 2)} className="font-inter text-sm spring-press flex items-center gap-1.5" style={{ color: "#8A8A7A" }}>
@@ -943,9 +942,18 @@ function ReservaFlow({
             )}
 
             {error && (
-              <p className="font-inter text-sm text-center" style={{ color: ROJO, animation: "lumoShake 0.4s ease" }}>
-                {error}
-              </p>
+              <div className="rounded-xl p-4 text-center" style={{ background: "rgba(122,32,48,0.04)", border: "1px solid rgba(122,32,48,0.1)", animation: "lumoShake 0.4s ease" }}>
+                <p className="font-inter text-sm mb-2" style={{ color: ROJO }}>{error}</p>
+                {(error.includes("llenarse") || error.includes("quedan")) && (
+                  <button
+                    onClick={() => { setError(""); setDiaEntrega(""); setStep(2); }}
+                    className="font-inter text-xs font-medium spring-press px-4 py-1.5 rounded-lg"
+                    style={{ background: "rgba(74,94,58,0.08)", color: VERDE, border: "1px solid rgba(74,94,58,0.15)" }}
+                  >
+                    Elegir otra fecha
+                  </button>
+                )}
+              </div>
             )}
 
             <button
@@ -1205,13 +1213,12 @@ function MiLumoFooter() {
 
 /* ── Historial tab ── */
 function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos: Movimiento[] }) {
-  type TimelineItem = { date: string; type: "pedido" | "movimiento"; data: Pedido | Movimiento };
-  const items: TimelineItem[] = [
-    ...pedidos.map((p) => ({ date: p.created_at, type: "pedido" as const, data: p })),
-    ...movimientos.map((m) => ({ date: m.created_at, type: "movimiento" as const, data: m })),
-  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const [section, setSection] = useState<"entregas" | "balance">("entregas");
 
-  if (items.length === 0) {
+  const hasPedidos = pedidos.length > 0;
+  const hasMovimientos = movimientos.length > 0;
+
+  if (!hasPedidos && !hasMovimientos) {
     return (
       <div className="mx-5 rounded-2xl p-6 text-center" style={{ background: "#fff" }}>
         <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Aún no hay actividad.</p>
@@ -1219,27 +1226,74 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
     );
   }
 
+  const estadoLabel: Record<string, string> = { pendiente: "Pendiente", confirmado: "Confirmado", preparado: "Preparado", entregado: "Entregado", cancelado: "Cancelado" };
+
   return (
     <section className="mx-5">
-      <div className="flex flex-col gap-2">
-        {items.slice(0, 30).map((item) => {
-          if (item.type === "pedido") {
-            const p = item.data as Pedido;
-            const estadoLabel: Record<string, string> = { pendiente: "Pendiente", confirmado: "Confirmado", preparado: "Preparado", entregado: "Entregado", cancelado: "Cancelado" };
-            return (
-              <div key={`p-${p.id}`} className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#fff" }}>
-                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.estado === "entregado" ? "#6DBF67" : p.estado === "cancelado" ? ROJO : TROPICAL }} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-inter text-sm truncate" style={{ color: "#2D2D2D" }}>{p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}</p>
-                  <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{formatDate(p.dia_entrega)} · {estadoLabel[p.estado] ?? p.estado}</p>
-                </div>
+      {/* Section toggle */}
+      <div className="flex gap-1 rounded-xl p-1 mb-4" style={{ background: "rgba(74,94,58,0.04)" }}>
+        <button
+          onClick={() => setSection("entregas")}
+          className="flex-1 rounded-lg py-2 font-inter text-xs font-medium transition-all flex items-center justify-center gap-1.5"
+          style={{
+            background: section === "entregas" ? "#fff" : "transparent",
+            color: section === "entregas" ? "#2D2D2D" : "#8A8A7A",
+            boxShadow: section === "entregas" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+          }}
+        >
+          <BottleIcon size={12} color={section === "entregas" ? VERDE : "#8A8A7A"} />
+          Entregas
+        </button>
+        <button
+          onClick={() => setSection("balance")}
+          className="flex-1 rounded-lg py-2 font-inter text-xs font-medium transition-all flex items-center justify-center gap-1.5"
+          style={{
+            background: section === "balance" ? "#fff" : "transparent",
+            color: section === "balance" ? "#2D2D2D" : "#8A8A7A",
+            boxShadow: section === "balance" ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+          }}
+        >
+          <DropIcon size={12} color={section === "balance" ? ACCENT : "#8A8A7A"} />
+          Balance
+        </button>
+      </div>
+
+      <div className="flex flex-col gap-2" style={{ animation: "lumoFadeIn 0.25s ease both" }} key={section}>
+        {section === "entregas" && (
+          pedidos.length === 0 ? (
+            <div className="rounded-xl p-4 text-center" style={{ background: "#fff" }}>
+              <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Aún no hay entregas.</p>
+            </div>
+          ) : pedidos.slice(0, 30).map((p) => (
+            <div key={p.id} className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#fff" }}>
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.formulas?.color_acento ?? VERDE }} />
+              <div className="flex-1 min-w-0">
+                <p className="font-inter text-sm truncate" style={{ color: "#2D2D2D" }}>{p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}</p>
+                <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{formatDate(p.dia_entrega)}</p>
               </div>
-            );
-          }
-          const m = item.data as Movimiento;
-          return (
-            <div key={`m-${m.id}`} className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#fff" }}>
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: m.monto > 0 ? "#6DBF67" : "#B0B0A0" }} />
+              <span
+                className="font-inter text-xs px-2 py-0.5 rounded-full flex-shrink-0"
+                style={{
+                  background: p.estado === "entregado" ? "rgba(109,191,103,0.1)" : p.estado === "cancelado" ? "rgba(122,32,48,0.08)" : "rgba(184,134,11,0.08)",
+                  color: p.estado === "entregado" ? "#6DBF67" : p.estado === "cancelado" ? ROJO : TROPICAL,
+                }}
+              >
+                {estadoLabel[p.estado] ?? p.estado}
+              </span>
+            </div>
+          ))
+        )}
+
+        {section === "balance" && (
+          movimientos.length === 0 ? (
+            <div className="rounded-xl p-4 text-center" style={{ background: "#fff" }}>
+              <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Sin movimientos aún.</p>
+            </div>
+          ) : movimientos.slice(0, 30).map((m) => (
+            <div key={m.id} className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#fff" }}>
+              <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: m.monto > 0 ? "rgba(109,191,103,0.1)" : "rgba(0,0,0,0.04)" }}>
+                <span className="font-inter text-xs" style={{ color: m.monto > 0 ? "#6DBF67" : "#8A8A7A" }}>{m.monto > 0 ? "↑" : "↓"}</span>
+              </div>
               <div className="flex-1 min-w-0">
                 <p className="font-inter text-sm truncate" style={{ color: "#2D2D2D" }}>{m.descripcion}</p>
                 <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{formatDateTime(m.created_at)}</p>
@@ -1248,8 +1302,8 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
                 {m.monto > 0 ? "+" : ""}${Math.abs(m.monto).toLocaleString("es-MX")}
               </span>
             </div>
-          );
-        })}
+          ))
+        )}
       </div>
     </section>
   );
