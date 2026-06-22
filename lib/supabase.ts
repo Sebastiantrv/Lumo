@@ -1,8 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Fallbacks are required because NEXT_PUBLIC_ vars are not available during
-// static pre-rendering in the build step. These are public/anon credentials
-// by design — actual security comes from Supabase RLS policies.
+// NEXT_PUBLIC_ vars are unavailable during static pre-rendering at build time.
+// These are public/anon credentials (safe to expose) — actual data protection
+// comes from Supabase RLS policies and server-side service-role access.
 const url =
   process.env.NEXT_PUBLIC_SUPABASE_URL ??
   "https://zglxnderfwmlrtrqfwgi.supabase.co";

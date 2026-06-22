@@ -59,6 +59,7 @@ const VERDE = "#4A5E3A";
 const TROPICAL = "#B8860B";
 const ACCENT = "#E6A800";
 const ROJO = "#7A2030";
+const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const FORMULA_DESCRIPTIONS: Record<string, string> = {
   "verde fresco": "Ligero, herbal y fresco.",
@@ -84,7 +85,13 @@ export default function MiLumoPage() {
     const stored = localStorage.getItem("miembro_lumo");
     if (stored) {
       try {
-        setMiembro(JSON.parse(stored));
+        const parsed = JSON.parse(stored);
+        const loginAt = parsed._loginAt ?? 0;
+        if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
+          localStorage.removeItem("miembro_lumo");
+        } else {
+          setMiembro(parsed);
+        }
       } catch {
         localStorage.removeItem("miembro_lumo");
       }
@@ -93,8 +100,9 @@ export default function MiLumoPage() {
   }, []);
 
   function handleLogin(m: Miembro) {
+    const withTimestamp = { ...m, _loginAt: Date.now() };
     setMiembro(m);
-    localStorage.setItem("miembro_lumo", JSON.stringify(m));
+    localStorage.setItem("miembro_lumo", JSON.stringify(withTimestamp));
   }
 
   function handleLogout() {
@@ -274,6 +282,17 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   }
 
   const load = useCallback(async () => {
+    // Verify member is still active
+    const { data: check } = await supabase
+      .from("clientes")
+      .select("activo")
+      .eq("id", miembro.id)
+      .single();
+    if (!check?.activo) {
+      onLogout();
+      return;
+    }
+
     const [{ data: f }, { data: recetas }, { data: p }, { data: m }] = await Promise.all([
       supabase.from("formulas").select("id, nombre, slug, color_acento, precio").order("nombre"),
       supabase.from("recetas").select("formula_id, ingredientes(nombre)"),
@@ -303,7 +322,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
     setMovimientos((m ?? []) as unknown as Movimiento[]);
     setBalance((m ?? []).reduce((s: number, mov: { monto: number }) => s + mov.monto, 0));
     setLoading(false);
-  }, [miembro.id]);
+  }, [miembro.id, onLogout]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -617,24 +636,26 @@ function ReservaFlow({
     setSaving(true);
     setError("");
     try {
-      for (const linea of lineas) {
-        const res = await fetch("/api/mi-lumo/pedido", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ cliente_id: clienteId, formula_id: linea.formulaId, cantidad: linea.cantidad, dia_entrega: diaEntrega }),
-        });
-        const data = await res.json();
-        if (!res.ok) {
-          if (data.error?.includes("Balance insuficiente")) {
-            setError("Tu Balance LUMO no es suficiente para confirmar esta reserva.");
-          } else if (data.error?.includes("llenarse") || data.error?.includes("Completo") || data.error?.includes("quedan")) {
-            setError(data.error);
-          } else {
-            setError(data.error || "Error al confirmar la reserva");
-          }
-          setSaving(false);
-          return;
+      const res = await fetch("/api/mi-lumo/pedido", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cliente_id: clienteId,
+          dia_entrega: diaEntrega,
+          lineas: lineas.map((l) => ({ formula_id: l.formulaId, cantidad: l.cantidad })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.error?.includes("Balance insuficiente")) {
+          setError("Tu Balance LUMO no es suficiente para confirmar esta reserva.");
+        } else if (data.error?.includes("llenarse") || data.error?.includes("quedan")) {
+          setError(data.error);
+        } else {
+          setError(data.error || "Error al confirmar la reserva");
         }
+        setSaving(false);
+        return;
       }
       setSuccess(true);
     } catch {
