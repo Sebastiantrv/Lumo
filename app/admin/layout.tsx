@@ -15,7 +15,7 @@ function AdminNav({ open, onClose }: { open: boolean; onClose: () => void }) {
     { href: "/admin/semana", label: "Semana", icon: CalendarIcon },
     { href: "/admin/compras", label: "Compras", icon: CartIcon },
     { href: "/admin/recetas", label: "Recetas", icon: LeafIcon },
-    { href: "/admin/clientes", label: "Clientes", icon: PeopleIcon },
+    { href: "/admin/clientes", label: "Miembros", icon: PeopleIcon },
     { href: "/admin/finanzas", label: "Finanzas", icon: FinanzasIcon },
     { href: "/admin/feedback", label: "Feedback", icon: FeedbackIcon },
   ];
