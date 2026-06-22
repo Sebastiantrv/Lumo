@@ -131,7 +131,7 @@ export default function AdminInicio() {
           sub={pendientesHoy > 0 ? `${pendientesHoy} pendiente${pendientesHoy > 1 ? "s" : ""}` : botellasHoy > 0 ? "Todo entregado" : "Sin pedidos"} href="/admin/hoy" />
         <MetricCard label="Esta semana" value={botellasSemana} unit="botellas" accent="#B8860B"
           sub={`${pedidosSemana.length} pedido${pedidosSemana.length !== 1 ? "s" : ""}`} href="/admin/semana" />
-        <MetricCard label="Clientes" value={numClientes} unit="registrados" accent="#7A2030"
+        <MetricCard label="Miembros" value={numClientes} unit="activos" accent="#7A2030"
           sub="Ver todos" href="/admin/clientes" />
       </div>
 
@@ -318,7 +318,7 @@ export default function AdminInicio() {
               style={{ background: "#4A5E3A14", border: "1px solid #4A5E3A30", color: "#F5F0E8" }}>
               <span style={{ color: "#4A5E3A" }}>+</span> Nuevo pedido
             </button>
-            <QuickAction href="/admin/clientes" label="Nuevo cliente" color="#7A2030" />
+            <QuickAction href="/admin/clientes" label="Nuevo miembro" color="#7A2030" />
             <QuickAction href="/admin/compras" label="Lista de compras" color="#B8860B" />
             <QuickAction href="/admin/recetas" label="Editar recetas" color="#8A8A8A" />
           </div>
