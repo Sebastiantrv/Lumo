@@ -36,13 +36,14 @@ export async function POST(req: NextRequest) {
   // Try atomic Postgres function first
   const { data, error } = await supabase.rpc("crear_pedido_atomico", {
     p_cliente_id: cliente_id,
-    p_lineas: JSON.stringify(lineas.map((l) => ({ formula_id: l.formula_id, cantidad: l.cantidad }))),
+    p_lineas: lineas.map((l) => ({ formula_id: l.formula_id, cantidad: l.cantidad })),
     p_dia_entrega: dia_entrega,
     p_capacidad_check: true,
   });
 
   if (error) {
     const msg = error.message ?? "";
+    // Business errors from the function
     if (msg.includes("Balance insuficiente")) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
@@ -52,11 +53,8 @@ export async function POST(req: NextRequest) {
     if (msg.includes("no encontrad") || msg.includes("inactivo")) {
       return NextResponse.json({ error: msg }, { status: 404 });
     }
-    // If the function doesn't exist yet, fall back to non-atomic flow
-    if (msg.includes("could not find") || msg.includes("does not exist") || msg.includes("42883")) {
-      return fallbackCreatePedido(supabase, cliente_id, lineas, dia_entrega);
-    }
-    return NextResponse.json({ error: msg || "Error al crear la entrega" }, { status: 500 });
+    // Function doesn't exist or has a signature mismatch — use fallback
+    return fallbackCreatePedido(supabase, cliente_id, lineas, dia_entrega);
   }
 
   return NextResponse.json(data);
