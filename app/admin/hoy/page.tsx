@@ -131,7 +131,7 @@ export default function AdminHoy() {
   }
 
   async function marcarTodoEntregado() {
-    const ids = pedidos.filter((p) => p.estado !== "entregado" && p.estado !== "cancelado").map((p) => p.id);
+    const ids = pedidos.filter((p) => p.estado !== "entregado" && p.estado !== "cancelado" && p.estado !== "eliminado").map((p) => p.id);
     if (!ids.length) return;
     await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "entregado" }, [{ column: "id", value: id }])));
     await load();
@@ -424,7 +424,8 @@ export default function AdminHoy() {
                         </svg>
                       </button>
                     )}
-                    <button
+                    {group.estado !== "eliminado" && (
+                      <button
                         onClick={() => eliminarGroup(group.ids)}
                         className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
                         style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
@@ -432,6 +433,7 @@ export default function AdminHoy() {
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
                       </button>
+                    )}
                     {group.estado === "cancelado" && (
                       <button
                         onClick={() => reactivarGroup(group.ids)}
@@ -564,6 +566,7 @@ function estadoLabel(estado: string) {
   if (estado === "confirmado") return "Confirmado";
   if (estado === "preparado") return "Envasado";
   if (estado === "cancelado") return "Cancelado";
+  if (estado === "eliminado") return "Eliminado";
   return "Entregado";
 }
 

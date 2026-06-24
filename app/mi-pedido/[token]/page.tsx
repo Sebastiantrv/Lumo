@@ -23,40 +23,6 @@ interface Pedido {
   formulas: { nombre: string; slug: string; color_acento: string };
 }
 
-/* ---------- estado badge ---------- */
-
-function EstadoBadge({ estado }: { estado: string }) {
-  const config: Record<string, { label: string; bg: string; color: string }> = {
-    pendiente:  { label: "Recibido", bg: "rgba(138,133,128,0.12)", color: "#8A8580" },
-    confirmado: { label: "Confirmado", bg: "rgba(74,94,58,0.12)", color: "#4A5E3A" },
-    preparado:  { label: "Listo para ti", bg: "rgba(74,94,58,0.18)", color: "#4A5E3A" },
-    entregado:  { label: "Entregado", bg: "rgba(74,94,58,0.12)", color: "#4A5E3A" },
-    cancelado:  { label: "Pedido cancelado", bg: "rgba(122,32,48,0.10)", color: "#7A2030" },
-  };
-  const c = config[estado] ?? config.pendiente;
-
-  return (
-    <div
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "7px 16px",
-        borderRadius: 100,
-        background: c.bg,
-      }}
-    >
-      <div style={{ position: "relative", width: 8, height: 8 }}>
-        <div style={{ position: "absolute", inset: -2, borderRadius: "50%", background: c.color, animation: "accentPulse 2.5s ease-in-out infinite", opacity: 0.4 }} />
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color }} />
-      </div>
-      <span className="font-inter" style={{ fontSize: 12, fontWeight: 500, color: c.color, letterSpacing: "0.03em" }}>
-        {c.label}
-      </span>
-    </div>
-  );
-}
-
 /* ---------- timeline ---------- */
 
 function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, accentColor }: {

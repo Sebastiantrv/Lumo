@@ -1623,7 +1623,7 @@ function StatBox({ label, value }: { label: string; value: string }) {
 
 /* ── Helpers ── */
 function greeting(): string {
-  const h = new Date().getHours();
+  const h = parseInt(new Date().toLocaleString("en-US", { hour: "numeric", hour12: false, timeZone: "America/Mexico_City" }), 10);
   if (h < 12) return "Buenos días";
   if (h < 19) return "Buenas tardes";
   return "Buenas noches";
