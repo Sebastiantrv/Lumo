@@ -388,9 +388,10 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
       <main className="flex-1 pb-8 max-w-3xl mx-auto w-full">
         {/* ── Membership header ── */}
-        <section className="px-6 pt-8 pb-10 text-center" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
+        <section className="px-6 pt-6 pb-6 text-center relative" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(74,94,58,0.03) 0%, transparent 70%)" }} />
           <div
-            className="w-[72px] h-[72px] rounded-full mx-auto mb-5 flex items-center justify-center"
+            className="w-[56px] h-[56px] rounded-full mx-auto mb-3 flex items-center justify-center"
             style={{
               background: "rgba(74,94,58,0.06)",
               border: "1px solid rgba(74,94,58,0.1)",
@@ -398,28 +399,31 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
               animationDelay: "0.15s",
             }}
           >
-            <span className="font-cormorant font-light text-[1.6rem]" style={{ color: VERDE }}>
+            <span className="font-cormorant font-light text-[1.3rem]" style={{ color: VERDE }}>
               {miembro.nombre.charAt(0).toUpperCase()}
             </span>
           </div>
-          <p className="font-inter text-xs tracking-wide mb-2" style={{ color: "#9A9A8A", letterSpacing: "0.06em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.2s" }}>
+          <p className="font-inter text-[0.65rem] tracking-wide mb-1" style={{ color: "#9A9A8A", letterSpacing: "0.06em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.2s" }}>
             {greeting()}
           </p>
           <h1
-            className="font-cormorant font-light mb-3"
-            style={{ fontSize: "2.1rem", color: "#1A1A1A", lineHeight: 1.15, letterSpacing: "-0.01em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.25s" }}
+            className="font-cormorant font-light mb-2"
+            style={{ fontSize: "1.8rem", color: "#1A1A1A", lineHeight: 1.15, letterSpacing: "-0.01em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.25s" }}
           >
             {miembro.nombre.split(" ")[0]}
           </h1>
-          <div style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.3s" }}>
-            <span className="font-inter text-[0.65rem] tracking-[0.12em] px-3 py-1.5 rounded-full" style={{ background: "rgba(74,94,58,0.06)", color: VERDE, border: "1px solid rgba(74,94,58,0.08)" }}>
+          <div className="flex items-center justify-center gap-2" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.3s" }}>
+            <span className="font-inter text-[0.6rem] tracking-[0.12em] px-2.5 py-1 rounded-full" style={{ background: "rgba(74,94,58,0.06)", color: VERDE, border: "1px solid rgba(74,94,58,0.08)" }}>
               {miembro.codigo_miembro}
             </span>
-            <p className="font-inter text-[0.7rem] mt-3" style={{ color: "#B5B5A5", letterSpacing: "0.02em" }}>
+            <span className="font-inter text-[0.6rem]" style={{ color: "#C5C5B5" }}>·</span>
+            <span className="font-inter text-[0.6rem]" style={{ color: "#B5B5A5", letterSpacing: "0.02em" }}>
               Miembro desde {memberSince}
-            </p>
+            </span>
           </div>
         </section>
+
+        <div className="mx-8 mb-5 h-px" style={{ background: `linear-gradient(90deg, transparent, ${VERDE}15, transparent)` }} />
 
         {/* ── Balance card ── */}
         <div
@@ -497,7 +501,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
             <p className="font-inter text-xs leading-relaxed" style={{ color: "#9A9A8A" }}>
               {balance > 0
                 ? "Reserva tu próximo LUMO cuando quieras."
-                : "Puedes añadir balance o reservar directamente tu próximo LUMO."}
+                : "Añade balance o reserva directamente tu próxima mañana."}
             </p>
           </div>
         )}
