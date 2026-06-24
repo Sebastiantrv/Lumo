@@ -629,19 +629,27 @@ function ReservaFlow({
   const [success, setSuccess] = useState(false);
   const [showRecarga, setShowRecarga] = useState(false);
   const [capacidadDiaria, setCapacidadDiaria] = useState<number | null>(null);
+  const [diasActivos, setDiasActivos] = useState<number[] | undefined>(undefined);
   const [pedidosPorDia, setPedidosPorDia] = useState<Record<string, number>>({});
 
   useEffect(() => {
     (async () => {
-      const { data: conf } = await supabase.from("configuracion").select("valor").eq("clave", "capacidad_diaria").single();
-      if (conf?.valor) setCapacidadDiaria(parseInt(conf.valor));
+      const { data: confs } = await supabase.from("configuracion").select("clave, valor");
+      let parsedDias: number[] | undefined;
+      for (const c of confs ?? []) {
+        if (c.clave === "capacidad_diaria") setCapacidadDiaria(parseInt(c.valor));
+        if (c.clave === "dias_entrega") {
+          try { parsedDias = JSON.parse(c.valor); setDiasActivos(parsedDias); } catch { /* ignore */ }
+        }
+      }
 
-      const deliveryDays = getNextDeliveryDays();
-      if (deliveryDays.length > 0) {
+      const deliveryDays = getNextDeliveryDays(parsedDias);
+      const disponibles = deliveryDays.filter((d) => d.disponible);
+      if (disponibles.length > 0) {
         const { data: peds } = await supabase
           .from("pedidos")
           .select("dia_entrega, cantidad")
-          .in("dia_entrega", deliveryDays.map((d) => d.value))
+          .in("dia_entrega", disponibles.map((d) => d.value))
           .neq("estado", "cancelado");
         const counts: Record<string, number> = {};
         for (const p of peds ?? []) counts[p.dia_entrega] = (counts[p.dia_entrega] ?? 0) + p.cantidad;
@@ -918,17 +926,19 @@ function ReservaFlow({
             {/* Dates */}
             <div className="flex flex-col gap-2.5">
               {deliveryDays.map((d, i) => {
-                const avail = getAvailability(d.value);
+                const noDisponible = d.disponible === false;
+                const avail = noDisponible ? null : getAvailability(d.value);
                 const isCompleto = avail === "completo";
+                const isDisabled = noDisponible || isCompleto;
                 const isSelected = diaEntrega === d.value;
                 return (
                   <button
                     key={d.value}
-                    onClick={() => !isCompleto && setDiaEntrega(d.value)}
-                    disabled={isCompleto}
+                    onClick={() => !isDisabled && setDiaEntrega(d.value)}
+                    disabled={isDisabled}
                     className="rounded-2xl p-4 text-left flex items-center justify-between transition-all duration-200 spring-press disabled:opacity-40 relative overflow-hidden"
                     style={{
-                      background: "#fff",
+                      background: noDisponible ? "#FAFAF8" : "#fff",
                       border: `1px solid ${isSelected ? `${VERDE}40` : "rgba(0,0,0,0.04)"}`,
                       boxShadow: isSelected ? `0 4px 20px ${VERDE}10` : "0 1px 4px rgba(0,0,0,0.02)",
                       animation: "lumoFadeUp 0.3s ease both",
@@ -939,7 +949,7 @@ function ReservaFlow({
                       <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: VERDE, animation: "lumoFadeUp 0.2s ease both" }} />
                     )}
                     <div className={isSelected ? "pl-2" : ""} style={{ transition: "padding 0.2s ease" }}>
-                      <p className="font-cormorant font-light text-[1.1rem]" style={{ color: isCompleto ? "#B0B0A0" : "#1A1A1A" }}>
+                      <p className="font-cormorant font-light text-[1.1rem]" style={{ color: isDisabled ? "#B0B0A0" : "#1A1A1A" }}>
                         {d.dayLabel}
                       </p>
                       <p className="font-inter text-[0.7rem] flex items-center gap-1 mt-0.5" style={{ color: "#9A9A8A" }}>
@@ -949,11 +959,11 @@ function ReservaFlow({
                     <span
                       className="font-inter text-[0.65rem] px-2.5 py-1 rounded-full"
                       style={{
-                        background: isCompleto ? "rgba(122,32,48,0.06)" : avail === "pocos" ? "rgba(184,134,11,0.06)" : `${VERDE}08`,
-                        color: isCompleto ? ROJO : avail === "pocos" ? TROPICAL : VERDE,
+                        background: noDisponible ? "rgba(0,0,0,0.03)" : isCompleto ? "rgba(122,32,48,0.06)" : avail === "pocos" ? "rgba(184,134,11,0.06)" : `${VERDE}08`,
+                        color: noDisponible ? "#B0B0A0" : isCompleto ? ROJO : avail === "pocos" ? TROPICAL : VERDE,
                       }}
                     >
-                      {isCompleto ? "Completo" : avail === "pocos" ? "Últimos lugares" : "Disponible"}
+                      {noDisponible ? "No disponible" : isCompleto ? "Completo" : avail === "pocos" ? "Últimos lugares" : "Disponible"}
                     </span>
                   </button>
                 );
@@ -1838,10 +1848,10 @@ function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleDateString("es-MX", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit", hour12: true });
 }
 
-function getNextDeliveryDays(): { value: string; dayLabel: string; fullLabel: string }[] {
-  const days: { value: string; dayLabel: string; fullLabel: string }[] = [];
+function getNextDeliveryDays(diasActivos?: number[]): { value: string; dayLabel: string; fullLabel: string; disponible: boolean }[] {
+  const days: { value: string; dayLabel: string; fullLabel: string; disponible: boolean }[] = [];
   const now = new Date();
-  for (let i = 1; i <= 10 && days.length < 5; i++) {
+  for (let i = 1; i <= 14 && days.length < 6; i++) {
     const d = new Date(now);
     d.setDate(now.getDate() + i);
     const dow = d.getDay();
@@ -1850,7 +1860,8 @@ function getNextDeliveryDays(): { value: string; dayLabel: string; fullLabel: st
     const dayName = d.toLocaleDateString("es-MX", { weekday: "long" });
     const dayLabel = dayName.charAt(0).toUpperCase() + dayName.slice(1) + " " + d.getDate();
     const fullLabel = d.toLocaleDateString("es-MX", { day: "numeric", month: "long" });
-    days.push({ value: iso, dayLabel, fullLabel });
+    const disponible = !diasActivos || diasActivos.length === 0 || diasActivos.includes(dow);
+    days.push({ value: iso, dayLabel, fullLabel, disponible });
   }
   return days;
 }
