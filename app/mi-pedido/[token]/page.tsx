@@ -163,63 +163,76 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
 /* ---------- Ficha LUMO data ---------- */
 
 interface VnrItem { nutriente: string; porcentaje: number; cantidad: string }
+interface BotanicalItem { title: string; source: string; description: string }
 
 const FICHA_DATA: Record<string, {
   ingredientes: string;
   nutricion: { label: string; value: string }[];
   vnr: VnrItem[];
-  micronutrientes: string[];
+  botanico: BotanicalItem[];
 }> = {
   verde: {
-    ingredientes: "Pepino, piña, manzana verde, apio, espinaca, jengibre y limón.",
+    ingredientes: "Pepino, manzana verde, apio, espinaca, limón y jengibre.",
     nutricion: [
-      { label: "Energía", value: "XX kcal" },
-      { label: "Carbohidratos", value: "XX g" },
-      { label: "Azúcares naturales", value: "XX g" },
-      { label: "Proteína", value: "XX g" },
-      { label: "Grasas", value: "XX g" },
-      { label: "Fibra estimada", value: "XX g" },
+      { label: "Energía", value: "158 kcal" },
+      { label: "Carbohidratos", value: "39.9 g" },
+      { label: "Azúcares naturales", value: "22.9 g" },
+      { label: "Proteína", value: "4.4 g" },
+      { label: "Grasas", value: "1.0 g" },
+      { label: "Fibra", value: "Baja por proceso de prensado" },
     ],
     vnr: [
-      { nutriente: "Vitamina C", porcentaje: 0, cantidad: "XX mg" },
-      { nutriente: "Potasio", porcentaje: 0, cantidad: "XX mg" },
-      { nutriente: "Folato", porcentaje: 0, cantidad: "XX µg" },
+      { nutriente: "Vitamina C", porcentaje: 90, cantidad: "54.2 mg aprox." },
+      { nutriente: "Potasio", porcentaje: 30, cantidad: "1,039 mg aprox." },
+      { nutriente: "Folato", porcentaje: 38, cantidad: "143 µg aprox." },
     ],
-    micronutrientes: ["Vitamina C", "Potasio", "Folato", "Antioxidantes"],
+    botanico: [
+      { title: "Nitratos de hoja verde", source: "Espinaca y apio", description: "Compuestos vegetales presentes en hojas verdes, estudiados por su relación con la disponibilidad de óxido nítrico." },
+      { title: "Folato vegetal", source: "Espinaca", description: "Micronutriente naturalmente presente en vegetales de hoja verde." },
+      { title: "Luteína y zeaxantina", source: "Espinaca", description: "Carotenoides presentes en hojas verdes, asociados con el perfil pigmentario y antioxidante de la espinaca." },
+    ],
   },
   rojo: {
-    ingredientes: "Betabel, zanahoria, manzana roja, pepino, limón y jengibre.",
+    ingredientes: "Pepino, zanahoria, manzana roja, betabel, limón y jengibre.",
     nutricion: [
-      { label: "Energía", value: "XX kcal" },
-      { label: "Carbohidratos", value: "XX g" },
-      { label: "Azúcares naturales", value: "XX g" },
-      { label: "Proteína", value: "XX g" },
-      { label: "Grasas", value: "XX g" },
-      { label: "Fibra estimada", value: "XX g" },
+      { label: "Energía", value: "245 kcal" },
+      { label: "Carbohidratos", value: "60.1 g" },
+      { label: "Azúcares naturales", value: "33.6 g" },
+      { label: "Proteína", value: "6.2 g" },
+      { label: "Grasas", value: "1.4 g" },
+      { label: "Fibra", value: "Baja por proceso de prensado" },
     ],
     vnr: [
-      { nutriente: "Vitamina A", porcentaje: 0, cantidad: "XX µg" },
-      { nutriente: "Hierro", porcentaje: 0, cantidad: "XX mg" },
-      { nutriente: "Potasio", porcentaje: 0, cantidad: "XX mg" },
+      { nutriente: "Vitamina C", porcentaje: 94, cantidad: "56.6 mg aprox." },
+      { nutriente: "Potasio", porcentaje: 46, cantidad: "1,607 mg aprox." },
+      { nutriente: "Folato", porcentaje: 47, cantidad: "178 µg aprox." },
     ],
-    micronutrientes: ["Vitamina A", "Hierro", "Potasio", "Antioxidantes"],
+    botanico: [
+      { title: "Nitratos vegetales", source: "Betabel", description: "Compuestos naturalmente presentes en el betabel, estudiados por su relación con el óxido nítrico y la función vascular." },
+      { title: "Betalaínas", source: "Betabel", description: "Pigmentos naturales responsables del color intenso del betabel, asociados con actividad antioxidante en estudios de alimentos vegetales." },
+      { title: "Carotenoides", source: "Zanahoria", description: "Compuestos vegetales presentes en vegetales naranjas, relacionados con el perfil antioxidante de la fórmula." },
+    ],
   },
   tropical: {
-    ingredientes: "Piña, pepino, manzana verde, limón y jengibre.",
+    ingredientes: "Pepino, piña, limón y jengibre.",
     nutricion: [
-      { label: "Energía", value: "XX kcal" },
-      { label: "Carbohidratos", value: "XX g" },
-      { label: "Azúcares naturales", value: "XX g" },
-      { label: "Proteína", value: "XX g" },
-      { label: "Grasas", value: "XX g" },
-      { label: "Fibra estimada", value: "XX g" },
+      { label: "Energía", value: "108 kcal" },
+      { label: "Carbohidratos", value: "28.1 g" },
+      { label: "Azúcares naturales", value: "15.4 g" },
+      { label: "Proteína", value: "2.8 g" },
+      { label: "Grasas", value: "0.6 g" },
+      { label: "Fibra", value: "Muy baja por proceso de prensado" },
     ],
     vnr: [
-      { nutriente: "Vitamina C", porcentaje: 0, cantidad: "XX mg" },
-      { nutriente: "Bromelina", porcentaje: 0, cantidad: "XX mg" },
-      { nutriente: "Potasio", porcentaje: 0, cantidad: "XX mg" },
+      { nutriente: "Vitamina C", porcentaje: 136, cantidad: "81.7 mg aprox." },
+      { nutriente: "Potasio", porcentaje: 16, cantidad: "575 mg aprox." },
+      { nutriente: "Folato", porcentaje: 11, cantidad: "42 µg aprox." },
     ],
-    micronutrientes: ["Vitamina C", "Bromelina", "Potasio", "Antioxidantes"],
+    botanico: [
+      { title: "Flavanonas cítricas", source: "Limón", description: "Compuestos vegetales presentes en cítricos, parte del perfil fenólico natural de la fórmula." },
+      { title: "Gingeroles", source: "Jengibre", description: "Compuestos característicos del jengibre, responsables de su nota aromática y estudiados por su actividad antioxidante." },
+      { title: "Ácidos orgánicos", source: "Piña y limón", description: "Aportan acidez natural, frescura sensorial y equilibrio al perfil tropical de la fórmula." },
+    ],
   },
 };
 
@@ -467,22 +480,36 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
               </div>
             )}
 
-            {/* Micronutrientes destacados */}
-            <div style={{ animation: "fichaStagger 0.4s ease 0.28s both", marginBottom: 24 }}>
-              <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 10 }}>
-                Micronutrientes destacados
-              </span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {data.micronutrientes.map((m) => (
-                  <span key={m} className="font-inter" style={{
-                    fontSize: 12, color: "#5A6A4A", padding: "6px 14px", borderRadius: 100,
-                    background: "rgba(74,94,58,0.06)", border: "1px solid rgba(74,94,58,0.12)",
-                  }}>
-                    {m}
-                  </span>
-                ))}
+            {/* Perfil botánico */}
+            {data.botanico.length > 0 && (
+              <div style={{ animation: "fichaStagger 0.4s ease 0.28s both", marginBottom: 24 }}>
+                <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 4 }}>
+                  Perfil botánico
+                </span>
+                <span className="font-inter" style={{ fontSize: 11, color: "#9A9490", display: "block", marginBottom: 14, lineHeight: 1.5 }}>
+                  Compuestos naturalmente presentes en los ingredientes de esta fórmula.
+                </span>
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {data.botanico.map((b, i) => (
+                    <div key={b.title} style={{
+                      background: "rgba(255,255,255,0.7)",
+                      border: "1px solid rgba(0,0,0,0.05)",
+                      borderRadius: 14,
+                      padding: "14px 16px",
+                      animation: `fichaStagger 0.4s ease ${0.31 + i * 0.06}s both`,
+                    }}>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
+                        <span className="font-inter" style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{b.title}</span>
+                        <span className="font-inter" style={{ fontSize: 10, color: "#9A9490", flexShrink: 0, marginLeft: 8 }}>{b.source}</span>
+                      </div>
+                      <p className="font-inter" style={{ fontSize: 12, color: "#6A6A6A", lineHeight: 1.6, margin: 0 }}>
+                        {b.description}
+                      </p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Notas */}
             <div style={{ animation: "fichaStagger 0.4s ease 0.34s both", marginBottom: 28 }}>
