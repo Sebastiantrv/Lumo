@@ -167,7 +167,7 @@ interface BotanicalItem { title: string; source: string; description: string }
 
 const FICHA_DATA: Record<string, {
   ingredientes: string;
-  nutricion: { label: string; value: string }[];
+  nutricion: { label: string; value: string; note?: string }[];
   vnr: VnrItem[];
   botanico: BotanicalItem[];
 }> = {
@@ -176,10 +176,10 @@ const FICHA_DATA: Record<string, {
     nutricion: [
       { label: "Energía", value: "158 kcal" },
       { label: "Carbohidratos", value: "39.9 g" },
-      { label: "Azúcares naturales", value: "22.9 g" },
+      { label: "Azúcares naturalmente presentes", value: "22.9 g", note: "Sin azúcar añadida. Provienen naturalmente de frutas y vegetales." },
       { label: "Proteína", value: "4.4 g" },
       { label: "Grasas", value: "1.0 g" },
-      { label: "Fibra", value: "Baja por proceso de prensado" },
+      { label: "Fibra estimada", value: "Baja por proceso de prensado" },
     ],
     vnr: [
       { nutriente: "Vitamina C", porcentaje: 90, cantidad: "54.2 mg aprox." },
@@ -197,10 +197,10 @@ const FICHA_DATA: Record<string, {
     nutricion: [
       { label: "Energía", value: "245 kcal" },
       { label: "Carbohidratos", value: "60.1 g" },
-      { label: "Azúcares naturales", value: "33.6 g" },
+      { label: "Azúcares naturalmente presentes", value: "33.6 g", note: "Sin azúcar añadida. Provienen naturalmente de frutas y vegetales." },
       { label: "Proteína", value: "6.2 g" },
       { label: "Grasas", value: "1.4 g" },
-      { label: "Fibra", value: "Baja por proceso de prensado" },
+      { label: "Fibra estimada", value: "Baja por proceso de prensado" },
     ],
     vnr: [
       { nutriente: "Vitamina C", porcentaje: 94, cantidad: "56.6 mg aprox." },
@@ -218,10 +218,10 @@ const FICHA_DATA: Record<string, {
     nutricion: [
       { label: "Energía", value: "108 kcal" },
       { label: "Carbohidratos", value: "28.1 g" },
-      { label: "Azúcares naturales", value: "15.4 g" },
+      { label: "Azúcares naturalmente presentes", value: "15.4 g", note: "Sin azúcar añadida. Provienen naturalmente de frutas y vegetales." },
       { label: "Proteína", value: "2.8 g" },
       { label: "Grasas", value: "0.6 g" },
-      { label: "Fibra", value: "Muy baja por proceso de prensado" },
+      { label: "Fibra estimada", value: "Muy baja por proceso de prensado" },
     ],
     vnr: [
       { nutriente: "Vitamina C", porcentaje: 136, cantidad: "81.7 mg aprox." },
@@ -335,13 +335,14 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
         background: "#FDFBF7",
         zIndex: "-1",
       });
-      clone.querySelectorAll("[style]").forEach((el) => {
+      clone.querySelectorAll("*").forEach((el) => {
         const s = (el as HTMLElement).style;
-        if (s.animation) s.animation = "none";
-        if (s.overflow === "auto" || s.overflowY === "auto") { s.overflow = "visible"; s.overflowY = "visible"; }
+        if (s?.animation) s.animation = "none";
+        if (s?.overflow === "auto" || s?.overflowY === "auto") { s.overflow = "visible"; s.overflowY = "visible"; }
       });
       document.body.appendChild(clone);
-      const canvas = await html2canvas(clone, { backgroundColor: "#FDFBF7", scale: 2, useCORS: true });
+      await document.fonts.ready;
+      const canvas = await html2canvas(clone, { backgroundColor: "#FDFBF7", scale: 3, useCORS: true, windowWidth: contentRef.current.offsetWidth });
       document.body.removeChild(clone);
       const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
       if (!blob) { setSharing(false); return; }
@@ -457,16 +458,22 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
                 Perfil nutricional estimado
               </span>
               <span className="font-inter" style={{ fontSize: 12, color: "#9A9490", display: "block", marginBottom: 12 }}>
-                por 350 ml
+                por botella
               </span>
               <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, border: "1px solid rgba(0,0,0,0.05)", overflow: "hidden" }}>
                 {data.nutricion.map((row, i) => (
                   <div key={row.label} style={{
-                    display: "flex", justifyContent: "space-between", alignItems: "center",
                     padding: "11px 16px", borderTop: i > 0 ? "1px solid rgba(0,0,0,0.04)" : "none",
                   }}>
-                    <span className="font-inter" style={{ fontSize: 13, color: "#4A4A4A" }}>{row.label}</span>
-                    <span className="font-inter" style={{ fontSize: 13, color: "#1A1A1A", fontWeight: 500 }}>{row.value}</span>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="font-inter" style={{ fontSize: 13, color: "#4A4A4A" }}>{row.label}</span>
+                      <span className="font-inter" style={{ fontSize: 13, color: "#1A1A1A", fontWeight: 500 }}>{row.value}</span>
+                    </div>
+                    {row.note && (
+                      <p className="font-inter" style={{ fontSize: 11, color: "#9A9490", margin: "4px 0 0", lineHeight: 1.5 }}>
+                        {row.note}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
@@ -486,9 +493,6 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
                     <VnrCard key={v.nutriente} item={v} delay={0.22 + i * 0.07} />
                   ))}
                 </div>
-                <p className="font-inter" style={{ fontSize: 10, color: "#B8B0A4", marginTop: 10, lineHeight: 1.5 }}>
-                  Valores estimados con base en ingredientes pesados antes del prensado. Pueden variar por madurez, origen y rendimiento de extracción.
-                </p>
               </div>
             )}
 
