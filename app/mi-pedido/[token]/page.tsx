@@ -30,7 +30,7 @@ function EstadoBadge({ estado }: { estado: string }) {
     pendiente:  { label: "Recibido", bg: "rgba(138,133,128,0.12)", color: "#8A8580" },
     confirmado: { label: "Confirmado", bg: "rgba(74,94,58,0.12)", color: "#4A5E3A" },
     preparado:  { label: "Listo para ti", bg: "rgba(74,94,58,0.18)", color: "#4A5E3A" },
-    entregado:  { label: "Entregado", bg: "rgba(74,94,58,0.10)", color: "#6A6A6A" },
+    entregado:  { label: "Entregado", bg: "rgba(74,94,58,0.12)", color: "#4A5E3A" },
     cancelado:  { label: "Pedido cancelado", bg: "rgba(122,32,48,0.10)", color: "#7A2030" },
   };
   const c = config[estado] ?? config.pendiente;
@@ -95,29 +95,25 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 28 }}>
               <div
                 style={{
+                  position: "relative",
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
                   border: isActive ? "none" : "2px solid #D4D0C8",
                   background: isActive ? accentColor : "transparent",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
                   flexShrink: 0,
-                  boxShadow: isCurrent ? `0 0 0 4px ${accentColor}22` : "none",
                   transition: "all 0.5s ease",
                 }}
               >
-                {isActive && (
-                  <svg width="13" height="13" viewBox="0 0 12 12" fill="none">
-                    <path
-                      d="M2 6L5 9L10 3"
-                      stroke="#fff"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+                {isCurrent && (
+                  <div style={{
+                    position: "absolute",
+                    inset: -4,
+                    borderRadius: "50%",
+                    background: accentColor,
+                    opacity: 0.3,
+                    animation: "accentPulse 2.5s ease-in-out infinite",
+                  }} />
                 )}
               </div>
               {!isLast && (
@@ -442,12 +438,10 @@ export default function MiPedidoPage({
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
                   {bottleImg ? (
                     <div style={{ position: "relative", width: 36, flexShrink: 0 }}>
-                      <div style={{ position: "absolute", inset: -4, borderRadius: "50%", background: g.color, animation: `accentPulse 3s ease-in-out ${idx * 0.8}s infinite`, opacity: 0.15, filter: "blur(8px)" }} />
                       <img src={bottleImg} alt={g.nombre} style={{ position: "relative", width: 36, height: 52, objectFit: "contain", opacity: 0.92 }} />
                     </div>
                   ) : (
                     <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
-                      <div style={{ position: "absolute", inset: -3, borderRadius: "50%", background: g.color, animation: `accentPulse 3s ease-in-out ${idx * 0.8}s infinite`, opacity: 0.3 }} />
                       <div style={{ position: "relative", width: 12, height: 12, borderRadius: "50%", background: g.color, boxShadow: `0 0 8px ${g.color}44` }} />
                     </div>
                   )}

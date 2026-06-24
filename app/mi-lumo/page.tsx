@@ -327,12 +327,11 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   useEffect(() => { load(); }, [load]);
 
   const hoy = new Date().toISOString().split("T")[0];
-  const ayer = new Date(Date.now() - 86400000).toISOString().split("T")[0];
   const pedidosActivos = pedidos.filter(
-    (p) => p.estado !== "cancelado" && !(p.estado === "entregado" && p.dia_entrega <= ayer) && p.dia_entrega >= hoy
+    (p) => p.estado !== "cancelado" && p.dia_entrega >= hoy
   );
   const pedidosHistorial = pedidos.filter(
-    (p) => p.estado === "cancelado" || (p.estado === "entregado" && p.dia_entrega <= ayer) || p.dia_entrega < hoy
+    (p) => p.estado === "cancelado" || p.dia_entrega < hoy
   );
 
   const memberSince = new Date(miembro.created_at).toLocaleDateString("es-MX", {
@@ -1361,11 +1360,14 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
               <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Aún no hay entregas.</p>
             </div>
           ) : pedidos.slice(0, 30).map((p) => (
-            <div key={p.id} className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#fff" }}>
+            <Link key={p.id} href={p.token ? `/mi-pedido/${p.token}` : "#"} className="rounded-xl p-3 flex items-center gap-3 spring-press" style={{ background: "#fff" }}>
               <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.formulas?.color_acento ?? VERDE }} />
               <div className="flex-1 min-w-0">
                 <p className="font-inter text-sm truncate" style={{ color: "#2D2D2D" }}>{p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}</p>
-                <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{formatDate(p.dia_entrega)}</p>
+                <div className="flex items-center gap-2">
+                  <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{formatDate(p.dia_entrega)}</span>
+                  {p.numero_pedido && <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>#{p.numero_pedido}</span>}
+                </div>
               </div>
               <span
                 className="font-inter text-xs px-2 py-0.5 rounded-full flex-shrink-0"
@@ -1376,7 +1378,7 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
               >
                 {estadoLabel[p.estado] ?? p.estado}
               </span>
-            </div>
+            </Link>
           ))
         )}
 

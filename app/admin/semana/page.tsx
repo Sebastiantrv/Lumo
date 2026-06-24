@@ -39,8 +39,8 @@ export default function SemanaPage() {
   const monday = days[0];
   const saturday = days[5];
 
-  async function load() {
-    setLoading(true);
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
     const [{ data: p }, { data: f }] = await Promise.all([
       supabase.from("pedidos").select("*, clientes(nombre), formulas(nombre, slug, color_acento)").gte("dia_entrega", monday).lte("dia_entrega", saturday).order("dia_entrega"),
       supabase.from("formulas").select("*").order("nombre"),
@@ -54,7 +54,7 @@ export default function SemanaPage() {
 
   async function setExtra(id: string, estado: string) {
     await adminWrite("pedidos", "update", { estado_extra: estado }, [{ column: "id", value: id }]);
-    await load();
+    await load(true);
   }
 
   async function aplazar(ids: string[], fecha: string) {
@@ -62,7 +62,7 @@ export default function SemanaPage() {
       await adminWrite("pedidos", "update", { dia_entrega: fecha, estado_extra: "aplazado" }, [{ column: "id", value: id }]);
     }
     setAplazarPickerFor(null);
-    await load();
+    await load(true);
   }
 
   async function moverFecha(ids: string[], fecha: string) {
@@ -70,7 +70,7 @@ export default function SemanaPage() {
       await adminWrite("pedidos", "update", { dia_entrega: fecha }, [{ column: "id", value: id }]);
     }
     setMoverPickerFor(null);
-    await load();
+    await load(true);
   }
 
   async function avanzarEstado(ids: string[], estadoActual: string, horaEntrega?: string) {
@@ -85,12 +85,12 @@ export default function SemanaPage() {
     if (siguiente === "entregado" && horaEntrega) payload.hora_entrega_estimada = horaEntrega;
 
     await Promise.all(ids.map((id) => adminWrite("pedidos", "update", payload, [{ column: "id", value: id }])));
-    await load();
+    await load(true);
   }
 
   async function cambiarFormula(id: string, formulaId: string) {
     await adminWrite("pedidos", "update", { formula_id: formulaId }, [{ column: "id", value: id }]);
-    await load();
+    await load(true);
   }
 
   function groupByToken(list: Pedido[]) {
