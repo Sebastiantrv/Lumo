@@ -325,20 +325,20 @@ export default function MiPedidoPage({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        padding: "48px 20px 40px",
+        padding: "32px 20px 40px",
         maxWidth: 640,
         margin: "0 auto",
         width: "100%",
       }}
     >
       {/* Back + Logo */}
-      <div style={{ width: "100%", maxWidth: 440, marginBottom: 44, animation: "pedidoFadeUp 0.7s ease 0s both" }}>
+      <div style={{ width: "100%", maxWidth: 440, marginBottom: 32, animation: "pedidoFadeUp 0.7s ease 0s both" }}>
         <button
           onClick={() => {
             if (window.history.length > 1) window.history.back();
             else window.location.href = "/mi-lumo";
           }}
-          className="font-inter spring-press flex items-center gap-1.5 mb-6"
+          className="font-inter spring-press flex items-center gap-1.5 mb-4"
           style={{ fontSize: 13, color: "#9A9490" }}
         >
           <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -374,7 +374,7 @@ export default function MiPedidoPage({
           color: "#9A9490",
           fontSize: 13,
           marginTop: 8,
-          marginBottom: 12,
+          marginBottom: 28,
           letterSpacing: "0.02em",
           animation: "pedidoFadeUp 0.7s ease 0.2s both",
         }}

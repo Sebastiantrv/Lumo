@@ -252,7 +252,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   const [loading, setLoading] = useState(true);
   const [showReserva, setShowReserva] = useState(false);
   const [showRecarga, setShowRecarga] = useState(false);
-  const [tab, setTab] = useState<"inicio" | "historial" | "perfil">("historial");
+  const [tab, setTab] = useState<"historial" | "perfil">("historial");
   const [refreshing, setRefreshing] = useState(false);
   const [pullDistance, setPullDistance] = useState(0);
   const touchStartY = useRef(0);
@@ -510,7 +510,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
         {/* ── Tabs ── */}
         <div className="mx-5 mb-4 flex gap-1 rounded-xl p-1" style={{ background: "rgba(74,94,58,0.04)" }}>
-          {(["inicio", "historial", "perfil"] as const).map((t) => (
+          {(["historial", "perfil"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -521,31 +521,12 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
                 boxShadow: tab === t ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
               }}
             >
-              {t === "inicio" ? "Inicio" : t === "historial" ? "Historial" : "Mi perfil"}
+              {t === "historial" ? "Historial" : "Mi perfil"}
             </button>
           ))}
         </div>
 
         <div style={{ animation: "lumoFadeIn 0.3s ease both" }} key={tab}>
-          {tab === "inicio" && (
-            <section className="mx-5">
-              {pedidosHistorial.length > 0 && (
-                <div className="rounded-2xl p-4" style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}>
-                  <p className="font-inter text-xs mb-2" style={{ color: "#8A8A7A" }}>Últimas entregas</p>
-                  {pedidosHistorial.slice(0, 3).map((p) => (
-                    <div key={p.id} className="flex items-center gap-3 py-2" style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-                      <div className="w-2 h-2 rounded-full" style={{ background: p.formulas?.color_acento ?? VERDE }} />
-                      <span className="font-inter text-sm flex-1" style={{ color: "#2D2D2D" }}>
-                        {p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}
-                      </span>
-                      <span className="font-inter text-xs" style={{ color: "#A0A090" }}>{formatDateShort(p.dia_entrega)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </section>
-          )}
-
           {tab === "historial" && (
             <HistorialTab pedidos={pedidosHistorial} movimientos={movimientos} />
           )}
@@ -1360,32 +1341,31 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
               <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Aún no hay entregas.</p>
             </div>
           ) : pedidos.slice(0, 30).map((p) => (
-            <Link key={p.id} href={p.token ? `/mi-pedido/${p.token}` : "#"} className="rounded-xl p-3 flex items-center gap-3 spring-press" style={{ background: "#fff" }}>
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.formulas?.color_acento ?? VERDE }} />
-              <div className="flex-1 min-w-0">
-                <p className="font-inter text-sm truncate" style={{ color: "#2D2D2D" }}>{p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}</p>
-                <div className="flex items-center gap-2">
-                  <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{formatDate(p.dia_entrega)}</span>
+            <Link key={p.id} href={p.token ? `/mi-pedido/${p.token}` : "#"} className="rounded-xl p-3.5 spring-press block" style={{ background: "#fff" }}>
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.formulas?.color_acento ?? VERDE }} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-inter text-sm truncate" style={{ color: "#2D2D2D" }}>{p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {p.numero_pedido && <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>#{p.numero_pedido}</span>}
+                  <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{formatDateShort(p.dia_entrega)}</span>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-shrink-0">
-                <span
-                  className="font-inter text-xs px-2 py-0.5 rounded-full"
-                  style={{
-                    background: p.estado === "entregado" ? "rgba(109,191,103,0.1)" : p.estado === "cancelado" ? "rgba(122,32,48,0.08)" : "rgba(184,134,11,0.08)",
-                    color: p.estado === "entregado" ? "#6DBF67" : p.estado === "cancelado" ? ROJO : TROPICAL,
-                  }}
-                >
-                  {estadoLabel[p.estado] ?? p.estado}
-                </span>
-                {p.estado === "entregado" && p.token && (
-                  <span className="font-inter text-xs flex items-center gap-0.5" style={{ color: VERDE }}>
-                    Mi experiencia
+              {p.estado === "entregado" && p.token && (
+                <div className="flex items-center justify-between mt-2.5 pt-2.5" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+                  <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>Entregado</span>
+                  <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
+                    Cuéntanos tu experiencia
                     <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
                   </span>
-                )}
-              </div>
+                </div>
+              )}
+              {p.estado === "cancelado" && (
+                <div className="mt-2.5 pt-2.5" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+                  <span className="font-inter text-xs" style={{ color: ROJO }}>Cancelado</span>
+                </div>
+              )}
             </Link>
           ))
         )}
