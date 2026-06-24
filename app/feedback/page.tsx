@@ -249,7 +249,7 @@ function FeedbackContent() {
                 <div className="flex flex-col gap-4 items-center">
                   <p className="font-inter text-sm" style={{ color: T.green }}>Comentario adicional enviado. Gracias.</p>
                   <Link
-                    href="/"
+                    href="/mi-lumo"
                     className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
                     style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: T.btnPrimary, color: T.btnText }}
                   >
@@ -282,7 +282,7 @@ function FeedbackContent() {
                     Enviar comentario <span aria-hidden="true">→</span>
                   </button>
                   <Link
-                    href="/"
+                    href="/mi-lumo"
                     className="w-full inline-flex items-center justify-center font-inter spring-press py-2"
                     style={{ fontSize: "clamp(0.82rem, 3.2vw, 0.95rem)", color: T.textSub }}
                   >
@@ -499,7 +499,7 @@ function FeedbackContent() {
                   </p>
 
                   <Link
-                    href="/"
+                    href="/mi-lumo"
                     className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
                     style={{
                       fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
@@ -508,7 +508,7 @@ function FeedbackContent() {
                       color: T.btnText,
                     }}
                   >
-                    Finalizar <span aria-hidden="true">→</span>
+                    Volver a Mi LUMO <span aria-hidden="true">→</span>
                   </Link>
                 </div>
               </div>
