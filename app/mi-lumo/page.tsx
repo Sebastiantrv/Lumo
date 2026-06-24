@@ -663,7 +663,7 @@ function ReservaFlow({
     return s + (f?.precio ?? 0) * l.cantidad;
   }, 0);
   const alcanza = balance >= total;
-  const deliveryDays = getNextDeliveryDays();
+  const deliveryDays = getNextDeliveryDays(diasActivos);
   const totalBotellas = lineas.reduce((s, l) => s + l.cantidad, 0);
 
   function addFormula(formulaId: string) {
