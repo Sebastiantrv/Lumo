@@ -396,47 +396,109 @@ function Empty({ texto }: { texto: string }) {
 
 function CapacidadDiariaCard() {
   const [capacidad, setCapacidad] = useState("");
+  const [diasActivos, setDiasActivos] = useState<number[]>([1, 2, 3, 4, 5]);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  const diasSemana = [
+    { value: 1, label: "Lun" },
+    { value: 2, label: "Mar" },
+    { value: 3, label: "Mié" },
+    { value: 4, label: "Jue" },
+    { value: 5, label: "Vie" },
+    { value: 6, label: "Sáb" },
+  ];
 
   useEffect(() => {
     fetch("/api/admin/configuracion")
       .then((r) => r.json())
-      .then((data) => { setCapacidad(data.capacidad_diaria ?? ""); setLoading(false); })
+      .then((data) => {
+        setCapacidad(data.capacidad_diaria ?? "");
+        if (data.dias_entrega) {
+          try { setDiasActivos(JSON.parse(data.dias_entrega)); } catch { /* keep defaults */ }
+        }
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
   async function save() {
-    await fetch("/api/admin/configuracion", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clave: "capacidad_diaria", valor: capacidad }),
-    });
+    await Promise.all([
+      fetch("/api/admin/configuracion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clave: "capacidad_diaria", valor: capacidad }),
+      }),
+      fetch("/api/admin/configuracion", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clave: "dias_entrega", valor: JSON.stringify(diasActivos) }),
+      }),
+    ]);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
 
+  function toggleDia(dia: number) {
+    setSaved(false);
+    setDiasActivos((prev) =>
+      prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia].sort()
+    );
+  }
+
   return (
     <div className="rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-      <h2 className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#8A8A8A" }}>Capacidad diaria</h2>
-      <p className="font-inter text-xs mb-4" style={{ color: "#555" }}>
-        Botellas que puedes preparar por día. Aplica a todos los días.
+      <h2 className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#8A8A8A" }}>Entregas</h2>
+      <p className="font-inter text-xs mb-5" style={{ color: "#555" }}>
+        Configura capacidad y días de entrega para tus miembros.
       </p>
       {loading ? (
         <Empty texto="Cargando..." />
       ) : (
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            value={capacidad}
-            onChange={(e) => { setCapacidad(e.target.value); setSaved(false); }}
-            placeholder="Ej. 20"
-            className="w-24 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
-            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
-          />
-          <span className="font-inter text-xs" style={{ color: "#555" }}>botellas</span>
+        <div className="flex flex-col gap-5">
+          {/* Capacidad */}
+          <div>
+            <p className="font-inter text-xs mb-2" style={{ color: "#8A8A8A" }}>Botellas por día</p>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                value={capacidad}
+                onChange={(e) => { setCapacidad(e.target.value); setSaved(false); }}
+                placeholder="Ej. 20"
+                className="w-24 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
+                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
+              />
+              <span className="font-inter text-xs" style={{ color: "#555" }}>botellas</span>
+            </div>
+          </div>
+
+          {/* Días de entrega */}
+          <div>
+            <p className="font-inter text-xs mb-2" style={{ color: "#8A8A8A" }}>Días de entrega</p>
+            <div className="flex gap-2">
+              {diasSemana.map((dia) => {
+                const activo = diasActivos.includes(dia.value);
+                return (
+                  <button
+                    key={dia.value}
+                    onClick={() => toggleDia(dia.value)}
+                    className="w-10 h-10 rounded-xl font-inter text-xs font-medium transition-all"
+                    style={{
+                      background: activo ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.04)",
+                      color: activo ? "#6DBF67" : "#555",
+                      border: activo ? "1px solid rgba(74,94,58,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                    }}
+                  >
+                    {dia.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Guardar */}
           <button onClick={save}
-            className="rounded-lg px-3 py-1.5 font-inter text-xs font-medium ml-auto"
+            className="rounded-lg px-4 py-2 font-inter text-xs font-medium self-start"
             style={{ background: saved ? "rgba(109,191,103,0.2)" : "rgba(74,94,58,0.2)", color: saved ? "#6DBF67" : "#4A5E3A", border: `1px solid ${saved ? "rgba(109,191,103,0.4)" : "rgba(74,94,58,0.4)"}` }}>
             {saved ? "✓ Guardado" : "Guardar"}
           </button>
