@@ -37,6 +37,8 @@ function AdminNav({ open, onClose }: { open: boolean; onClose: () => void }) {
           width: 220,
           background: "#111",
           borderRight: "1px solid rgba(255,255,255,0.06)",
+          WebkitOverflowScrolling: "touch",
+          overflowY: "auto",
         }}
       >
         <div>
@@ -147,13 +149,68 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <AdminNav open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
         <main
-          className="md:ml-[220px] md:p-[2rem_2.5rem] p-4 pt-2 md:pt-[2rem]"
+          className="md:ml-[220px] md:p-[2rem_2.5rem] p-4 pt-2 pb-20 md:pb-[2rem] md:pt-[2rem]"
           style={{ minHeight: "100svh" }}
         >
           {children}
         </main>
+
+        {/* Mobile bottom navigation */}
+        <MobileBottomNav onOpenFull={() => setSidebarOpen(true)} />
       </div>
     </SessionProvider>
+  );
+}
+
+/* ── Mobile bottom nav ── */
+function MobileBottomNav({ onOpenFull }: { onOpenFull: () => void }) {
+  const path = usePathname();
+
+  const tabs = [
+    { href: "/admin", label: "Inicio", icon: HomeIcon },
+    { href: "/admin/hoy", label: "Hoy", icon: SunIcon },
+    { href: "/admin/semana", label: "Semana", icon: CalendarIcon },
+    { href: "/admin/clientes", label: "Miembros", icon: PeopleIcon },
+  ];
+
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around md:hidden"
+      style={{
+        height: 64,
+        background: "#111",
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+      }}
+    >
+      {tabs.map(({ href, label, icon: Icon }) => {
+        const active = path === href;
+        return (
+          <Link
+            key={href}
+            href={href}
+            className="flex flex-col items-center gap-1 py-1.5 px-2"
+          >
+            <Icon size={18} color={active ? "#4A5E3A" : "#555"} />
+            <span
+              className="font-inter"
+              style={{ fontSize: "0.6rem", color: active ? "#F5F0E8" : "#555" }}
+            >
+              {label}
+            </span>
+          </Link>
+        );
+      })}
+      <button
+        onClick={onOpenFull}
+        className="flex flex-col items-center gap-1 py-1.5 px-2"
+      >
+        <MoreIcon size={18} color="#555" />
+        <span className="font-inter" style={{ fontSize: "0.6rem", color: "#555" }}>
+          Más
+        </span>
+      </button>
+    </div>
   );
 }
 
@@ -237,6 +294,15 @@ function LogoutIcon({ size, color }: { size: number; color: string }) {
       <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
       <polyline points="16 17 21 12 16 7" />
       <line x1="21" y1="12" x2="9" y2="12" />
+    </svg>
+  );
+}
+function MoreIcon({ size, color }: { size: number; color: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round">
+      <circle cx="12" cy="12" r="1.5" fill={color} />
+      <circle cx="5" cy="12" r="1.5" fill={color} />
+      <circle cx="19" cy="12" r="1.5" fill={color} />
     </svg>
   );
 }
