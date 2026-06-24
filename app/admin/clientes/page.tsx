@@ -18,6 +18,7 @@ type Cliente = {
   codigo_miembro: string | null;
   activo: boolean;
   created_at: string;
+  categoria: string | null;
 };
 
 type Formula = { id: string; nombre: string; slug: string; color_acento: string };
@@ -59,6 +60,7 @@ export default function ClientesPage() {
   const [showInactivos, setShowInactivos] = useState(false);
   const [showRecargaModal, setShowRecargaModal] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState("");
+  const [catFilter, setCatFilter] = useState<string>("todos");
 
   async function load() {
     const [{ data: c }, { data: f }, { data: mov }, { data: pedidos }] = await Promise.all([
@@ -131,14 +133,22 @@ export default function ClientesPage() {
   const inactivos = clientes.filter((c) => !c.activo);
   const totalBalance = movimientos.reduce((s, m) => s + m.monto, 0);
 
+  const getCat = (c: Cliente) => c.categoria ?? (c.empresa ? "empresa" : "amigo");
+  const catCounts = { empresa: 0, vecino: 0, amigo: 0 };
+  for (const c of activos) {
+    const cat = getCat(c);
+    if (cat in catCounts) catCounts[cat as keyof typeof catCounts]++;
+  }
+
+  const afterCat = catFilter === "todos" ? activos : activos.filter((c) => getCat(c) === catFilter);
   const filtrados = busqueda.trim()
-    ? activos.filter((c) =>
+    ? afterCat.filter((c) =>
         c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
         c.telefono?.includes(busqueda) ||
         c.codigo_miembro?.toLowerCase().includes(busqueda.toLowerCase()) ||
         c.empresa?.toLowerCase().includes(busqueda.toLowerCase())
       )
-    : activos;
+    : afterCat;
 
   const fichaClienteData = fichaCliente ? clientes.find((c) => c.id === fichaCliente) : null;
 
@@ -166,6 +176,30 @@ export default function ClientesPage() {
           <p className="font-inter text-xs uppercase tracking-widest" style={{ color: totalBalance > 0 ? "#B8860B" : "#8A8A8A" }}>Balance LUMO</p>
           <p className="font-cormorant text-2xl mt-1" style={{ color: totalBalance > 0 ? "#E6A800" : "#555" }}>${totalBalance}</p>
         </div>
+      </div>
+
+      {/* Category tabs */}
+      <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+        {([
+          { id: "todos", label: "Todos", count: activos.length, color: "#F5F0E8" },
+          { id: "empresa", label: "Empresa", count: catCounts.empresa, color: "#4A5E3A" },
+          { id: "vecino", label: "Vecinos", count: catCounts.vecino, color: "#B8860B" },
+          { id: "amigo", label: "Amigos / Otros", count: catCounts.amigo, color: "#8A8A8A" },
+        ] as const).map((tab) => {
+          const active = catFilter === tab.id;
+          return (
+            <button key={tab.id} onClick={() => setCatFilter(tab.id)}
+              className="rounded-full px-3.5 py-1.5 font-inter text-xs whitespace-nowrap transition-all shrink-0"
+              style={{
+                background: active ? `${tab.color}18` : "rgba(255,255,255,0.03)",
+                border: active ? `1px solid ${tab.color}50` : "1px solid rgba(255,255,255,0.06)",
+                color: active ? tab.color : "#666",
+                fontWeight: active ? 500 : 400,
+              }}>
+              {tab.label} ({tab.count})
+            </button>
+          );
+        })}
       </div>
 
       <div className="mb-4">
@@ -271,6 +305,7 @@ function MiembroCard({ cliente, stats, balance, onOpenFicha, onPedido, onEditar 
                 </>
               ) : (<span className="font-inter text-xs" style={{ color: "#555" }}>Sin pedidos</span>)}
               {cliente.empresa && (<><span style={{ color: "#333" }}>·</span><span className="font-inter text-xs" style={{ color: "#666" }}>{cliente.empresa}</span></>)}
+              {(() => { const cat = cliente.categoria ?? (cliente.empresa ? "empresa" : "amigo"); const catLabel = cat === "empresa" ? "Empresa" : cat === "vecino" ? "Vecino" : null; const catColor = cat === "empresa" ? "#4A5E3A" : cat === "vecino" ? "#B8860B" : null; return catLabel ? (<><span style={{ color: "#333" }}>·</span><span className="font-inter text-[0.65rem]" style={{ color: catColor ?? "#555" }}>{catLabel}</span></>) : null; })()}
             </div>
           </div>
         </div>
@@ -320,6 +355,7 @@ function FichaMiembro({ cliente, stats, movimientos, balance, onClose, onEditar,
                 <h2 className="font-cormorant text-xl" style={{ color: "#F5F0E8" }}>{cliente.nombre}</h2>
                 <div className="flex items-center gap-2 mt-0.5">
                   {cliente.codigo_miembro && <span className="font-inter text-xs font-medium" style={{ color: "#B8860B" }}>{cliente.codigo_miembro}</span>}
+                  {(() => { const cat = cliente.categoria ?? (cliente.empresa ? "empresa" : "amigo"); const catLabel = cat === "empresa" ? "Empresa" : cat === "vecino" ? "Vecino" : "Amigo"; const catColor = cat === "empresa" ? "#4A5E3A" : cat === "vecino" ? "#B8860B" : "#8A8A8A"; return <span className="font-inter text-[0.65rem] px-1.5 py-0.5 rounded" style={{ background: `${catColor}15`, color: catColor }}>{catLabel}</span>; })()}
                   <span className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Miembro desde {miembroDesde}</span>
                 </div>
               </div>
@@ -470,6 +506,7 @@ function RecargaBalanceModal({ clienteId, clienteNombre, codigoMiembro, onClose,
 function NuevoMiembroModal({ clientes, onClose, onSaved }: { clientes: Cliente[]; onClose: () => void; onSaved: () => void }) {
   const [nombre, setNombre] = useState(""); const [telefono, setTelefono] = useState(""); const [email, setEmail] = useState("");
   const [empresa, setEmpresa] = useState(""); const [restricciones, setRestricciones] = useState(""); const [notas, setNotas] = useState("");
+  const [categoria, setCategoria] = useState("amigo");
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -477,17 +514,20 @@ function NuevoMiembroModal({ clientes, onClose, onSaved }: { clientes: Cliente[]
     const existingCodes = clientes.map((c) => c.codigo_miembro).filter(Boolean) as string[];
     let codigo = generarCodigoMiembro(); let attempts = 0;
     while (existingCodes.includes(codigo) && attempts < 50) { codigo = generarCodigoMiembro(); attempts++; }
-    await adminWrite("clientes", "insert", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, activo: true, codigo_miembro: codigo });
+    await adminWrite("clientes", "insert", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, activo: true, codigo_miembro: codigo, categoria });
     onSaved();
   }
 
   return (
     <Modal title="Nuevo miembro" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="Categoría">
+          <CategoriaSelector value={categoria} onChange={setCategoria} />
+        </Field>
         <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
         <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
         <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
-        <Field label="Empresa"><Input value={empresa} onChange={setEmpresa} placeholder="Ej. Deloitte, WeWork Roma..." /></Field>
+        <Field label={categoria === "vecino" ? "Colonia / Zona" : "Empresa"}><Input value={empresa} onChange={setEmpresa} placeholder={categoria === "vecino" ? "Ej. Col. Roma Norte" : "Ej. Deloitte, WeWork Roma..."} /></Field>
         <Field label="Restricciones / Alergias"><Input value={restricciones} onChange={setRestricciones} placeholder="Ej. Sin apio, sin jengibre..." /></Field>
         <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Observaciones internas..." /></Field>
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
@@ -501,21 +541,25 @@ function EditarMiembroModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
   const [nombre, setNombre] = useState(cliente.nombre); const [telefono, setTelefono] = useState(cliente.telefono ?? "");
   const [email, setEmail] = useState(cliente.email ?? ""); const [empresa, setEmpresa] = useState(cliente.empresa ?? "");
   const [restricciones, setRestricciones] = useState(cliente.restricciones ?? ""); const [notas, setNotas] = useState(cliente.notas ?? "");
+  const [categoria, setCategoria] = useState(cliente.categoria ?? (cliente.empresa ? "empresa" : "amigo"));
   const [saving, setSaving] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setSaving(true);
-    await adminWrite("clientes", "update", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null }, [{ column: "id", value: cliente.id }]);
+    await adminWrite("clientes", "update", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, categoria }, [{ column: "id", value: cliente.id }]);
     onSaved();
   }
 
   return (
     <Modal title="Editar miembro" onClose={onClose}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <Field label="Categoría">
+          <CategoriaSelector value={categoria} onChange={setCategoria} />
+        </Field>
         <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
         <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
         <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
-        <Field label="Empresa"><Input value={empresa} onChange={setEmpresa} placeholder="Ej. Deloitte, WeWork Roma..." /></Field>
+        <Field label={categoria === "vecino" ? "Colonia / Zona" : "Empresa"}><Input value={empresa} onChange={setEmpresa} placeholder={categoria === "vecino" ? "Ej. Col. Roma Norte" : "Ej. Deloitte, WeWork Roma..."} /></Field>
         <Field label="Restricciones / Alergias"><Input value={restricciones} onChange={setRestricciones} placeholder="Ej. Sin apio, sin jengibre..." /></Field>
         <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Observaciones internas..." /></Field>
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
@@ -640,6 +684,33 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       <p className="font-cormorant text-2xl mb-2" style={{ color: "#F5F0E8" }}>Sin miembros aún</p>
       <p className="font-inter text-sm mb-5" style={{ color: "#555" }}>Registra tu primer miembro para empezar.</p>
       <button onClick={onAdd} className="rounded-xl px-5 py-2.5 font-inter text-sm font-medium" style={{ background: "#F5F0E8", color: "#0D0D0D" }}>+ Registrar miembro</button>
+    </div>
+  );
+}
+
+function CategoriaSelector({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const cats = [
+    { id: "empresa", label: "Empresa", color: "#4A5E3A", icon: "🏢" },
+    { id: "vecino", label: "Vecino", color: "#B8860B", icon: "🏠" },
+    { id: "amigo", label: "Amigo / Otro", color: "#8A8A8A", icon: "👤" },
+  ];
+  return (
+    <div className="flex gap-2">
+      {cats.map((cat) => {
+        const active = value === cat.id;
+        return (
+          <button key={cat.id} type="button" onClick={() => onChange(cat.id)}
+            className="flex-1 rounded-xl py-2.5 font-inter text-xs transition-all flex items-center justify-center gap-1.5"
+            style={{
+              background: active ? `${cat.color}20` : "rgba(255,255,255,0.04)",
+              border: active ? `1px solid ${cat.color}50` : "1px solid rgba(255,255,255,0.07)",
+              color: active ? cat.color : "#666",
+              fontWeight: active ? 500 : 400,
+            }}>
+            {cat.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
