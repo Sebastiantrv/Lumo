@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 
-export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" }) {
+export default function Navbar({ theme = "dark", sticky, onLogout }: { theme?: "dark" | "light"; sticky?: boolean; onLogout?: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [closing, setClosing] = useState(false);
   const isDark = theme === "dark";
@@ -52,7 +52,7 @@ export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" })
       `}</style>
 
       <nav
-        className="fixed top-0 left-0 right-0 md:top-4 md:left-5 md:right-5 z-40 flex items-center justify-between px-6 py-[18px] md:px-7 md:py-4 md:rounded-2xl"
+        className={`${sticky ? "sticky" : "fixed"} top-0 left-0 right-0 ${sticky ? "" : "md:top-4 md:left-5 md:right-5 md:rounded-2xl"} z-40 flex items-center justify-between px-6 py-[18px] md:px-7 md:py-4`}
         style={{
           animation: "navbarDrop 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both",
           background: isDark ? "rgba(255,255,255,0.06)" : "rgba(244,239,231,0.85)",
@@ -81,7 +81,7 @@ export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" })
         </button>
       </nav>
 
-      <div className="h-[68px] md:h-[88px]" />
+      {!sticky && <div className="h-[68px] md:h-[88px]" />}
 
       {menuOpen && (
         <div
@@ -204,9 +204,9 @@ export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" })
             </Link>
           </nav>
 
-          {/* Footer tagline */}
+          {/* Footer */}
           <div
-            className="px-12 py-8"
+            className="px-12 py-8 flex items-center justify-between"
             style={{
               animation: "menuLinkIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both",
               animationDelay: "0.42s",
@@ -215,6 +215,15 @@ export default function Navbar({ theme = "dark" }: { theme?: "dark" | "light" })
             <p className="font-inter" style={{ fontSize: 12, color: "#B8B0A4", letterSpacing: "0.04em" }}>
               Prensado en frío · Cada mañana
             </p>
+            {onLogout && (
+              <button
+                onClick={() => { onLogout(); closeMenu(); }}
+                className="font-inter spring-press"
+                style={{ fontSize: 12, color: "#B8B0A4", background: "none", border: "none", cursor: "pointer" }}
+              >
+                Cerrar sesión
+              </button>
+            )}
           </div>
         </div>
       )}

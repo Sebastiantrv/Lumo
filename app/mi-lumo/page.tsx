@@ -5,6 +5,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP } from "@/lib/constants";
 import { todayStr } from "@/lib/dates";
+import Navbar from "@/components/Navbar";
 
 /* ── Types ── */
 type Miembro = {
@@ -162,7 +163,7 @@ function LoginScreen({ onLogin }: { onLogin: (m: Miembro) => void }) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: CREAM }}>
-      <MiLumoNavbar />
+      <Navbar theme="light" sticky />
 
       <div className="flex-1 flex flex-col items-center justify-center px-6" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
         <div className="w-full max-w-sm">
@@ -380,7 +381,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: CREAM }} onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}>
-      <MiLumoNavbar showLogout onLogout={onLogout} />
+      <Navbar theme="light" sticky onLogout={onLogout} />
 
       {/* Pull-to-refresh indicator */}
       {(pullDistance > 0 || refreshing) && (
@@ -1278,87 +1279,6 @@ function RecargaPlaceholder({ onClose }: { onClose: () => void }) {
         Añadir balance por WhatsApp
       </a>
     </ModalOverlay>
-  );
-}
-
-/* ── Navbar ── */
-function MiLumoNavbar({ showLogout, onLogout }: { showLogout?: boolean; onLogout?: () => void }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [closing, setClosing] = useState(false);
-
-  function openMenu() { setMenuOpen(true); setClosing(false); }
-  function closeMenu() { setClosing(true); }
-  function handleAnimationEnd() { if (closing) { setMenuOpen(false); setClosing(false); } }
-
-  return (
-    <>
-      <nav
-        className="sticky top-0 z-40 flex items-center justify-between px-5 py-4"
-        style={{
-          background: "rgba(244,239,231,0.85)",
-          backdropFilter: "blur(24px) saturate(160%)",
-          WebkitBackdropFilter: "blur(24px) saturate(160%)",
-          borderBottom: "1px solid rgba(0,0,0,0.06)",
-        }}
-      >
-        <Link href="/" className="font-cormorant text-lg tracking-[0.3em] font-semibold spring-press" style={{ color: "#2D2D2D" }}>
-          L U M O
-        </Link>
-        <button onClick={openMenu} className="flex flex-col gap-[5px] p-2 spring-press rounded-lg" aria-label="Abrir menú">
-          <span className="block w-5 h-[1.5px]" style={{ backgroundColor: "#2D2D2D" }} />
-          <span className="block w-5 h-[1.5px]" style={{ backgroundColor: "#2D2D2D" }} />
-        </button>
-      </nav>
-
-      {menuOpen && (
-        <div
-          className="fixed inset-0 z-50 flex flex-col"
-          style={{
-            background: "rgba(13, 13, 13, 0.88)",
-            backdropFilter: "blur(40px) saturate(180%)",
-            WebkitBackdropFilter: "blur(40px) saturate(180%)",
-            animation: closing ? "overlayOut 0.4s var(--spring) both" : "overlayIn 0.4s var(--spring) both",
-          }}
-          onAnimationEnd={handleAnimationEnd}
-        >
-          <div className="flex items-center justify-between px-6 py-5">
-            <Link href="/" onClick={closeMenu} className="font-cormorant text-xl tracking-[0.35em] font-semibold text-[#F5F0E8] spring-press">
-              L U M O
-            </Link>
-            <button onClick={closeMenu} className="p-2 text-[#F5F0E8] spring-press rounded-full" aria-label="Cerrar menú">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          </div>
-          <nav className="flex flex-col items-center justify-center flex-1 gap-8">
-            {[
-              { href: "/", label: "Inicio" },
-              { href: "/formulas", label: "Fórmulas" },
-              { href: "/proceso", label: "Proceso" },
-              { href: "/mi-lumo", label: "Mi LUMO" },
-            ].map((item, i) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={closeMenu}
-                className="font-cormorant text-4xl md:text-5xl font-light text-[#F5F0E8] spring-press"
-                style={{ animation: `menuItemIn 0.5s var(--spring) both`, animationDelay: `${0.06 + i * 0.08}s` }}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-          {showLogout && onLogout && (
-            <div className="px-6 pb-8 text-center" style={{ animation: "menuItemIn 0.5s var(--spring) both", animationDelay: "0.4s" }}>
-              <button onClick={() => { onLogout(); closeMenu(); }} className="font-inter text-sm spring-press" style={{ color: "#8A8A8A" }}>
-                Cerrar sesión
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-    </>
   );
 }
 
