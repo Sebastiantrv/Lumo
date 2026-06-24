@@ -330,13 +330,13 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   const hace3Dias = new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0];
   const pedidosVisibles = pedidos.filter((p) => p.estado !== "eliminado");
   const pedidosActivos = pedidosVisibles.filter(
-    (p) => p.estado !== "cancelado" && !(p.estado === "entregado" && p.dia_entrega < hoy) && p.dia_entrega >= hoy
+    (p) => p.dia_entrega >= hoy && p.estado !== "cancelado" && p.estado !== "entregado"
   );
   const pedidosRecientes = pedidosVisibles.filter(
-    (p) => p.estado === "entregado" && p.dia_entrega < hoy && p.dia_entrega >= hace3Dias
+    (p) => p.estado === "entregado" && p.dia_entrega >= hace3Dias
   );
   const pedidosHistorial = pedidosVisibles.filter(
-    (p) => p.dia_entrega < hace3Dias || (p.estado === "cancelado" && p.dia_entrega < hoy)
+    (p) => (p.estado === "entregado" && p.dia_entrega < hace3Dias) || (p.estado === "cancelado") || (p.estado !== "entregado" && p.dia_entrega < hoy)
   );
 
   const memberSince = new Date(miembro.created_at).toLocaleDateString("es-MX", {
