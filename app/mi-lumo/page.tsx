@@ -688,20 +688,17 @@ function ReservaFlow({
     const newBalance = balance - total;
     return (
       <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: CREAM, overscrollBehavior: "none" }}>
-        {/* Botanical corner detail */}
-        <div className="absolute top-0 right-0 pointer-events-none" style={{ animation: "lumoFadeUp 1.2s ease 0.2s both" }}>
-          <img
-            src="/lumo_botanical_corner_sprig.png"
-            alt=""
-            style={{
-              width: 160,
-              height: "auto",
-              opacity: 0.1,
-              transform: "translate(25px, -15px) rotate(20deg)",
-              filter: "saturate(0.7)",
-            }}
-          />
-        </div>
+        {/* Botanical background */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage: "url(/lumo_confirmation_plant_shadow_background.png)",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            opacity: 0.08,
+            animation: "lumoFadeUp 1.5s ease 0.1s both",
+          }}
+        />
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
           <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm md:max-w-md">
