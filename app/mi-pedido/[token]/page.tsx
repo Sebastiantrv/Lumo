@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP, POLL_INTERVAL_MS } from "@/lib/constants";
 import { formatDateLabel, formatHora, formatCreatedDate, capitalize, isCutoffPassed } from "@/lib/dates";
@@ -159,6 +159,315 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
   );
 }
 
+/* ---------- Ficha LUMO data ---------- */
+
+const FICHA_DATA: Record<string, {
+  ingredientes: string;
+  nutricion: { label: string; value: string }[];
+  micronutrientes: string[];
+}> = {
+  "verde": {
+    ingredientes: "Pepino, piña, manzana verde, apio, espinaca, jengibre y limón.",
+    nutricion: [
+      { label: "Energía", value: "XX kcal" },
+      { label: "Carbohidratos", value: "XX g" },
+      { label: "Azúcares naturales", value: "XX g" },
+      { label: "Proteína", value: "XX g" },
+      { label: "Grasas", value: "XX g" },
+      { label: "Fibra estimada", value: "XX g" },
+    ],
+    micronutrientes: ["Vitamina C", "Potasio", "Folato", "Antioxidantes"],
+  },
+  "rojo": {
+    ingredientes: "Betabel, zanahoria, manzana roja, pepino, limón y jengibre.",
+    nutricion: [
+      { label: "Energía", value: "XX kcal" },
+      { label: "Carbohidratos", value: "XX g" },
+      { label: "Azúcares naturales", value: "XX g" },
+      { label: "Proteína", value: "XX g" },
+      { label: "Grasas", value: "XX g" },
+      { label: "Fibra estimada", value: "XX g" },
+    ],
+    micronutrientes: ["Vitamina A", "Hierro", "Potasio", "Antioxidantes"],
+  },
+  "tropical": {
+    ingredientes: "Piña, pepino, manzana verde, limón y jengibre.",
+    nutricion: [
+      { label: "Energía", value: "XX kcal" },
+      { label: "Carbohidratos", value: "XX g" },
+      { label: "Azúcares naturales", value: "XX g" },
+      { label: "Proteína", value: "XX g" },
+      { label: "Grasas", value: "XX g" },
+      { label: "Fibra estimada", value: "XX g" },
+    ],
+    micronutrientes: ["Vitamina C", "Bromelina", "Potasio", "Antioxidantes"],
+  },
+};
+
+function getFichaKey(slug: string): string | null {
+  if (slug.includes("verde")) return "verde";
+  if (slug.includes("rojo")) return "rojo";
+  if (slug.includes("tropical")) return "tropical";
+  return null;
+}
+
+const INGREDIENT_IMAGES: Record<string, string> = {
+  verde: "/icon-verde.png",
+  rojo: "/icon-rojo.png",
+  tropical: "/icon-tropical.png",
+};
+
+/* ---------- Ficha LUMO bottom sheet ---------- */
+
+function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado, diaEntrega, onClose }: {
+  formulaNombre: string;
+  formulaSlug: string;
+  accentColor: string;
+  horaPreparado?: string | null;
+  diaEntrega?: string;
+  onClose: () => void;
+}) {
+  const sheetRef = useRef<HTMLDivElement>(null);
+  const [closing, setClosing] = useState(false);
+
+  const close = useCallback(() => {
+    setClosing(true);
+    setTimeout(onClose, 350);
+  }, [onClose]);
+
+  const fichaKey = getFichaKey(formulaSlug);
+  const data = fichaKey ? FICHA_DATA[fichaKey] : null;
+  const ingredientImg = fichaKey ? INGREDIENT_IMAGES[fichaKey] : null;
+
+  if (!data) return null;
+
+  const prepHora = horaPreparado ? formatHora(horaPreparado) : "6:15 AM";
+
+  return (
+    <>
+      <style>{`
+        @keyframes sheetOverlayIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes sheetOverlayOut { from { opacity: 1; } to { opacity: 0; } }
+        @keyframes sheetSlideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes sheetSlideDown { from { transform: translateY(0); } to { transform: translateY(100%); } }
+        @keyframes fichaStagger { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+      `}</style>
+
+      {/* Overlay */}
+      <div
+        onClick={close}
+        style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.3)",
+          backdropFilter: "blur(4px)",
+          WebkitBackdropFilter: "blur(4px)",
+          zIndex: 200,
+          animation: `${closing ? "sheetOverlayOut" : "sheetOverlayIn"} ${closing ? "300ms" : "250ms"} ease both`,
+        }}
+      />
+
+      {/* Sheet */}
+      <div
+        ref={sheetRef}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          maxHeight: "88svh",
+          background: "#FDFBF7",
+          borderRadius: "28px 28px 0 0",
+          boxShadow: "0 -8px 40px rgba(0,0,0,0.08)",
+          zIndex: 201,
+          display: "flex",
+          flexDirection: "column",
+          animation: `${closing ? "sheetSlideDown" : "sheetSlideUp"} 400ms cubic-bezier(0.34, 1.56, 0.64, 1) both`,
+        }}
+      >
+        {/* Drag handle */}
+        <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 4px" }}>
+          <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(0,0,0,0.1)" }} />
+        </div>
+
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "8px 24px 16px" }}>
+          <div>
+            <h2 className="font-cormorant" style={{ fontSize: 26, fontWeight: 300, color: "#1A1A1A", lineHeight: 1.2 }}>
+              Ficha LUMO
+            </h2>
+            <p className="font-inter" style={{ fontSize: 13, color: "#9A9490", marginTop: 4 }}>
+              {formulaNombre} · 250 ml
+            </p>
+          </div>
+          <button
+            onClick={close}
+            style={{
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: "rgba(0,0,0,0.04)",
+              border: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+              flexShrink: 0,
+              marginTop: 4,
+            }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9490" strokeWidth="2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Scrollable content */}
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 32px", WebkitOverflowScrolling: "touch" }}>
+
+          {/* Ingredientes */}
+          <div style={{ animation: "fichaStagger 0.4s ease 0.05s both" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 24 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 22c4-4 8-7.5 8-12a8 8 0 10-16 0c0 4.5 4 8 8 12z" />
+                  </svg>
+                  <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>Ingredientes</span>
+                </div>
+                <p className="font-inter" style={{ fontSize: 13, color: "#6A6A6A", lineHeight: 1.6 }}>
+                  {data.ingredientes}
+                </p>
+              </div>
+              {ingredientImg && (
+                <img src={ingredientImg} alt="Ingredientes" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, flexShrink: 0, opacity: 0.9 }} />
+              )}
+            </div>
+          </div>
+
+          {/* Perfil nutricional */}
+          <div style={{ animation: "fichaStagger 0.4s ease 0.12s both" }}>
+            <div style={{ marginBottom: 24 }}>
+              <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 2 }}>
+                Perfil nutricional estimado
+              </span>
+              <span className="font-inter" style={{ fontSize: 12, color: "#9A9490", display: "block", marginBottom: 12 }}>
+                por 250 ml
+              </span>
+              <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, border: "1px solid rgba(0,0,0,0.05)", overflow: "hidden" }}>
+                {data.nutricion.map((row, i) => (
+                  <div key={row.label} style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "11px 16px",
+                    borderTop: i > 0 ? "1px solid rgba(0,0,0,0.04)" : "none",
+                  }}>
+                    <span className="font-inter" style={{ fontSize: 13, color: "#4A4A4A" }}>{row.label}</span>
+                    <span className="font-inter" style={{ fontSize: 13, color: "#1A1A1A", fontWeight: 500 }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Micronutrientes */}
+          <div style={{ animation: "fichaStagger 0.4s ease 0.19s both" }}>
+            <div style={{ marginBottom: 24 }}>
+              <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 10 }}>
+                Micronutrientes destacados
+              </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {data.micronutrientes.map((m) => (
+                  <span key={m} className="font-inter" style={{
+                    fontSize: 12,
+                    color: "#5A6A4A",
+                    padding: "6px 14px",
+                    borderRadius: 100,
+                    background: "rgba(74,94,58,0.06)",
+                    border: "1px solid rgba(74,94,58,0.12)",
+                  }}>
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Notas importantes */}
+          <div style={{ animation: "fichaStagger 0.4s ease 0.26s both" }}>
+            <div style={{ marginBottom: 24 }}>
+              <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 8 }}>
+                Notas importantes
+              </span>
+              <p className="font-inter" style={{ fontSize: 12, color: "#8A8580", lineHeight: 1.7 }}>
+                Información estimada con base en ingredientes pesados antes del prensado. Los valores pueden variar por madurez, origen y rendimiento de extracción. No sustituye una recomendación médica o nutricional individualizada.
+              </p>
+            </div>
+          </div>
+
+          {/* Trazabilidad */}
+          <div style={{ animation: "fichaStagger 0.4s ease 0.33s both" }}>
+            <div style={{ marginBottom: 28 }}>
+              <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 10 }}>
+                Trazabilidad
+              </span>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  { label: "Preparación estimada", value: prepHora },
+                  { label: "Método", value: "Prensado en frío" },
+                  { label: "Conservación", value: "Refrigerado" },
+                ].map((row) => (
+                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span className="font-inter" style={{ fontSize: 13, color: "#8A8580" }}>{row.label}</span>
+                    <span className="font-inter" style={{ fontSize: 13, color: "#4A4A4A", fontWeight: 500 }}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Compartir ficha */}
+          <div style={{ animation: "fichaStagger 0.4s ease 0.4s both" }}>
+            <button
+              onClick={() => {
+                const text = `Ficha LUMO — ${formulaNombre} (250 ml)\n\nIngredientes: ${data.ingredientes}\n\nPerfil nutricional estimado (por 250 ml):\n${data.nutricion.map((r) => `${r.label}: ${r.value}`).join("\n")}\n\nMicronutrientes: ${data.micronutrientes.join(", ")}\n\nMétodo: Prensado en frío · Conservación: Refrigerado`;
+                if (navigator.share) {
+                  navigator.share({ title: `Ficha LUMO — ${formulaNombre}`, text }).catch(() => {});
+                } else {
+                  navigator.clipboard.writeText(text).then(() => alert("Ficha copiada al portapapeles"));
+                }
+              }}
+              className="font-inter spring-press"
+              style={{
+                width: "100%",
+                padding: "14px 24px",
+                borderRadius: 100,
+                background: "#1A1A1A",
+                color: "#F4EFE7",
+                border: "none",
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 8,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+              </svg>
+              Compartir ficha
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ---------- page ---------- */
 
 export default function MiPedidoPage({
@@ -175,6 +484,7 @@ export default function MiPedidoPage({
   const [adjustSending, setAdjustSending] = useState(false);
   const [adjustSent, setAdjustSent] = useState(false);
   const [hasFeedback, setHasFeedback] = useState(false);
+  const [showFicha, setShowFicha] = useState(false);
 
   useEffect(() => {
     document.documentElement.style.backgroundColor = "#F4EFE7";
@@ -464,6 +774,38 @@ export default function MiPedidoPage({
             margin: "20px 0 4px",
           }}
         />
+
+        {/* Ficha LUMO CTA */}
+        {globalEstado !== "cancelado" && (
+          <div
+            onClick={globalEstado !== "pendiente" ? () => setShowFicha(true) : undefined}
+            style={{
+              background: "rgba(74,94,58,0.06)",
+              borderRadius: 14,
+              padding: "14px 16px",
+              marginBottom: 4,
+              cursor: globalEstado !== "pendiente" ? "pointer" : "default",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              transition: "background 0.2s",
+            }}
+          >
+            <div>
+              <div className="font-cormorant" style={{ fontSize: 16, fontWeight: 300, color: "#1A1A1A", letterSpacing: "0.01em" }}>
+                Ficha LUMO
+              </div>
+              <div className="font-inter" style={{ fontSize: 12, color: "#8C8475", marginTop: 2 }}>
+                {globalEstado === "pendiente" ? "Disponible pronto" : "Ingredientes, perfil nutricional y más"}
+              </div>
+            </div>
+            {globalEstado !== "pendiente" && (
+              <span className="font-inter" style={{ fontSize: 12, color: accentColor, fontWeight: 500 }}>
+                Ver ficha →
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Timeline */}
         <Timeline
@@ -970,6 +1312,17 @@ export default function MiPedidoPage({
       >
         Hecho con intencion · LUMO
       </p>
+
+      {showFicha && (
+        <FichaLumoSheet
+          formulaNombre={p.formulas.nombre}
+          formulaSlug={p.formulas.slug}
+          accentColor={accentColor}
+          horaPreparado={p.hora_preparado ?? undefined}
+          diaEntrega={p.dia_entrega}
+          onClose={() => setShowFicha(false)}
+        />
+      )}
     </main>
   );
 }
