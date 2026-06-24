@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP, POLL_INTERVAL_MS } from "@/lib/constants";
 import { formatDateLabel, formatHora, formatCreatedDate, capitalize, isCutoffPassed } from "@/lib/dates";
+import html2canvas from "html2canvas";
 
 /* ---------- types ---------- */
 
@@ -161,12 +162,15 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
 
 /* ---------- Ficha LUMO data ---------- */
 
+interface VnrItem { nutriente: string; porcentaje: number; cantidad: string }
+
 const FICHA_DATA: Record<string, {
   ingredientes: string;
   nutricion: { label: string; value: string }[];
+  vnr: VnrItem[];
   micronutrientes: string[];
 }> = {
-  "verde": {
+  verde: {
     ingredientes: "Pepino, piña, manzana verde, apio, espinaca, jengibre y limón.",
     nutricion: [
       { label: "Energía", value: "XX kcal" },
@@ -176,9 +180,14 @@ const FICHA_DATA: Record<string, {
       { label: "Grasas", value: "XX g" },
       { label: "Fibra estimada", value: "XX g" },
     ],
+    vnr: [
+      { nutriente: "Vitamina C", porcentaje: 0, cantidad: "XX mg" },
+      { nutriente: "Potasio", porcentaje: 0, cantidad: "XX mg" },
+      { nutriente: "Folato", porcentaje: 0, cantidad: "XX µg" },
+    ],
     micronutrientes: ["Vitamina C", "Potasio", "Folato", "Antioxidantes"],
   },
-  "rojo": {
+  rojo: {
     ingredientes: "Betabel, zanahoria, manzana roja, pepino, limón y jengibre.",
     nutricion: [
       { label: "Energía", value: "XX kcal" },
@@ -188,9 +197,14 @@ const FICHA_DATA: Record<string, {
       { label: "Grasas", value: "XX g" },
       { label: "Fibra estimada", value: "XX g" },
     ],
+    vnr: [
+      { nutriente: "Vitamina A", porcentaje: 0, cantidad: "XX µg" },
+      { nutriente: "Hierro", porcentaje: 0, cantidad: "XX mg" },
+      { nutriente: "Potasio", porcentaje: 0, cantidad: "XX mg" },
+    ],
     micronutrientes: ["Vitamina A", "Hierro", "Potasio", "Antioxidantes"],
   },
-  "tropical": {
+  tropical: {
     ingredientes: "Piña, pepino, manzana verde, limón y jengibre.",
     nutricion: [
       { label: "Energía", value: "XX kcal" },
@@ -199,6 +213,11 @@ const FICHA_DATA: Record<string, {
       { label: "Proteína", value: "XX g" },
       { label: "Grasas", value: "XX g" },
       { label: "Fibra estimada", value: "XX g" },
+    ],
+    vnr: [
+      { nutriente: "Vitamina C", porcentaje: 0, cantidad: "XX mg" },
+      { nutriente: "Bromelina", porcentaje: 0, cantidad: "XX mg" },
+      { nutriente: "Potasio", porcentaje: 0, cantidad: "XX mg" },
     ],
     micronutrientes: ["Vitamina C", "Bromelina", "Potasio", "Antioxidantes"],
   },
@@ -211,11 +230,54 @@ function getFichaKey(slug: string): string | null {
   return null;
 }
 
-const INGREDIENT_IMAGES: Record<string, string> = {
-  verde: "/Ingredientes-formulas.jpg",
-  rojo: "/Ingredientes-formulas.jpg",
-  tropical: "/Ingredientes-formulas.jpg",
-};
+/* ---------- VNR count-up hook ---------- */
+
+function useCountUp(target: number, duration = 600) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    if (target <= 0) return;
+    let start: number | null = null;
+    let raf: number;
+    const step = (ts: number) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(Math.round(eased * target));
+      if (progress < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return value;
+}
+
+function VnrCard({ item, delay }: { item: VnrItem; delay: number }) {
+  const count = useCountUp(item.porcentaje);
+  return (
+    <div style={{
+      flex: 1,
+      minWidth: 0,
+      background: "rgba(255,255,255,0.7)",
+      border: "1px solid rgba(0,0,0,0.05)",
+      borderRadius: 14,
+      padding: "14px 16px",
+      animation: `fichaStagger 0.45s ease ${delay}s both`,
+    }}>
+      <span className="font-inter" style={{ fontSize: 11, fontWeight: 600, color: "#4A4A4A", letterSpacing: "0.03em", display: "block" }}>
+        {item.nutriente}
+      </span>
+      <span className="font-cormorant" style={{ fontSize: 28, fontWeight: 300, color: "#1A1A1A", lineHeight: 1.1, display: "block", marginTop: 6 }}>
+        {count}%
+      </span>
+      <span className="font-inter" style={{ fontSize: 10, color: "#9A9490", display: "block", marginTop: 2 }}>
+        del VNR diario estimado
+      </span>
+      <span className="font-inter" style={{ fontSize: 11, color: "#8A8580", display: "block", marginTop: 4 }}>
+        {item.cantidad} aprox.
+      </span>
+    </div>
+  );
+}
 
 /* ---------- Ficha LUMO bottom sheet ---------- */
 
@@ -226,7 +288,9 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
   onClose: () => void;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const [closing, setClosing] = useState(false);
+  const [sharing, setSharing] = useState(false);
 
   const close = useCallback(() => {
     setClosing(true);
@@ -235,9 +299,41 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
 
   const fichaKey = getFichaKey(formulaSlug);
   const data = fichaKey ? FICHA_DATA[fichaKey] : null;
-  const ingredientImg = fichaKey ? INGREDIENT_IMAGES[fichaKey] : null;
 
   if (!data) return null;
+
+  const hasVnr = data.vnr.some((v) => v.porcentaje > 0);
+
+  async function handleShare() {
+    if (!contentRef.current) return;
+    setSharing(true);
+    try {
+      const closeBtn = contentRef.current.querySelector(".ficha-close-btn") as HTMLElement | null;
+      if (closeBtn) closeBtn.style.display = "none";
+      const canvas = await html2canvas(contentRef.current, {
+        backgroundColor: "#FDFBF7",
+        scale: 2,
+        useCORS: true,
+        scrollY: -contentRef.current.scrollTop,
+        height: contentRef.current.scrollHeight,
+      });
+      if (closeBtn) closeBtn.style.display = "";
+      const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
+      if (!blob) { setSharing(false); return; }
+      const file = new File([blob], `Ficha-LUMO-${formulaNombre}.png`, { type: "image/png" });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: `Ficha LUMO — ${formulaNombre}`, files: [file] });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = file.name;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch {}
+    setSharing(false);
+  }
 
   return (
     <>
@@ -287,51 +383,38 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
           <div style={{ width: 36, height: 4, borderRadius: 2, background: "rgba(0,0,0,0.1)" }} />
         </div>
 
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", padding: "8px 24px 16px" }}>
-          <div>
-            <h2 className="font-cormorant" style={{ fontSize: 26, fontWeight: 300, color: "#1A1A1A", lineHeight: 1.2 }}>
-              Ficha LUMO
-            </h2>
-            <p className="font-inter" style={{ fontSize: 13, color: "#9A9490", marginTop: 4 }}>
-              {formulaNombre} · 250 ml
-            </p>
-          </div>
-          <button
-            onClick={close}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: "50%",
-              background: "rgba(0,0,0,0.04)",
-              border: "none",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              flexShrink: 0,
-              marginTop: 4,
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9490" strokeWidth="2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
+        {/* Scrollable content — captured for share */}
+        <div ref={contentRef} style={{ flex: 1, overflowY: "auto", WebkitOverflowScrolling: "touch", background: "#FDFBF7" }}>
 
-        {/* Scrollable content */}
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 32px", WebkitOverflowScrolling: "touch" }}>
-
-          {/* Imagen ingredientes */}
-          {ingredientImg && (
-            <div style={{ animation: "fichaStagger 0.4s ease 0.05s both", marginBottom: 20 }}>
-              <img src={ingredientImg} alt="Ingredientes LUMO" style={{ width: "100%", borderRadius: 16, objectFit: "cover" }} />
+          {/* Header */}
+          <div style={{ padding: "8px 24px 20px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+            <div>
+              <h2 className="font-cormorant" style={{ fontSize: 26, fontWeight: 300, color: "#1A1A1A", lineHeight: 1.2 }}>
+                Ficha LUMO
+              </h2>
+              <p className="font-inter" style={{ fontSize: 13, color: "#9A9490", marginTop: 4 }}>
+                {formulaNombre} · 350 ml
+              </p>
             </div>
-          )}
+            <button
+              onClick={close}
+              className="ficha-close-btn"
+              style={{
+                width: 32, height: 32, borderRadius: "50%", background: "rgba(0,0,0,0.04)",
+                border: "none", display: "flex", alignItems: "center", justifyContent: "center",
+                cursor: "pointer", flexShrink: 0, marginTop: 4,
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9490" strokeWidth="2" strokeLinecap="round">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
 
-          {/* Ingredientes */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.1s both" }}>
-            <div style={{ marginBottom: 24 }}>
+          <div style={{ padding: "0 24px 32px" }}>
+
+            {/* Ingredientes */}
+            <div style={{ animation: "fichaStagger 0.4s ease 0.05s both", marginBottom: 24 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22c4-4 8-7.5 8-12a8 8 0 10-16 0c0 4.5 4 8 8 12z" />
@@ -342,25 +425,20 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
                 {data.ingredientes}
               </p>
             </div>
-          </div>
 
-          {/* Perfil nutricional */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.17s both" }}>
-            <div style={{ marginBottom: 24 }}>
+            {/* Perfil nutricional */}
+            <div style={{ animation: "fichaStagger 0.4s ease 0.12s both", marginBottom: 24 }}>
               <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 2 }}>
                 Perfil nutricional estimado
               </span>
               <span className="font-inter" style={{ fontSize: 12, color: "#9A9490", display: "block", marginBottom: 12 }}>
-                por 250 ml
+                por 350 ml
               </span>
               <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, border: "1px solid rgba(0,0,0,0.05)", overflow: "hidden" }}>
                 {data.nutricion.map((row, i) => (
                   <div key={row.label} style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    padding: "11px 16px",
-                    borderTop: i > 0 ? "1px solid rgba(0,0,0,0.04)" : "none",
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    padding: "11px 16px", borderTop: i > 0 ? "1px solid rgba(0,0,0,0.04)" : "none",
                   }}>
                     <span className="font-inter" style={{ fontSize: 13, color: "#4A4A4A" }}>{row.label}</span>
                     <span className="font-inter" style={{ fontSize: 13, color: "#1A1A1A", fontWeight: 500 }}>{row.value}</span>
@@ -368,88 +446,75 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Micronutrientes */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.24s both" }}>
-            <div style={{ marginBottom: 24 }}>
+            {/* Aporte diario estimado (VNR) */}
+            {hasVnr && (
+              <div style={{ animation: "fichaStagger 0.4s ease 0.19s both", marginBottom: 24 }}>
+                <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 2 }}>
+                  Aporte diario estimado
+                </span>
+                <span className="font-inter" style={{ fontSize: 11, color: "#9A9490", display: "block", marginBottom: 14, lineHeight: 1.5 }}>
+                  Una lectura simple del aporte nutrimental más relevante de esta fórmula.
+                </span>
+                <div style={{ display: "flex", gap: 10 }}>
+                  {data.vnr.filter((v) => v.porcentaje > 0).map((v, i) => (
+                    <VnrCard key={v.nutriente} item={v} delay={0.22 + i * 0.07} />
+                  ))}
+                </div>
+                <p className="font-inter" style={{ fontSize: 10, color: "#B8B0A4", marginTop: 10, lineHeight: 1.5 }}>
+                  Valores estimados con base en ingredientes pesados antes del prensado. Pueden variar por madurez, origen y rendimiento de extracción.
+                </p>
+              </div>
+            )}
+
+            {/* Micronutrientes destacados */}
+            <div style={{ animation: "fichaStagger 0.4s ease 0.28s both", marginBottom: 24 }}>
               <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 10 }}>
                 Micronutrientes destacados
               </span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {data.micronutrientes.map((m) => (
                   <span key={m} className="font-inter" style={{
-                    fontSize: 12,
-                    color: "#5A6A4A",
-                    padding: "6px 14px",
-                    borderRadius: 100,
-                    background: "rgba(74,94,58,0.06)",
-                    border: "1px solid rgba(74,94,58,0.12)",
+                    fontSize: 12, color: "#5A6A4A", padding: "6px 14px", borderRadius: 100,
+                    background: "rgba(74,94,58,0.06)", border: "1px solid rgba(74,94,58,0.12)",
                   }}>
                     {m}
                   </span>
                 ))}
               </div>
             </div>
-          </div>
 
-          {/* Notas importantes */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.31s both" }}>
-            <div style={{ marginBottom: 24 }}>
-              <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 8 }}>
-                Notas importantes
-              </span>
-              <p className="font-inter" style={{ fontSize: 12, color: "#8A8580", lineHeight: 1.7 }}>
+            {/* Notas */}
+            <div style={{ animation: "fichaStagger 0.4s ease 0.34s both", marginBottom: 28 }}>
+              <p className="font-inter" style={{ fontSize: 11, color: "#8A8580", lineHeight: 1.7 }}>
                 Información estimada con base en ingredientes pesados antes del prensado. Los valores pueden variar por madurez, origen y rendimiento de extracción. No sustituye una recomendación médica o nutricional individualizada.
               </p>
             </div>
-          </div>
 
-          {/* Compartir ficha */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.38s both" }}>
-            <button
-              onClick={async () => {
-                const text = `Ficha LUMO — ${formulaNombre} (250 ml)\n\nIngredientes: ${data.ingredientes}\n\nPerfil nutricional estimado (por 250 ml):\n${data.nutricion.map((r) => `${r.label}: ${r.value}`).join("\n")}\n\nMicronutrientes: ${data.micronutrientes.join(", ")}\n\nMétodo: Prensado en frío · Conservación: Refrigerado`;
-                try {
-                  const res = await fetch("/Ingredientes-formulas.jpg");
-                  const blob = await res.blob();
-                  const file = new File([blob], "Ficha-LUMO.jpg", { type: "image/jpeg" });
-                  if (navigator.share && navigator.canShare?.({ files: [file] })) {
-                    await navigator.share({ title: `Ficha LUMO — ${formulaNombre}`, text, files: [file] });
-                    return;
-                  }
-                } catch {}
-                if (navigator.share) {
-                  navigator.share({ title: `Ficha LUMO — ${formulaNombre}`, text }).catch(() => {});
-                } else {
-                  navigator.clipboard.writeText(text).then(() => alert("Ficha copiada al portapapeles"));
-                }
-              }}
-              className="font-inter spring-press"
-              style={{
-                width: "100%",
-                padding: "14px 24px",
-                borderRadius: 100,
-                background: "#1A1A1A",
-                color: "#F4EFE7",
-                border: "none",
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 8,
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
-              </svg>
-              Compartir ficha
-            </button>
-            <p className="font-inter" style={{ textAlign: "center", fontSize: 11, color: "#B8B0A4", marginTop: 10 }}>
-              Ideal para compartir con tu nutriólogo
-            </p>
+            {/* Compartir ficha */}
+            <div style={{ animation: "fichaStagger 0.4s ease 0.4s both" }}>
+              <button
+                onClick={handleShare}
+                disabled={sharing}
+                className="font-inter spring-press"
+                style={{
+                  width: "100%", padding: "14px 24px", borderRadius: 100,
+                  background: sharing ? "#555" : "#1A1A1A", color: "#F4EFE7",
+                  border: "none", fontSize: 14, fontWeight: 500, cursor: sharing ? "wait" : "pointer",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  transition: "background 0.2s",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                {sharing ? "Generando..." : "Compartir ficha"}
+              </button>
+              <p className="font-inter" style={{ textAlign: "center", fontSize: 11, color: "#B8B0A4", marginTop: 10 }}>
+                Ideal para compartir con tu nutriólogo
+              </p>
+            </div>
+
           </div>
         </div>
       </div>
