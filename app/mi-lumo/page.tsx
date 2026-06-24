@@ -691,72 +691,76 @@ function ReservaFlow({
         <div className="flex-1 flex flex-col items-center justify-center px-6">
           <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm md:max-w-md">
             <div
-              className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
+              className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
               style={{
-                background: "rgba(74,94,58,0.08)",
-                boxShadow: `0 0 40px rgba(74,94,58,0.1)`,
+                background: `${VERDE}0A`,
+                border: `1px solid ${VERDE}15`,
                 animation: "lumoScaleIn 0.6s var(--spring) both",
               }}
             >
-              <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke={VERDE} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={VERDE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" style={{ strokeDasharray: 20, strokeDashoffset: 20, animation: "checkStroke 0.6s ease 0.3s forwards" }} />
               </svg>
             </div>
 
             <h2
-              className="font-cormorant font-semibold text-2xl mb-2"
-              style={{ color: "#2D2D2D", animation: "lumoFadeUp 0.6s ease 0.4s both" }}
+              className="font-cormorant font-light text-2xl mb-1.5"
+              style={{ color: "#1A1A1A", animation: "lumoFadeUp 0.6s ease 0.4s both" }}
             >
               Tu LUMO está reservado
             </h2>
             <p
-              className="font-inter text-sm mb-6"
+              className="font-inter text-[0.8rem] mb-6"
               style={{ color: "#8A8A7A", animation: "lumoFadeUp 0.6s ease 0.5s both" }}
             >
               Lo prepararemos la mañana de tu entrega.
             </p>
 
             <div
-              className="rounded-2xl p-5 text-left mb-6"
+              className="rounded-2xl overflow-hidden text-left mb-6"
               style={{
                 background: "#fff",
-                boxShadow: "0 2px 16px rgba(74,94,58,0.06)",
-                border: "1px solid rgba(74,94,58,0.12)",
+                boxShadow: "0 2px 16px rgba(0,0,0,0.04)",
+                border: "1px solid rgba(74,94,58,0.08)",
                 animation: "lumoFadeUp 0.6s ease 0.6s both",
               }}
             >
-              {lineas.map((linea) => {
-                const f = formulas.find((fo) => fo.id === linea.formulaId);
-                return (
-                  <div key={linea.formulaId} className="flex items-center gap-3 mb-2">
-                    <div className="w-3 h-3 rounded-full" style={{ background: f?.color_acento ?? VERDE }} />
-                    <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
-                      {linea.cantidad}x {f?.nombre}
-                    </span>
-                  </div>
-                );
-              })}
-              <p className="font-inter text-sm mt-3" style={{ color: "#6B6B5E" }}>
-                <CalendarIcon size={13} color="#8A8A7A" />{" "}
-                {formatDate(diaEntrega)}
-              </p>
+              <div className="h-[2px]" style={{ background: `linear-gradient(90deg, ${VERDE}30, ${VERDE}60, ${VERDE}30)` }} />
+              <div className="p-5">
+                {lineas.map((linea) => {
+                  const f = formulas.find((fo) => fo.id === linea.formulaId);
+                  return (
+                    <div key={linea.formulaId} className="flex items-center gap-3 mb-2 last:mb-0">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ background: f?.color_acento ?? VERDE }} />
+                      <span className="font-cormorant font-light text-lg" style={{ color: "#1A1A1A" }}>
+                        {linea.cantidad}x {f?.nombre}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="h-px my-3" style={{ background: "rgba(0,0,0,0.04)" }} />
+                <p className="font-inter text-[0.8rem] flex items-center gap-1.5" style={{ color: "#6B6B5E" }}>
+                  <CalendarIcon size={13} color="#9A9A8A" />
+                  {formatDate(diaEntrega)}
+                </p>
+              </div>
             </div>
 
             <div
               className="flex items-center justify-center gap-2 mb-8"
               style={{ animation: "lumoFadeUp 0.6s ease 0.7s both" }}
             >
-              <DropIcon size={14} color={ACCENT} />
-              <span className="font-inter text-sm" style={{ color: "#8A8A7A" }}>
-                Balance LUMO: <span style={{ color: "#B0B0A0", textDecoration: "line-through" }}>${balance.toLocaleString("es-MX")}</span>
+              <DropIcon size={13} color={VERDE} />
+              <span className="font-inter text-[0.8rem]" style={{ color: "#8A8A7A" }}>
+                Balance: <span style={{ color: "#B0B0A0", textDecoration: "line-through" }}>${balance.toLocaleString("es-MX")}</span>
                 {" → "}
-                <span className="font-semibold" style={{ color: "#2D2D2D" }}>${newBalance.toLocaleString("es-MX")}</span>
+                <span className="font-medium" style={{ color: "#1A1A1A" }}>${newBalance.toLocaleString("es-MX")}</span>
               </span>
             </div>
 
             <button
               onClick={onSuccess}
-              className="w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press"
+              className="w-full rounded-2xl py-3.5 font-inter text-sm font-medium spring-press"
               style={{ background: VERDE, color: CREAM, animation: "lumoFadeUp 0.6s ease 0.8s both" }}
             >
               Volver a Mi LUMO
@@ -770,27 +774,27 @@ function ReservaFlow({
   return (
     <div className="min-h-screen flex flex-col" style={{ background: CREAM, overscrollBehavior: "none" }}>
       {/* Top bar */}
-      <div className="sticky top-0 z-40 px-5 py-4 flex items-center justify-between" style={{ background: "rgba(244,239,231,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-        <button onClick={step === 1 ? onClose : () => setStep((step - 1) as 1 | 2)} className="font-inter text-sm spring-press flex items-center gap-1.5" style={{ color: "#8A8A7A" }}>
-          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
+      <div className="sticky top-0 z-40 px-5 py-3.5 flex items-center justify-between" style={{ background: "rgba(244,239,231,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
+        <button onClick={step === 1 ? onClose : () => setStep((step - 1) as 1 | 2)} className="font-inter text-[0.8rem] spring-press flex items-center gap-1.5" style={{ color: "#9A9A8A" }}>
+          <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
           {step === 1 ? "Mi LUMO" : "Atrás"}
         </button>
-        <span className="font-inter text-xs" style={{ color: "#B0B0A0" }}>
+        <span className="font-inter text-[0.65rem] tracking-[0.08em] uppercase" style={{ color: "#B5B5A5" }}>
           Paso {step} de 3
         </span>
       </div>
 
       <div className="max-w-2xl mx-auto w-full">
       {/* Step indicator */}
-      <div className="px-5 pt-4 pb-2">
+      <div className="px-5 pt-5 pb-2">
         <div className="flex gap-2 mb-4">
           {[1, 2, 3].map((s) => (
-            <div key={s} className="flex-1 h-[3px] rounded-full transition-all" style={{ background: s <= step ? VERDE : "rgba(74,94,58,0.12)" }} />
+            <div key={s} className="flex-1 h-[2px] rounded-full transition-all duration-300" style={{ background: s <= step ? VERDE : `${VERDE}15` }} />
           ))}
         </div>
         <h2
-          className="font-cormorant font-semibold text-xl"
-          style={{ color: "#2D2D2D", animation: "lumoFadeUp 0.4s ease both" }}
+          className="font-cormorant font-light text-[1.4rem]"
+          style={{ color: "#1A1A1A", letterSpacing: "-0.01em", animation: "lumoFadeUp 0.4s ease both" }}
           key={`step-title-${step}`}
         >
           {stepLabels[step - 1]}
@@ -817,17 +821,17 @@ function ReservaFlow({
 
             {lineas.length > 0 && (
               <div className="md:col-span-2 lg:col-span-3" style={{ animation: "lumoFadeUp 0.3s ease both" }}>
-                <div className="rounded-xl p-3 mb-3 flex items-center justify-between" style={{ background: "rgba(74,94,58,0.06)" }}>
-                  <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
+                <div className="rounded-xl p-3.5 mb-3 flex items-center justify-between" style={{ background: "#fff", border: `1px solid ${VERDE}12`, boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}>
+                  <span className="font-inter text-[0.75rem]" style={{ color: "#8A8A7A" }}>
                     {lineas.length} {lineas.length === 1 ? "fórmula" : "fórmulas"} · {totalBotellas} {totalBotellas === 1 ? "botella" : "botellas"}
                   </span>
-                  <span className="font-inter text-xs font-medium" style={{ color: VERDE }}>
+                  <span className="font-cormorant font-light text-lg" style={{ color: "#1A1A1A" }}>
                     ${total.toLocaleString("es-MX")}
                   </span>
                 </div>
                 <button
                   onClick={() => setStep(2)}
-                  className="w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press"
+                  className="w-full rounded-2xl py-3.5 font-inter text-sm font-medium spring-press"
                   style={{ background: VERDE, color: CREAM }}
                 >
                   Continuar
@@ -839,16 +843,16 @@ function ReservaFlow({
 
         {step === 2 && (
           <div className="flex flex-col gap-4 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
-            <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
+            <p className="font-inter text-[0.75rem]" style={{ color: "#9A9A8A" }}>
               Cada lote se prepara temprano y con cupo limitado.
             </p>
 
             {/* Selected formulas summary */}
-            <div className="rounded-xl p-3 flex flex-wrap gap-2" style={{ background: "rgba(74,94,58,0.04)" }}>
+            <div className="rounded-xl p-3 flex flex-wrap gap-2" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.04)" }}>
               {lineas.map((l) => {
                 const f = formulas.find((fo) => fo.id === l.formulaId);
                 return (
-                  <span key={l.formulaId} className="flex items-center gap-1.5 font-inter text-xs px-2.5 py-1 rounded-full" style={{ background: "#fff", color: "#2D2D2D" }}>
+                  <span key={l.formulaId} className="flex items-center gap-1.5 font-inter text-[0.75rem] px-2.5 py-1 rounded-full" style={{ background: `${f?.color_acento ?? VERDE}08`, color: "#2D2D2D" }}>
                     <span className="w-2 h-2 rounded-full" style={{ background: f?.color_acento ?? VERDE }} />
                     {l.cantidad}x {f?.nombre}
                   </span>
@@ -857,36 +861,37 @@ function ReservaFlow({
             </div>
 
             {/* Dates */}
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2.5">
               {deliveryDays.map((d, i) => {
                 const avail = getAvailability(d.value);
                 const isCompleto = avail === "completo";
+                const isSelected = diaEntrega === d.value;
                 return (
                   <button
                     key={d.value}
                     onClick={() => !isCompleto && setDiaEntrega(d.value)}
                     disabled={isCompleto}
-                    className="rounded-xl p-4 text-left flex items-center justify-between transition-all spring-press disabled:opacity-50"
+                    className="rounded-2xl p-4 text-left flex items-center justify-between transition-all duration-200 spring-press disabled:opacity-40"
                     style={{
-                      background: diaEntrega === d.value ? "#fff" : "rgba(255,255,255,0.6)",
-                      border: `1px solid ${diaEntrega === d.value ? `${VERDE}30` : "rgba(0,0,0,0.04)"}`,
-                      boxShadow: diaEntrega === d.value ? "0 2px 8px rgba(0,0,0,0.04)" : "none",
+                      background: "#fff",
+                      border: `1px solid ${isSelected ? `${VERDE}30` : "rgba(0,0,0,0.04)"}`,
+                      boxShadow: isSelected ? `0 2px 12px ${VERDE}08` : "0 1px 4px rgba(0,0,0,0.02)",
                       animation: "lumoFadeUp 0.3s ease both",
                       animationDelay: `${i * 0.04}s`,
                     }}
                   >
                     <div>
-                      <p className="font-inter text-sm font-medium" style={{ color: isCompleto ? "#B0B0A0" : "#2D2D2D" }}>
+                      <p className="font-cormorant font-light text-[1.1rem]" style={{ color: isCompleto ? "#B0B0A0" : "#1A1A1A" }}>
                         {d.dayLabel}
                       </p>
-                      <p className="font-inter text-xs flex items-center gap-1 mt-0.5" style={{ color: "#8A8A7A" }}>
-                        <ClockIcon size={11} color="#8A8A7A" /> {d.fullLabel}
+                      <p className="font-inter text-[0.7rem] flex items-center gap-1 mt-0.5" style={{ color: "#9A9A8A" }}>
+                        <ClockIcon size={11} color="#9A9A8A" /> {d.fullLabel}
                       </p>
                     </div>
                     <span
-                      className="font-inter text-xs px-2.5 py-1 rounded-full"
+                      className="font-inter text-[0.65rem] px-2.5 py-1 rounded-full"
                       style={{
-                        background: isCompleto ? "rgba(122,32,48,0.06)" : avail === "pocos" ? "rgba(184,134,11,0.08)" : "rgba(74,94,58,0.06)",
+                        background: isCompleto ? "rgba(122,32,48,0.06)" : avail === "pocos" ? "rgba(184,134,11,0.06)" : `${VERDE}08`,
                         color: isCompleto ? ROJO : avail === "pocos" ? TROPICAL : VERDE,
                       }}
                     >
@@ -900,7 +905,7 @@ function ReservaFlow({
             {diaEntrega && (
               <button
                 onClick={() => setStep(3)}
-                className="w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press mt-2"
+                className="w-full rounded-2xl py-3.5 font-inter text-sm font-medium spring-press mt-2"
                 style={{ background: VERDE, color: CREAM, animation: "lumoFadeUp 0.3s ease both" }}
               >
                 Continuar
@@ -912,69 +917,71 @@ function ReservaFlow({
         {step === 3 && (
           <div className="flex flex-col gap-5 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
             <div
-              className="rounded-2xl p-5 relative overflow-hidden"
-              style={{ background: "#fff", boxShadow: "0 1px 8px rgba(0,0,0,0.04)" }}
+              className="rounded-2xl overflow-hidden relative"
+              style={{ background: "#fff", boxShadow: "0 2px 16px rgba(0,0,0,0.04)", border: "1px solid rgba(74,94,58,0.08)" }}
             >
-              <div
-                className="absolute top-0 right-0 w-32 h-32 rounded-full"
-                style={{ background: VERDE, opacity: 0.04, transform: "translate(30%, -30%)", filter: "blur(20px)" }}
-              />
+              <div className="h-[2px]" style={{ background: `linear-gradient(90deg, ${VERDE}30, ${VERDE}60, ${VERDE}30)` }} />
+              <div className="absolute top-0 right-0 w-32 h-32 rounded-full pointer-events-none" style={{ background: VERDE, opacity: 0.03, transform: "translate(30%, -30%)", filter: "blur(20px)" }} />
 
-              <p className="font-inter text-xs tracking-wide mb-4" style={{ color: "#8A8A7A" }}>TU RESERVA</p>
+              <div className="p-5">
+                <p className="font-inter text-[0.6rem] tracking-[0.14em] uppercase mb-4" style={{ color: "#9A9A8A" }}>Tu reserva</p>
 
-              {lineas.map((linea) => {
-                const f = formulas.find((fo) => fo.id === linea.formulaId);
-                return (
-                  <div key={linea.formulaId} className="flex items-center gap-3 mb-3">
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: `${f?.color_acento ?? VERDE}10` }}>
-                      <BottleIcon size={20} color={f?.color_acento ?? VERDE} />
+                {lineas.map((linea) => {
+                  const f = formulas.find((fo) => fo.id === linea.formulaId);
+                  return (
+                    <div key={linea.formulaId} className="flex items-center gap-3 mb-3 last:mb-0">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background: `${f?.color_acento ?? VERDE}08` }}>
+                        <BottleIcon size={18} color={f?.color_acento ?? VERDE} />
+                      </div>
+                      <div>
+                        <p className="font-cormorant font-light text-[1.1rem]" style={{ color: "#1A1A1A" }}>
+                          {f?.nombre}
+                        </p>
+                        <p className="font-inter text-[0.7rem]" style={{ color: "#9A9A8A" }}>
+                          {linea.cantidad} {linea.cantidad === 1 ? "botella" : "botellas"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
-                        {f?.nombre}
-                      </p>
-                      <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
-                        {linea.cantidad} {linea.cantidad === 1 ? "botella" : "botellas"}
-                      </p>
+                  );
+                })}
+
+                <div className="h-px my-4" style={{ background: "rgba(0,0,0,0.04)" }} />
+
+                <div className="flex items-center gap-2 mb-4">
+                  <CalendarIcon size={13} color="#9A9A8A" />
+                  <span className="font-inter text-[0.8rem]" style={{ color: "#1A1A1A" }}>
+                    {formatDate(diaEntrega)}
+                  </span>
+                </div>
+
+                <div className="rounded-xl p-3.5" style={{ background: `${VERDE}06` }}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <DropIcon size={13} color={VERDE} />
+                      <span className="font-inter text-[0.7rem]" style={{ color: "#8A8A7A" }}>Balance LUMO</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-inter text-[0.8rem]" style={{ color: "#B0B0A0", textDecoration: "line-through" }}>
+                        ${balance.toLocaleString("es-MX")}
+                      </span>
+                      <span className="font-inter text-[0.8rem] font-medium ml-2" style={{ color: alcanza ? "#1A1A1A" : ROJO }}>
+                        ${(balance - total).toLocaleString("es-MX")}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-
-              <div className="flex items-center gap-2 mb-2 mt-1">
-                <CalendarIcon size={13} color="#8A8A7A" />
-                <span className="font-inter text-sm" style={{ color: "#2D2D2D" }}>
-                  {formatDate(diaEntrega)}
-                </span>
-              </div>
-
-              <div className="h-px my-4" style={{ background: "rgba(0,0,0,0.05)" }} />
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <DropIcon size={14} color={ACCENT} />
-                  <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>Balance LUMO</span>
-                </div>
-                <div className="text-right">
-                  <span className="font-inter text-sm" style={{ color: "#B0B0A0", textDecoration: "line-through" }}>
-                    ${balance.toLocaleString("es-MX")}
-                  </span>
-                  <span className="font-inter text-sm font-semibold ml-2" style={{ color: alcanza ? "#2D2D2D" : ROJO }}>
-                    ${(balance - total).toLocaleString("es-MX")}
-                  </span>
                 </div>
               </div>
             </div>
 
             {!alcanza && (
-              <div className="rounded-xl p-4 text-center" style={{ background: "rgba(122,32,48,0.04)", border: "1px solid rgba(122,32,48,0.1)" }}>
-                <p className="font-inter text-sm mb-3" style={{ color: ROJO }}>
+              <div className="rounded-2xl p-4 text-center" style={{ background: "rgba(122,32,48,0.03)", border: "1px solid rgba(122,32,48,0.08)" }}>
+                <p className="font-inter text-[0.8rem] mb-3" style={{ color: ROJO }}>
                   Tu Balance LUMO no es suficiente para confirmar esta reserva.
                 </p>
                 <button
                   onClick={() => setShowRecarga(true)}
-                  className="font-inter text-sm font-medium spring-press px-5 py-2 rounded-xl"
-                  style={{ background: "rgba(184,134,11,0.08)", color: TROPICAL, border: "1px solid rgba(184,134,11,0.15)" }}
+                  className="font-inter text-[0.8rem] font-medium spring-press px-5 py-2 rounded-xl"
+                  style={{ background: `${VERDE}08`, color: VERDE, border: `1px solid ${VERDE}15` }}
                 >
                   Añadir balance
                 </button>
@@ -982,13 +989,13 @@ function ReservaFlow({
             )}
 
             {error && (
-              <div className="rounded-xl p-4 text-center" style={{ background: "rgba(122,32,48,0.04)", border: "1px solid rgba(122,32,48,0.1)", animation: "lumoShake 0.4s ease" }}>
-                <p className="font-inter text-sm mb-2" style={{ color: ROJO }}>{error}</p>
+              <div className="rounded-2xl p-4 text-center" style={{ background: "rgba(122,32,48,0.03)", border: "1px solid rgba(122,32,48,0.08)", animation: "lumoShake 0.4s ease" }}>
+                <p className="font-inter text-[0.8rem] mb-2" style={{ color: ROJO }}>{error}</p>
                 {(error.includes("llenarse") || error.includes("quedan")) && (
                   <button
                     onClick={() => { setError(""); setDiaEntrega(""); setStep(2); }}
-                    className="font-inter text-xs font-medium spring-press px-4 py-1.5 rounded-lg"
-                    style={{ background: "rgba(74,94,58,0.08)", color: VERDE, border: "1px solid rgba(74,94,58,0.15)" }}
+                    className="font-inter text-[0.75rem] font-medium spring-press px-4 py-1.5 rounded-xl"
+                    style={{ background: `${VERDE}08`, color: VERDE, border: `1px solid ${VERDE}15` }}
                   >
                     Elegir otra fecha
                   </button>
@@ -999,7 +1006,7 @@ function ReservaFlow({
             <button
               onClick={handleConfirm}
               disabled={saving || !alcanza}
-              className="w-full rounded-xl py-4 font-inter text-sm font-medium spring-press disabled:opacity-40 transition-all"
+              className="w-full rounded-2xl py-4 font-inter text-sm font-medium spring-press disabled:opacity-40 transition-all"
               style={{ background: VERDE, color: CREAM }}
             >
               {saving ? (
@@ -1010,7 +1017,7 @@ function ReservaFlow({
               ) : `Confirmar reserva · $${total.toLocaleString("es-MX")}`}
             </button>
 
-            <p className="font-inter text-xs text-center" style={{ color: "#A0A090" }}>
+            <p className="font-inter text-[0.7rem] text-center" style={{ color: "#B5B5A5" }}>
               Lo preparamos la mañana de tu entrega.
             </p>
           </div>
@@ -1035,66 +1042,62 @@ function FormulaCard({ formula, cantidad, delay, onAdd, onRemove }: {
   const selected = cantidad > 0;
   return (
     <div
-      className="rounded-2xl p-5 text-left relative overflow-hidden transition-all"
+      className="rounded-2xl text-left relative overflow-hidden transition-all duration-200"
       style={{
         background: "#fff",
-        border: `1px solid ${selected ? `${color}35` : "rgba(0,0,0,0.05)"}`,
-        boxShadow: selected ? `0 2px 16px ${color}10` : "0 1px 6px rgba(0,0,0,0.03)",
+        border: `1px solid ${selected ? `${color}30` : "rgba(0,0,0,0.04)"}`,
+        boxShadow: selected ? `0 2px 16px ${color}08` : "0 1px 4px rgba(0,0,0,0.02)",
         animation: "lumoFadeUp 0.45s ease both",
         animationDelay: `${delay}s`,
       }}
     >
-      {/* Color accent — subtle halo top-right */}
-      <div
-        className="absolute top-0 right-0 w-28 h-28 rounded-full"
-        style={{ background: color, opacity: 0.06, transform: "translate(30%, -40%)", filter: "blur(16px)" }}
-      />
+      {/* Top accent line */}
+      <div className="h-[2px] transition-all duration-200" style={{ background: selected ? `linear-gradient(90deg, ${color}40, ${color}80, ${color}40)` : `linear-gradient(90deg, ${color}10, ${color}20, ${color}10)` }} />
 
-      {/* Left accent line */}
-      <div
-        className="absolute left-0 top-4 bottom-4 w-[3px] rounded-full transition-all"
-        style={{ background: color, opacity: selected ? 0.6 : 0.15 }}
-      />
+      <div className="p-5 relative">
+        {/* Color accent — subtle halo top-right */}
+        <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none" style={{ background: color, opacity: 0.04, transform: "translate(30%, -40%)", filter: "blur(16px)" }} />
 
-      <div className="relative z-10 pl-2">
-        <div className="flex items-center gap-2 mb-1.5">
-          <div className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-          <h3 className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
-            {formula.nombre}
-          </h3>
-        </div>
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="w-2 h-2 rounded-full" style={{ background: color }} />
+            <h3 className="font-cormorant font-light text-[1.15rem]" style={{ color: "#1A1A1A" }}>
+              {formula.nombre}
+            </h3>
+          </div>
 
-        {formula.ingredientes.length > 0 && (
-          <p className="font-inter text-xs mb-2 flex items-center gap-1" style={{ color: "#8A8A7A" }}>
-            <LeafIcon size={11} color="#8A8A7A" />
-            {formula.ingredientes.join(" · ")}
-          </p>
-        )}
-
-        <p className="font-inter text-xs italic mb-3" style={{ color: "#A0A090" }}>
-          {formula.descripcion}
-        </p>
-
-        <div className="flex items-center justify-between">
-          <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
-            ${formula.precio} por botella
-          </span>
-
-          {selected ? (
-            <div className="flex items-center gap-2">
-              <button onClick={onRemove} className="w-8 h-8 rounded-lg flex items-center justify-center spring-press" style={{ background: `${color}08`, border: `1px solid ${color}15` }}>
-                <span style={{ color, fontSize: "1.1rem" }}>−</span>
-              </button>
-              <span className="font-cormorant font-semibold text-lg w-6 text-center" style={{ color: "#2D2D2D" }}>{cantidad}</span>
-              <button onClick={onAdd} className="w-8 h-8 rounded-lg flex items-center justify-center spring-press" style={{ background: `${color}08`, border: `1px solid ${color}15` }}>
-                <span style={{ color, fontSize: "1.1rem" }}>+</span>
-              </button>
-            </div>
-          ) : (
-            <button onClick={onAdd} className="font-inter text-xs px-3 py-1.5 rounded-full spring-press" style={{ background: `${color}08`, color, border: `1px solid ${color}15` }}>
-              Agregar
-            </button>
+          {formula.ingredientes.length > 0 && (
+            <p className="font-inter text-[0.7rem] mb-2 flex items-center gap-1" style={{ color: "#9A9A8A" }}>
+              <LeafIcon size={11} color="#9A9A8A" />
+              {formula.ingredientes.join(" · ")}
+            </p>
           )}
+
+          <p className="font-inter text-[0.7rem] italic mb-3" style={{ color: "#B0B0A0" }}>
+            {formula.descripcion}
+          </p>
+
+          <div className="flex items-center justify-between">
+            <span className="font-inter text-[0.7rem]" style={{ color: "#9A9A8A" }}>
+              ${formula.precio} por botella
+            </span>
+
+            {selected ? (
+              <div className="flex items-center gap-2">
+                <button onClick={onRemove} className="w-8 h-8 rounded-xl flex items-center justify-center spring-press" style={{ background: `${color}06`, border: `1px solid ${color}12` }}>
+                  <span style={{ color, fontSize: "1.1rem" }}>−</span>
+                </button>
+                <span className="font-cormorant font-light text-lg w-6 text-center" style={{ color: "#1A1A1A" }}>{cantidad}</span>
+                <button onClick={onAdd} className="w-8 h-8 rounded-xl flex items-center justify-center spring-press" style={{ background: `${color}06`, border: `1px solid ${color}12` }}>
+                  <span style={{ color, fontSize: "1.1rem" }}>+</span>
+                </button>
+              </div>
+            ) : (
+              <button onClick={onAdd} className="font-inter text-[0.7rem] px-3.5 py-1.5 rounded-full spring-press" style={{ background: `${color}06`, color, border: `1px solid ${color}12` }}>
+                Agregar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
