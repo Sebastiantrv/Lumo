@@ -486,23 +486,36 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
                 <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 4 }}>
                   Perfil botánico
                 </span>
-                <span className="font-inter" style={{ fontSize: 11, color: "#9A9490", display: "block", marginBottom: 14, lineHeight: 1.5 }}>
-                  Compuestos naturalmente presentes en los ingredientes de esta fórmula.
+                <span className="font-inter" style={{ fontSize: 11, color: "#9A9490", display: "block", marginBottom: 18, lineHeight: 1.5 }}>
+                  Una lectura breve de los compuestos naturales más característicos de esta fórmula.
                 </span>
-                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+                <span className="font-inter" style={{ fontSize: 12, fontWeight: 600, color: "#4A4A4A", letterSpacing: "0.04em", display: "block", marginBottom: 12 }}>
+                  Bioactivos destacados
+                </span>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                   {data.botanico.map((b, i) => (
-                    <div key={b.title} style={{
+                    <div key={b.title} className="botanico-card" style={{
                       background: "rgba(255,255,255,0.7)",
                       border: "1px solid rgba(0,0,0,0.05)",
                       borderRadius: 14,
-                      padding: "14px 16px",
-                      animation: `fichaStagger 0.4s ease ${0.31 + i * 0.06}s both`,
-                    }}>
-                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 6 }}>
-                        <span className="font-inter" style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A" }}>{b.title}</span>
-                        <span className="font-inter" style={{ fontSize: 10, color: "#9A9490", flexShrink: 0, marginLeft: 8 }}>{b.source}</span>
-                      </div>
-                      <p className="font-inter" style={{ fontSize: 12, color: "#6A6A6A", lineHeight: 1.6, margin: 0 }}>
+                      padding: "16px 18px",
+                      animation: `fichaStagger 0.4s ease ${0.32 + i * 0.07}s both`,
+                      transition: "transform 200ms ease, box-shadow 200ms ease",
+                      cursor: "default",
+                    }}
+                    onPointerDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "scale(0.98)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 2px 12px rgba(0,0,0,0.06)"; }}
+                    onPointerUp={(e) => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = ""; }}
+                    onPointerLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = ""; }}
+                    >
+                      <span className="font-inter" style={{ fontSize: 13, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 4 }}>
+                        {b.title}
+                      </span>
+                      <span className="font-inter" style={{ fontSize: 11, color: "#9A9490", display: "block", marginBottom: 8 }}>
+                        Fuente: {b.source}
+                      </span>
+                      <p className="font-inter" style={{ fontSize: 12, color: "#6A6A6A", lineHeight: 1.65, margin: 0 }}>
                         {b.description}
                       </p>
                     </div>
