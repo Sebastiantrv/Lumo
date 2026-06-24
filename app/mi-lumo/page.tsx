@@ -388,38 +388,40 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
       <main className="flex-1 pb-8 max-w-3xl mx-auto w-full">
         {/* ── Membership header ── */}
-        <section className="px-6 pt-6 pb-6 text-center relative" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
-          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(74,94,58,0.03) 0%, transparent 70%)" }} />
-          <div
-            className="w-[56px] h-[56px] rounded-full mx-auto mb-3 flex items-center justify-center"
-            style={{
-              background: "rgba(74,94,58,0.06)",
-              border: "1px solid rgba(74,94,58,0.1)",
-              animation: "lumoScaleIn 0.5s var(--spring) both",
-              animationDelay: "0.15s",
-            }}
-          >
-            <span className="font-cormorant font-light text-[1.3rem]" style={{ color: VERDE }}>
-              {miembro.nombre.charAt(0).toUpperCase()}
-            </span>
-          </div>
-          <p className="font-inter text-[0.65rem] tracking-wide mb-1" style={{ color: "#9A9A8A", letterSpacing: "0.06em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.2s" }}>
-            {greeting()}
-          </p>
-          <h1
-            className="font-cormorant font-light mb-2"
-            style={{ fontSize: "1.8rem", color: "#1A1A1A", lineHeight: 1.15, letterSpacing: "-0.01em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.25s" }}
-          >
-            {miembro.nombre.split(" ")[0]}
-          </h1>
-          <div className="flex items-center justify-center gap-2" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.3s" }}>
-            <span className="font-inter text-[0.6rem] tracking-[0.12em] px-2.5 py-1 rounded-full" style={{ background: "rgba(74,94,58,0.06)", color: VERDE, border: "1px solid rgba(74,94,58,0.08)" }}>
-              {miembro.codigo_miembro}
-            </span>
-            <span className="font-inter text-[0.6rem]" style={{ color: "#C5C5B5" }}>·</span>
-            <span className="font-inter text-[0.6rem]" style={{ color: "#B5B5A5", letterSpacing: "0.02em" }}>
-              Miembro desde {memberSince}
-            </span>
+        <section className="px-5 pt-7 pb-5 relative" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
+          <div className="absolute inset-0 pointer-events-none" style={{ background: "radial-gradient(ellipse at 0% 0%, rgba(74,94,58,0.03) 0%, transparent 60%)" }} />
+          <div className="flex items-center gap-4 relative">
+            <div
+              className="w-[52px] h-[52px] rounded-full flex-shrink-0 flex items-center justify-center"
+              style={{
+                background: "rgba(74,94,58,0.06)",
+                border: "1px solid rgba(74,94,58,0.1)",
+                animation: "lumoScaleIn 0.5s var(--spring) both",
+                animationDelay: "0.15s",
+              }}
+            >
+              <span className="font-cormorant font-light text-[1.35rem]" style={{ color: VERDE }}>
+                {miembro.nombre.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="min-w-0" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.2s" }}>
+              <p className="font-inter text-[0.7rem] mb-0.5" style={{ color: "#9A9A8A", letterSpacing: "0.04em" }}>
+                {greeting()}
+              </p>
+              <h1
+                className="font-cormorant font-light truncate"
+                style={{ fontSize: "1.65rem", color: "#1A1A1A", lineHeight: 1.2, letterSpacing: "-0.01em" }}
+              >
+                {miembro.nombre.split(" ")[0]}
+              </h1>
+              <p className="font-inter text-[0.65rem] mt-1 flex items-center gap-1.5 flex-wrap" style={{ color: "#B5B5A5" }}>
+                <span className="tracking-[0.08em] px-2 py-0.5 rounded-full" style={{ background: "rgba(74,94,58,0.05)", color: VERDE, border: "1px solid rgba(74,94,58,0.08)", fontSize: "0.6rem" }}>
+                  {miembro.codigo_miembro}
+                </span>
+                <span style={{ color: "#D0D0C0" }}>·</span>
+                <span>Miembro desde {memberSince}</span>
+              </p>
+            </div>
           </div>
         </section>
 
