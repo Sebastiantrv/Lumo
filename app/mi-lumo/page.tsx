@@ -330,13 +330,13 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   const hace3Dias = new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0];
   const pedidosVisibles = pedidos.filter((p) => p.estado !== "eliminado");
   const pedidosActivos = pedidosVisibles.filter(
-    (p) => p.estado !== "cancelado" && p.dia_entrega >= hoy
+    (p) => p.estado !== "cancelado" && !(p.estado === "entregado" && p.dia_entrega < hoy) && p.dia_entrega >= hoy
   );
   const pedidosRecientes = pedidosVisibles.filter(
-    (p) => (p.estado === "cancelado" || p.dia_entrega < hoy) && p.dia_entrega >= hace3Dias
+    (p) => p.estado === "entregado" && p.dia_entrega < hoy && p.dia_entrega >= hace3Dias
   );
   const pedidosHistorial = pedidosVisibles.filter(
-    (p) => p.dia_entrega < hace3Dias
+    (p) => p.dia_entrega < hace3Dias || (p.estado === "cancelado" && p.dia_entrega < hoy)
   );
 
   const memberSince = new Date(miembro.created_at).toLocaleDateString("es-MX", {
@@ -532,22 +532,20 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
                     <span className="font-inter text-sm flex-1" style={{ color: "#2D2D2D" }}>
                       {p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}
                     </span>
-                    <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>
-                      {formatDateShort(p.dia_entrega)}
-                    </span>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {p.numero_pedido && <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>#{p.numero_pedido}</span>}
+                      <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>
+                        {formatDateShort(p.dia_entrega)}
+                      </span>
+                    </div>
                   </div>
-                  {p.estado === "entregado" && p.token && (
+                  {p.token && (
                     <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
                       <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>Entregado</span>
                       <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
                         Cuéntanos tu experiencia
                         <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
                       </span>
-                    </div>
-                  )}
-                  {p.estado === "cancelado" && (
-                    <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-                      <span className="font-inter text-xs" style={{ color: ROJO }}>Cancelado</span>
                     </div>
                   )}
                 </Link>

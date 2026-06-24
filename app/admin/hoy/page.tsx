@@ -282,9 +282,11 @@ export default function AdminHoy() {
                       ? "rgba(74,94,58,0.08)"
                       : group.estado === "cancelado"
                       ? "rgba(122,32,48,0.06)"
+                      : group.estado === "eliminado"
+                      ? "rgba(255,255,255,0.02)"
                       : "rgba(255,255,255,0.04)",
-                    border: group.estado === "cancelado" ? "1px solid rgba(122,32,48,0.15)" : "1px solid rgba(255,255,255,0.06)",
-                    opacity: group.estado === "entregado" || group.estado === "cancelado" ? 0.5 : 1,
+                    border: group.estado === "cancelado" ? "1px solid rgba(122,32,48,0.15)" : group.estado === "eliminado" ? "1px dashed rgba(255,255,255,0.08)" : "1px solid rgba(255,255,255,0.06)",
+                    opacity: group.estado === "entregado" || group.estado === "cancelado" || group.estado === "eliminado" ? 0.5 : 1,
                     textDecoration: group.estado === "cancelado" ? "line-through" : "none",
                     borderBottomLeftRadius: (showDeliveryPicker === firstPed.id || showMoverPicker === firstPed.id) ? 0 : undefined,
                     borderBottomRightRadius: (showDeliveryPicker === firstPed.id || showMoverPicker === firstPed.id) ? 0 : undefined,
@@ -570,6 +572,7 @@ function estadoBadgeStyle(estado: string): React.CSSProperties {
   if (estado === "confirmado") return { background: "rgba(74,94,58,0.15)", color: "#4A5E3A", border: "1px solid rgba(74,94,58,0.3)" };
   if (estado === "preparado") return { background: "rgba(184,134,11,0.25)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.4)" };
   if (estado === "cancelado") return { background: "rgba(122,32,48,0.15)", color: "#7A2030", border: "1px solid rgba(122,32,48,0.3)", cursor: "default" };
+  if (estado === "eliminado") return { background: "rgba(255,255,255,0.04)", color: "#555", border: "1px solid rgba(255,255,255,0.08)", textDecoration: "line-through" as const };
   return { background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" };
 }
 
