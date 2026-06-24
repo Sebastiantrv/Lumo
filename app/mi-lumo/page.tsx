@@ -327,11 +327,12 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   useEffect(() => { load(); }, [load]);
 
   const hoy = new Date().toISOString().split("T")[0];
+  const ayer = new Date(Date.now() - 86400000).toISOString().split("T")[0];
   const pedidosActivos = pedidos.filter(
-    (p) => p.dia_entrega >= hoy && p.estado !== "cancelado" && p.estado !== "entregado"
+    (p) => p.estado !== "cancelado" && !(p.estado === "entregado" && p.dia_entrega <= ayer) && p.dia_entrega >= hoy
   );
   const pedidosHistorial = pedidos.filter(
-    (p) => p.estado === "entregado" || p.estado === "cancelado" || p.dia_entrega < hoy
+    (p) => p.estado === "cancelado" || (p.estado === "entregado" && p.dia_entrega <= ayer) || p.dia_entrega < hoy
   );
 
   const memberSince = new Date(miembro.created_at).toLocaleDateString("es-MX", {
@@ -481,7 +482,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
         {groupedActivos.length > 0 && (
           <section className="mx-5 mb-7" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.45s" }}>
             <h2 className="font-cormorant font-light text-lg mb-3" style={{ color: "#1A1A1A" }}>
-              Entregas activas
+              Próximas entregas
             </h2>
             <div className="flex flex-col gap-3">
               {groupedActivos.map((group) => (
@@ -498,7 +499,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
               <DropIcon size={18} color={`${VERDE}80`} />
             </div>
             <p className="font-cormorant font-light text-lg mb-1.5" style={{ color: "#1A1A1A" }}>
-              {balance > 0 ? "Sin entregas activas" : "Aún no tienes Balance LUMO"}
+              {balance > 0 ? "Sin próximas entregas" : "Aún no tienes Balance LUMO"}
             </p>
             <p className="font-inter text-xs leading-relaxed" style={{ color: "#9A9A8A" }}>
               {balance > 0
@@ -688,17 +689,24 @@ function ReservaFlow({
     const newBalance = balance - total;
     return (
       <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: CREAM, overscrollBehavior: "none" }}>
-        {/* Botanical background */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage: "url(/lumo_confirmation_plant_shadow_background.png)",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            opacity: 0.08,
-            animation: "lumoFadeUp 1.5s ease 0.1s both",
-          }}
-        />
+        {/* Botanical background with cream fade */}
+        <div className="absolute inset-0 pointer-events-none" style={{ animation: "lumoFadeUp 1.5s ease 0.1s both" }}>
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: "url(/lumo_confirmation_plant_shadow_background.png)",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              opacity: 0.06,
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(ellipse at center, ${CREAM}00 0%, ${CREAM}88 45%, ${CREAM}dd 70%, ${CREAM} 100%)`,
+            }}
+          />
+        </div>
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
           <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm md:max-w-md">

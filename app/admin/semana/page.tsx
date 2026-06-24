@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { adminWrite } from "@/lib/admin-api";
 import { localStr, getWeekDays, formatDateShort } from "@/lib/dates";
+import { DELIVERY_RANGES } from "@/lib/constants";
 
 type Pedido = {
   id: string;
@@ -18,6 +19,8 @@ type Pedido = {
   ingredientes_excluidos: string[] | null;
   preferencia_sorpresa: string | null;
   notas: string | null;
+  hora_preparado: string | null;
+  hora_entrega_estimada: string | null;
   clientes: { nombre: string } | null;
   formulas: { id?: string; nombre: string; slug: string; color_acento: string } | null;
 };
@@ -67,6 +70,21 @@ export default function SemanaPage() {
       await adminWrite("pedidos", "update", { dia_entrega: fecha }, [{ column: "id", value: id }]);
     }
     setMoverPickerFor(null);
+    await load();
+  }
+
+  async function avanzarEstado(ids: string[], estadoActual: string, horaEntrega?: string) {
+    const siguiente =
+      estadoActual === "pendiente" ? "confirmado"
+      : estadoActual === "confirmado" ? "preparado"
+      : estadoActual === "preparado" ? "entregado"
+      : "pendiente";
+
+    const payload: Record<string, string> = { estado: siguiente };
+    if (siguiente === "preparado") payload.hora_preparado = new Date().toISOString();
+    if (siguiente === "entregado" && horaEntrega) payload.hora_entrega_estimada = horaEntrega;
+
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", payload, [{ column: "id", value: id }])));
     await load();
   }
 
@@ -169,6 +187,7 @@ export default function SemanaPage() {
                           onAplazar={(fecha) => aplazar(ids, fecha)}
                           onMoverFecha={(fecha) => moverFecha(ids, fecha)}
                           onCambiarFormula={cambiarFormula}
+                          onAvanzarEstado={(hora) => avanzarEstado(ids, group[0].estado, hora)}
                           showAplazarPicker={aplazarPickerFor === groupKey}
                           onOpenAplazar={() => setAplazarPickerFor(groupKey)}
                           onCloseAplazar={() => setAplazarPickerFor(null)}
@@ -190,7 +209,7 @@ export default function SemanaPage() {
 }
 
 function PedidoRow({
-  group, formulas, onSetExtra, onAplazar, onMoverFecha, onCambiarFormula, showAplazarPicker, onOpenAplazar, onCloseAplazar, showMoverPicker, onOpenMover, onCloseMover,
+  group, formulas, onSetExtra, onAplazar, onMoverFecha, onCambiarFormula, onAvanzarEstado, showAplazarPicker, onOpenAplazar, onCloseAplazar, showMoverPicker, onOpenMover, onCloseMover,
 }: {
   group: Pedido[];
   formulas: Formula[];
@@ -198,6 +217,7 @@ function PedidoRow({
   onAplazar: (fecha: string) => void;
   onMoverFecha: (fecha: string) => void;
   onCambiarFormula: (id: string, formulaId: string) => void;
+  onAvanzarEstado: (hora?: string) => void;
   showAplazarPicker: boolean;
   onOpenAplazar: () => void;
   onCloseAplazar: () => void;
@@ -205,6 +225,7 @@ function PedidoRow({
   onOpenMover: () => void;
   onCloseMover: () => void;
 }) {
+  const [showDeliveryPicker, setShowDeliveryPicker] = useState(false);
   const first = group[0];
   const tipo = first.tipo_pedido ?? "normal";
   const rechazado = first.estado_extra === "rechazado";
@@ -286,9 +307,26 @@ function PedidoRow({
             <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲</span>
           )}
           <TipoBadge tipo={tipo} />
-          <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={estadoBadge(first.estado)}>
-            {first.estado}
-          </span>
+          {first.estado !== "entregado" && first.estado !== "cancelado" ? (
+            <button
+              onClick={() => {
+                if (first.estado === "confirmado") {
+                  setShowDeliveryPicker(!showDeliveryPicker);
+                } else {
+                  onAvanzarEstado();
+                }
+              }}
+              className="font-inter text-xs px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-80"
+              style={estadoBadge(first.estado)}
+              title="Avanzar estado"
+            >
+              {first.estado} →
+            </button>
+          ) : (
+            <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={estadoBadge(first.estado)}>
+              {first.estado}
+            </span>
+          )}
         </div>
       </div>
 
@@ -370,6 +408,25 @@ function PedidoRow({
             })}
           </div>
           <button onClick={onCloseMover} className="font-inter text-xs text-left mt-0.5" style={{ color: "#555" }}>Cancelar</button>
+        </div>
+      )}
+
+      {showDeliveryPicker && (
+        <div className="flex flex-col gap-2 mt-1">
+          <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Hora de entrega estimada:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {DELIVERY_RANGES.map((range) => (
+              <button
+                key={range}
+                onClick={() => { setShowDeliveryPicker(false); onAvanzarEstado(range); }}
+                className="rounded-lg px-3 py-1.5 font-inter text-xs font-medium"
+                style={{ background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" }}
+              >
+                {range}
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowDeliveryPicker(false)} className="font-inter text-xs text-left mt-0.5" style={{ color: "#555" }}>Cancelar</button>
         </div>
       )}
 
