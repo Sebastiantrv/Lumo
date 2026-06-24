@@ -889,9 +889,9 @@ function ReservaFlow({
                     disabled={isCompleto}
                     className="rounded-2xl p-4 text-left flex items-center justify-between transition-all duration-200 spring-press disabled:opacity-40"
                     style={{
-                      background: "#fff",
-                      border: `1px solid ${isSelected ? `${VERDE}30` : "rgba(0,0,0,0.04)"}`,
-                      boxShadow: isSelected ? `0 2px 12px ${VERDE}08` : "0 1px 4px rgba(0,0,0,0.02)",
+                      background: isSelected ? `${VERDE}06` : "#fff",
+                      border: `1.5px solid ${isSelected ? `${VERDE}50` : "rgba(0,0,0,0.04)"}`,
+                      boxShadow: isSelected ? `0 4px 16px ${VERDE}12, inset 0 0 0 1px ${VERDE}10` : "0 1px 4px rgba(0,0,0,0.02)",
                       animation: "lumoFadeUp 0.3s ease both",
                       animationDelay: `${i * 0.04}s`,
                     }}

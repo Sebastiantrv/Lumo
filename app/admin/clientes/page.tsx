@@ -414,7 +414,7 @@ function RecargaBalanceModal({ clienteId, clienteNombre, codigoMiembro, onClose,
 }) {
   const [monto, setMonto] = useState("");
   const [montoCustom, setMontoCustom] = useState("");
-  const [descripcion, setDescripcion] = useState("Recarga de Balance LUMO");
+  const [descripcion, setDescripcion] = useState("Balance LUMO de cortesía");
   const [saving, setSaving] = useState(false);
   const presets = [300, 600, 1200];
   const montoFinal = monto === "custom" ? parseFloat(montoCustom) : parseFloat(monto);

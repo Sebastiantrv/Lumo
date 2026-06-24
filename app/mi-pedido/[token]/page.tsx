@@ -40,15 +40,16 @@ function EstadoBadge({ estado }: { estado: string }) {
       style={{
         display: "inline-flex",
         alignItems: "center",
-        gap: 6,
-        padding: "6px 14px",
+        gap: 8,
+        padding: "7px 16px",
         borderRadius: 100,
         background: c.bg,
       }}
     >
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M5 13l4 4L19 7" />
-      </svg>
+      <div style={{ position: "relative", width: 8, height: 8 }}>
+        <div style={{ position: "absolute", inset: -2, borderRadius: "50%", background: c.color, animation: "accentPulse 2.5s ease-in-out infinite", opacity: 0.4 }} />
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: c.color }} />
+      </div>
       <span className="font-inter" style={{ fontSize: 12, fontWeight: 500, color: c.color, letterSpacing: "0.03em" }}>
         {c.label}
       </span>
@@ -440,7 +441,10 @@ export default function MiPedidoPage({
               <div key={g.nombre} style={{ marginBottom: idx < grouped.length - 1 ? 12 : 6 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
                   {bottleImg ? (
-                    <img src={bottleImg} alt={g.nombre} style={{ width: 32, height: 48, objectFit: "contain", opacity: 0.9, flexShrink: 0 }} />
+                    <div style={{ position: "relative", width: 36, flexShrink: 0 }}>
+                      <div style={{ position: "absolute", inset: -4, borderRadius: "50%", background: g.color, animation: `accentPulse 3s ease-in-out ${idx * 0.8}s infinite`, opacity: 0.15, filter: "blur(8px)" }} />
+                      <img src={bottleImg} alt={g.nombre} style={{ position: "relative", width: 36, height: 52, objectFit: "contain", opacity: 0.92 }} />
+                    </div>
                   ) : (
                     <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
                       <div style={{ position: "absolute", inset: -3, borderRadius: "50%", background: g.color, animation: `accentPulse 3s ease-in-out ${idx * 0.8}s infinite`, opacity: 0.3 }} />
