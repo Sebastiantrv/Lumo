@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP } from "@/lib/constants";
@@ -132,7 +133,8 @@ export default function MiLumoPage() {
    LOGIN
    ══════════════════════════════════════════════ */
 function LoginScreen({ onLogin }: { onLogin: (m: Miembro) => void }) {
-  const [codigo, setCodigo] = useState("");
+  const searchParams = useSearchParams();
+  const [codigo, setCodigo] = useState(() => searchParams.get("code") ?? "");
   const [telefono, setTelefono] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);

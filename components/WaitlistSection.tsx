@@ -390,7 +390,7 @@ export default function WaitlistSection() {
                   Ingresa con tu código y elige el día que quieres recibir tu LUMO.
                 </p>
 
-                <Link href="/mi-lumo"
+                <Link href={codigoMiembro ? `/mi-lumo?code=${codigoMiembro.replace("LM-", "")}` : "/mi-lumo"}
                   className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
                   style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: T.btnPrimary, color: T.btnText }}>
                   Ir a Mi LUMO <span aria-hidden="true">→</span>
