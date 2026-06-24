@@ -212,19 +212,17 @@ function getFichaKey(slug: string): string | null {
 }
 
 const INGREDIENT_IMAGES: Record<string, string> = {
-  verde: "/icon-verde.png",
-  rojo: "/icon-rojo.png",
-  tropical: "/icon-tropical.png",
+  verde: "/Ingredientes-formulas.jpg",
+  rojo: "/Ingredientes-formulas.jpg",
+  tropical: "/Ingredientes-formulas.jpg",
 };
 
 /* ---------- Ficha LUMO bottom sheet ---------- */
 
-function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado, diaEntrega, onClose }: {
+function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
   formulaNombre: string;
   formulaSlug: string;
   accentColor: string;
-  horaPreparado?: string | null;
-  diaEntrega?: string;
   onClose: () => void;
 }) {
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -240,8 +238,6 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado
   const ingredientImg = fichaKey ? INGREDIENT_IMAGES[fichaKey] : null;
 
   if (!data) return null;
-
-  const prepHora = horaPreparado ? formatHora(horaPreparado) : "6:15 AM";
 
   return (
     <>
@@ -326,28 +322,30 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado
         {/* Scrollable content */}
         <div style={{ flex: 1, overflowY: "auto", padding: "0 24px 32px", WebkitOverflowScrolling: "touch" }}>
 
+          {/* Imagen ingredientes */}
+          {ingredientImg && (
+            <div style={{ animation: "fichaStagger 0.4s ease 0.05s both", marginBottom: 20 }}>
+              <img src={ingredientImg} alt="Ingredientes LUMO" style={{ width: "100%", borderRadius: 16, objectFit: "cover" }} />
+            </div>
+          )}
+
           {/* Ingredientes */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.05s both" }}>
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 24 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 22c4-4 8-7.5 8-12a8 8 0 10-16 0c0 4.5 4 8 8 12z" />
-                  </svg>
-                  <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>Ingredientes</span>
-                </div>
-                <p className="font-inter" style={{ fontSize: 13, color: "#6A6A6A", lineHeight: 1.6 }}>
-                  {data.ingredientes}
-                </p>
+          <div style={{ animation: "fichaStagger 0.4s ease 0.1s both" }}>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={accentColor} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22c4-4 8-7.5 8-12a8 8 0 10-16 0c0 4.5 4 8 8 12z" />
+                </svg>
+                <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A" }}>Ingredientes</span>
               </div>
-              {ingredientImg && (
-                <img src={ingredientImg} alt="Ingredientes" style={{ width: 72, height: 72, objectFit: "contain", borderRadius: 12, flexShrink: 0, opacity: 0.9 }} />
-              )}
+              <p className="font-inter" style={{ fontSize: 13, color: "#6A6A6A", lineHeight: 1.6 }}>
+                {data.ingredientes}
+              </p>
             </div>
           </div>
 
           {/* Perfil nutricional */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.12s both" }}>
+          <div style={{ animation: "fichaStagger 0.4s ease 0.17s both" }}>
             <div style={{ marginBottom: 24 }}>
               <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 2 }}>
                 Perfil nutricional estimado
@@ -373,7 +371,7 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado
           </div>
 
           {/* Micronutrientes */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.19s both" }}>
+          <div style={{ animation: "fichaStagger 0.4s ease 0.24s both" }}>
             <div style={{ marginBottom: 24 }}>
               <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 10 }}>
                 Micronutrientes destacados
@@ -396,7 +394,7 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado
           </div>
 
           {/* Notas importantes */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.26s both" }}>
+          <div style={{ animation: "fichaStagger 0.4s ease 0.31s both" }}>
             <div style={{ marginBottom: 24 }}>
               <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 8 }}>
                 Notas importantes
@@ -407,32 +405,20 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado
             </div>
           </div>
 
-          {/* Trazabilidad */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.33s both" }}>
-            <div style={{ marginBottom: 28 }}>
-              <span className="font-inter" style={{ fontSize: 14, fontWeight: 600, color: "#1A1A1A", display: "block", marginBottom: 10 }}>
-                Trazabilidad
-              </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[
-                  { label: "Preparación estimada", value: prepHora },
-                  { label: "Método", value: "Prensado en frío" },
-                  { label: "Conservación", value: "Refrigerado" },
-                ].map((row) => (
-                  <div key={row.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span className="font-inter" style={{ fontSize: 13, color: "#8A8580" }}>{row.label}</span>
-                    <span className="font-inter" style={{ fontSize: 13, color: "#4A4A4A", fontWeight: 500 }}>{row.value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
           {/* Compartir ficha */}
-          <div style={{ animation: "fichaStagger 0.4s ease 0.4s both" }}>
+          <div style={{ animation: "fichaStagger 0.4s ease 0.38s both" }}>
             <button
-              onClick={() => {
+              onClick={async () => {
                 const text = `Ficha LUMO — ${formulaNombre} (250 ml)\n\nIngredientes: ${data.ingredientes}\n\nPerfil nutricional estimado (por 250 ml):\n${data.nutricion.map((r) => `${r.label}: ${r.value}`).join("\n")}\n\nMicronutrientes: ${data.micronutrientes.join(", ")}\n\nMétodo: Prensado en frío · Conservación: Refrigerado`;
+                try {
+                  const res = await fetch("/Ingredientes-formulas.jpg");
+                  const blob = await res.blob();
+                  const file = new File([blob], "Ficha-LUMO.jpg", { type: "image/jpeg" });
+                  if (navigator.share && navigator.canShare?.({ files: [file] })) {
+                    await navigator.share({ title: `Ficha LUMO — ${formulaNombre}`, text, files: [file] });
+                    return;
+                  }
+                } catch {}
                 if (navigator.share) {
                   navigator.share({ title: `Ficha LUMO — ${formulaNombre}`, text }).catch(() => {});
                 } else {
@@ -461,6 +447,9 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, horaPreparado
               </svg>
               Compartir ficha
             </button>
+            <p className="font-inter" style={{ textAlign: "center", fontSize: 11, color: "#B8B0A4", marginTop: 10 }}>
+              Ideal para compartir con tu nutriólogo
+            </p>
           </div>
         </div>
       </div>
@@ -783,7 +772,7 @@ export default function MiPedidoPage({
               background: "rgba(74,94,58,0.06)",
               borderRadius: 14,
               padding: "14px 16px",
-              marginBottom: 4,
+              margin: "16px 0 12px",
               cursor: globalEstado !== "pendiente" ? "pointer" : "default",
               display: "flex",
               alignItems: "center",
@@ -1318,8 +1307,6 @@ export default function MiPedidoPage({
           formulaNombre={p.formulas.nombre}
           formulaSlug={p.formulas.slug}
           accentColor={accentColor}
-          horaPreparado={p.hora_preparado ?? undefined}
-          diaEntrega={p.dia_entrega}
           onClose={() => setShowFicha(false)}
         />
       )}
