@@ -120,7 +120,7 @@ export default function AdminInicio() {
     <div className="max-w-4xl">
       {/* Header */}
       <div className="mb-8">
-        <p className="font-inter text-sm mb-1" style={{ color: "#4A5E3A", letterSpacing: "0.1em" }}>{greeting()}, Sebastián</p>
+        <p className="font-inter text-sm mb-1" style={{ color: "#4A5E3A", letterSpacing: "0.1em" }}>{greeting()}</p>
         <h1 className="font-cormorant font-light text-[#F5F0E8] capitalize" style={{ fontSize: "2.2rem" }}>
           {formatDateLabel(todayStr())}
         </h1>

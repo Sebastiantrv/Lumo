@@ -1215,7 +1215,7 @@ export default function MiPedidoPage({
                   Ajustar pedido
                 </h2>
                 <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 24 }}>
-                  Selecciona una opcion:
+                  Selecciona una opción:
                 </p>
                 <button
                   onClick={() => setAdjustStep("date")}
@@ -1275,7 +1275,7 @@ export default function MiPedidoPage({
                   Nueva fecha
                 </h2>
                 <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 20 }}>
-                  Selecciona la fecha en la que te gustaria recibir tu pedido:
+                  Selecciona la fecha en la que te gustaría recibir tu pedido:
                 </p>
                 <input
                   type="date"

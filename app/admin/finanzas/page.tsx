@@ -86,7 +86,7 @@ export default function FinanzasPage() {
     setPedidos((prev) => prev.map((p) => p.id === pedidoId ? { ...p, descuento } : p));
   }
 
-  const pedidosActivos = pedidos.filter((p) => p.tipo_pedido !== "extra" || true);
+  const pedidosActivos = pedidos;
   const ingresoTotal = pedidosActivos.reduce((s, p) => s + precioFinal(p), 0);
   const pedidosConIngreso = pedidosActivos.filter((p) => !p.es_regalo);
   const regalos = pedidosActivos.filter((p) => p.es_regalo).length;

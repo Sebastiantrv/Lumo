@@ -184,8 +184,9 @@ function FeedbackContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch (e) {
-      console.error("Submit error:", e);
+    } catch {
+      alert("No se pudo enviar tu retroalimentación. Verifica tu conexión e intenta de nuevo.");
+      return;
     }
     goTo(10, "forward");
   }
