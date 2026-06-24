@@ -308,14 +308,19 @@ export default function WaitlistSection() {
           {step === 7 && (
             <div className="flex flex-col gap-8">
               <style>{`
-                @keyframes welcomeFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-                @keyframes codeReveal { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+                @keyframes welcomeFadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes codeReveal { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+                @keyframes softGlow { 0%, 100% { box-shadow: 0 0 0 0 rgba(74,94,58,0); } 50% { box-shadow: 0 0 24px 4px rgba(74,94,58,0.08); } }
+                @keyframes checkDraw { from { stroke-dashoffset: 24; } to { stroke-dashoffset: 0; } }
+                @keyframes lineFade { from { width: 0; opacity: 0; } to { width: 48px; opacity: 1; } }
               `}</style>
 
-              <div className="flex flex-col gap-5" style={{ animation: "welcomeFadeUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
+              <div className="flex flex-col gap-5" style={{ animation: "welcomeFadeUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
                 <div className="w-14 h-14 rounded-full flex items-center justify-center"
                   style={{ background: "rgba(74,94,58,0.12)", border: "1.5px solid #4A5E3A" }}>
-                  <CheckIcon />
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4A5E3A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12" style={{ strokeDasharray: 24, animation: "checkDraw 0.5s ease-out 0.3s both" }} />
+                  </svg>
                 </div>
 
                 <h2 className="font-cormorant font-light"
@@ -331,22 +336,23 @@ export default function WaitlistSection() {
               {/* Código LUMO */}
               {codigoMiembro && (
                 <div
-                  className="rounded-2xl p-6 text-center"
+                  className="rounded-2xl p-7 text-center relative overflow-hidden"
                   style={{
                     background: "rgba(255,255,255,0.7)",
                     border: `1px solid ${T.cardBorder}`,
                     backdropFilter: "blur(16px)",
                     WebkitBackdropFilter: "blur(16px)",
-                    animation: "codeReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both",
+                    animation: "codeReveal 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.25s both, softGlow 3s ease-in-out 1s infinite",
                   }}
                 >
                   <p className="font-inter text-xs uppercase tracking-widest mb-3" style={{ color: T.textMuted }}>
                     Tu código LUMO
                   </p>
-                  <p className="font-cormorant font-light tracking-[0.15em]"
-                    style={{ fontSize: "clamp(2rem, 8vw, 2.6rem)", color: "#4A5E3A", lineHeight: 1 }}>
+                  <p className="font-cormorant font-light tracking-[0.18em]"
+                    style={{ fontSize: "clamp(2.2rem, 9vw, 2.8rem)", color: "#4A5E3A", lineHeight: 1 }}>
                     {codigoMiembro}
                   </p>
+                  <div className="mx-auto mt-4 mb-1" style={{ height: "1px", background: "rgba(74,94,58,0.15)", animation: "lineFade 0.8s ease-out 0.6s both" }} />
                   <p className="font-inter text-xs mt-3" style={{ color: T.textMuted, lineHeight: 1.5 }}>
                     Con este código accedes a Mi LUMO
                   </p>
@@ -359,7 +365,7 @@ export default function WaitlistSection() {
                 style={{
                   background: "rgba(74,94,58,0.04)",
                   border: "1px solid rgba(74,94,58,0.10)",
-                  animation: "welcomeFadeUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both",
+                  animation: "welcomeFadeUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.45s both",
                 }}
               >
                 <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
@@ -379,7 +385,7 @@ export default function WaitlistSection() {
               </div>
 
               {/* Siguiente paso */}
-              <div style={{ animation: "welcomeFadeUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both" }}>
+              <div style={{ animation: "welcomeFadeUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s both" }}>
                 <p className="font-inter text-xs mb-4" style={{ color: T.textMuted, lineHeight: 1.6 }}>
                   Ingresa con tu código y elige el día que quieres recibir tu LUMO.
                 </p>

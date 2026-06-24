@@ -11,7 +11,7 @@ export default function PilotoPage() {
       <div style={{ flex: 1 }}>
         <WaitlistSection />
       </div>
-      <Footer />
+      <Footer theme="light" />
     </main>
   );
 }
