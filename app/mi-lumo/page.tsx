@@ -1394,22 +1394,13 @@ function getRecommendation(
 ): { formula: FormulaWithIngredients; reason: string } | null {
   if (formulas.length === 0) return null;
 
-  const restriccionesSet = new Set(prefs.restricciones);
-
-  function hasRestriction(f: FormulaWithIngredients): boolean {
-    return f.ingredientes.some((ing) => restriccionesSet.has(ing.toLowerCase()));
-  }
-
-  const safe = formulas.filter((f) => !hasRestriction(f));
-  const pool = safe.length > 0 ? safe : formulas;
-
   if (prefs.notasPreferida) {
-    const match = pool.find((f) => f.nombre.toLowerCase().includes(prefs.notasPreferida!.toLowerCase()));
+    const match = formulas.find((f) => f.nombre.toLowerCase().includes(prefs.notasPreferida!.toLowerCase()));
     if (match) return { formula: match, reason: "Por tu preferencia al registrarte." };
   }
 
   if (prefs.favorita) {
-    const leastTried = pool
+    const leastTried = formulas
       .filter((f) => f.id !== prefs.favorita!.id)
       .sort((a, b) => a.nombre.localeCompare(b.nombre));
     if (leastTried.length > 0) {
@@ -1421,8 +1412,7 @@ function getRecommendation(
     }
   }
 
-  const first = pool[0];
-  return { formula: first, reason: "Nuestra fórmula ideal para empezar." };
+  return { formula: formulas[0], reason: "Nuestra fórmula ideal para empezar." };
 }
 
 function ConciergeSection({ miembro, pedidos, formulas, onReservar }: {
