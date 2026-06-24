@@ -387,84 +387,94 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
       )}
 
       <main className="flex-1 pb-8 max-w-3xl mx-auto w-full">
-        {/* Hero greeting */}
-        <section className="px-5 pt-6 pb-8 text-center" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
+        {/* ── Membership header ── */}
+        <section className="px-6 pt-8 pb-10 text-center" style={{ animation: "lumoFadeUp 0.6s ease both" }}>
           <div
-            className="w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center"
-            style={{ background: "rgba(74,94,58,0.08)", animation: "lumoScaleIn 0.5s var(--spring) both", animationDelay: "0.15s" }}
+            className="w-[72px] h-[72px] rounded-full mx-auto mb-5 flex items-center justify-center"
+            style={{
+              background: "rgba(74,94,58,0.06)",
+              border: "1px solid rgba(74,94,58,0.1)",
+              animation: "lumoScaleIn 0.5s var(--spring) both",
+              animationDelay: "0.15s",
+            }}
           >
-            <span className="font-cormorant font-semibold text-2xl" style={{ color: VERDE }}>
+            <span className="font-cormorant font-light text-[1.6rem]" style={{ color: VERDE }}>
               {miembro.nombre.charAt(0).toUpperCase()}
             </span>
           </div>
-          <p className="font-inter text-sm mb-1" style={{ color: "#8A8A7A", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.2s" }}>
+          <p className="font-inter text-xs tracking-wide mb-2" style={{ color: "#9A9A8A", letterSpacing: "0.06em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.2s" }}>
             {greeting()}
           </p>
           <h1
-            className="font-cormorant font-semibold mb-1"
-            style={{ fontSize: "1.9rem", color: "#2D2D2D", lineHeight: 1.2, animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.25s" }}
+            className="font-cormorant font-light mb-3"
+            style={{ fontSize: "2.1rem", color: "#1A1A1A", lineHeight: 1.15, letterSpacing: "-0.01em", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.25s" }}
           >
             {miembro.nombre.split(" ")[0]}
           </h1>
           <div style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.3s" }}>
-            <span className="font-inter text-xs px-3 py-1 rounded-full" style={{ background: "rgba(74,94,58,0.1)", color: VERDE }}>
+            <span className="font-inter text-[0.65rem] tracking-[0.12em] px-3 py-1.5 rounded-full" style={{ background: "rgba(74,94,58,0.06)", color: VERDE, border: "1px solid rgba(74,94,58,0.08)" }}>
               {miembro.codigo_miembro}
             </span>
-            {miembro.empresa && (
-              <p className="font-inter text-xs mt-2" style={{ color: "#A0A090" }}>{miembro.empresa}</p>
-            )}
-            <p className="font-inter text-xs mt-1" style={{ color: "#B0B0A0" }}>
+            <p className="font-inter text-[0.7rem] mt-3" style={{ color: "#B5B5A5", letterSpacing: "0.02em" }}>
               Miembro desde {memberSince}
             </p>
           </div>
         </section>
 
-        {/* Balance card */}
+        {/* ── Balance card ── */}
         <div
-          className="mx-5 mb-5 rounded-2xl p-5"
-          style={{ background: "#fff", boxShadow: "0 1px 8px rgba(0,0,0,0.04)", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.35s" }}
+          className="mx-5 mb-5 rounded-2xl overflow-hidden"
+          style={{ background: "#fff", boxShadow: "0 1px 12px rgba(0,0,0,0.04)", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.35s" }}
         >
-          <div className="flex items-center gap-2 mb-3">
-            <DropIcon size={16} color={ACCENT} />
-            <span className="font-inter text-xs font-medium tracking-wide" style={{ color: "#8A8A7A" }}>
-              BALANCE LUMO
-            </span>
-          </div>
-          <div className="flex items-end justify-between">
-            <span className="font-cormorant font-semibold" style={{ fontSize: "2.4rem", color: "#2D2D2D", lineHeight: 1 }}>
-              ${balance.toLocaleString("es-MX")}
-            </span>
-            <button
-              onClick={() => setShowRecarga(true)}
-              className="font-inter text-xs px-4 py-2 rounded-xl spring-press"
-              style={{ background: "rgba(184,134,11,0.08)", color: TROPICAL, border: "1px solid rgba(184,134,11,0.15)" }}
-            >
-              Recargar
-            </button>
+          <div className="h-[2px]" style={{ background: `linear-gradient(90deg, ${VERDE}30, ${VERDE}60, ${VERDE}30)` }} />
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <DropIcon size={14} color={VERDE} />
+              <span className="font-inter text-[0.65rem] font-medium tracking-[0.14em] uppercase" style={{ color: "#8A8A7A" }}>
+                Balance LUMO
+              </span>
+            </div>
+            <div className="flex items-end justify-between mb-3">
+              <span className="font-cormorant font-light" style={{ fontSize: "2.6rem", color: "#1A1A1A", lineHeight: 1 }}>
+                ${balance.toLocaleString("es-MX")}
+              </span>
+              <button
+                onClick={() => setShowRecarga(true)}
+                className="font-inter text-xs px-4 py-2 rounded-full spring-press transition-all"
+                style={{ background: "rgba(74,94,58,0.06)", color: VERDE, border: "1px solid rgba(74,94,58,0.1)" }}
+              >
+                Añadir balance
+              </button>
+            </div>
+            <p className="font-inter text-[0.7rem]" style={{ color: "#A0A090" }}>
+              {balance > 0
+                ? "Disponible para tu próximo lote."
+                : "Aún no tienes Balance LUMO."}
+            </p>
           </div>
         </div>
 
-        {/* Reservar mi LUMO — CTA principal */}
-        <div className="mx-5 mb-6" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.4s" }}>
+        {/* ── Reservar mi LUMO — CTA principal ── */}
+        <div className="mx-5 mb-7" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.4s" }}>
           <button
             onClick={() => balance > 0 ? setShowReserva(true) : setShowRecarga(true)}
-            className="w-full rounded-2xl py-5 font-inter text-sm font-medium flex flex-col items-center gap-1 spring-press"
+            className="w-full rounded-2xl py-5 flex flex-col items-center gap-2 spring-press transition-all"
             style={{ background: VERDE, color: CREAM }}
           >
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2.5 font-inter text-sm font-medium tracking-wide">
               <BottleIcon size={18} color={CREAM} />
               Reservar mi LUMO
             </span>
-            <span className="font-inter text-xs opacity-70">
-              Cada lote se prepara temprano y en cantidades limitadas
+            <span className="font-inter text-[0.7rem] opacity-60">
+              Reserva tu próxima mañana
             </span>
           </button>
         </div>
 
-        {/* Active orders */}
+        {/* ── Active orders ── */}
         {groupedActivos.length > 0 && (
-          <section className="mx-5 mb-6" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.45s" }}>
-            <h2 className="font-cormorant font-semibold text-lg mb-3" style={{ color: "#2D2D2D" }}>
+          <section className="mx-5 mb-7" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.45s" }}>
+            <h2 className="font-cormorant font-light text-lg mb-3" style={{ color: "#1A1A1A" }}>
               Entregas activas
             </h2>
             <div className="flex flex-col gap-3">
@@ -475,32 +485,34 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
           </section>
         )}
 
-        {/* Empty state — no active orders */}
+        {/* ── Empty state ── */}
         {groupedActivos.length === 0 && (
-          <div className="mx-5 mb-6 rounded-2xl p-6 text-center" style={{ background: "#fff", boxShadow: "0 1px 8px rgba(0,0,0,0.04)", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.45s" }}>
-            <LeafIllustration />
-            <p className="font-cormorant text-lg mb-1" style={{ color: "#2D2D2D" }}>
-              {balance > 0 ? "Sin entregas activas" : "Tu Balance LUMO está en cero"}
+          <div className="mx-5 mb-7 rounded-2xl p-7 text-center" style={{ background: "#fff", boxShadow: "0 1px 10px rgba(0,0,0,0.03)", animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.45s" }}>
+            <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: "rgba(74,94,58,0.05)" }}>
+              <DropIcon size={18} color={`${VERDE}80`} />
+            </div>
+            <p className="font-cormorant font-light text-lg mb-1.5" style={{ color: "#1A1A1A" }}>
+              {balance > 0 ? "Sin entregas activas" : "Aún no tienes Balance LUMO"}
             </p>
-            <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
+            <p className="font-inter text-xs leading-relaxed" style={{ color: "#9A9A8A" }}>
               {balance > 0
                 ? "Reserva tu próximo LUMO cuando quieras."
-                : "Recarga tu balance para reservar tu próxima entrega."}
+                : "Puedes añadir balance o reservar directamente tu próximo LUMO."}
             </p>
           </div>
         )}
 
-        {/* Tabs */}
-        <div className="mx-5 mb-4 flex gap-1 rounded-xl p-1" style={{ background: "rgba(74,94,58,0.06)" }}>
+        {/* ── Tabs ── */}
+        <div className="mx-5 mb-4 flex gap-1 rounded-xl p-1" style={{ background: "rgba(74,94,58,0.04)" }}>
           {(["inicio", "historial", "perfil"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="flex-1 rounded-lg py-2 font-inter text-xs font-medium transition-all"
+              className="flex-1 rounded-lg py-2.5 font-inter text-xs font-medium transition-all duration-200"
               style={{
                 background: tab === t ? "#fff" : "transparent",
-                color: tab === t ? "#2D2D2D" : "#8A8A7A",
-                boxShadow: tab === t ? "0 1px 3px rgba(0,0,0,0.06)" : "none",
+                color: tab === t ? "#1A1A1A" : "#9A9A8A",
+                boxShadow: tab === t ? "0 1px 4px rgba(0,0,0,0.06)" : "none",
               }}
             >
               {t === "inicio" ? "Inicio" : t === "historial" ? "Historial" : "Mi perfil"}
@@ -958,7 +970,7 @@ function ReservaFlow({
                   className="font-inter text-sm font-medium spring-press px-5 py-2 rounded-xl"
                   style={{ background: "rgba(184,134,11,0.08)", color: TROPICAL, border: "1px solid rgba(184,134,11,0.15)" }}
                 >
-                  Recargar Balance
+                  Añadir balance
                 </button>
               </div>
             )}
@@ -1096,14 +1108,14 @@ function RecargaPlaceholder({ onClose }: { onClose: () => void }) {
   return (
     <ModalOverlay onClose={onClose}>
       <div className="text-center mb-5">
-        <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: "rgba(184,134,11,0.08)" }}>
-          <DropIcon size={22} color={ACCENT} />
+        <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: `${VERDE}10` }}>
+          <DropIcon size={22} color={VERDE} />
         </div>
-        <h2 className="font-cormorant font-semibold text-xl mb-1" style={{ color: "#2D2D2D" }}>
-          Recargar Balance
+        <h2 className="font-cormorant font-light text-xl mb-1" style={{ color: "#2D2D2D" }}>
+          Añadir Balance LUMO
         </h2>
         <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
-          Próximamente podrás recargar tu Balance LUMO desde aquí.
+          Próximamente podrás añadir balance desde aquí.
         </p>
       </div>
 
@@ -1116,10 +1128,10 @@ function RecargaPlaceholder({ onClose }: { onClose: () => void }) {
           <div
             key={amount}
             className="rounded-xl p-4 flex items-center justify-between"
-            style={{ background: "rgba(184,134,11,0.04)", border: "1px solid rgba(184,134,11,0.1)", opacity: 0.6 }}
+            style={{ background: `${VERDE}06`, border: `1px solid ${VERDE}12`, opacity: 0.6 }}
           >
             <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>{label}</span>
-            <span className="font-inter text-xs px-3 py-1 rounded-full" style={{ background: "rgba(184,134,11,0.08)", color: TROPICAL }}>
+            <span className="font-inter text-xs px-3 py-1 rounded-full" style={{ background: `${VERDE}10`, color: VERDE }}>
               Próximamente
             </span>
           </div>
@@ -1127,17 +1139,17 @@ function RecargaPlaceholder({ onClose }: { onClose: () => void }) {
       </div>
 
       <p className="font-inter text-xs text-center mb-4" style={{ color: "#A0A090" }}>
-        Mientras tanto, contáctanos por WhatsApp para recargar.
+        Mientras tanto, contáctanos por WhatsApp para añadir balance.
       </p>
       <a
-        href={`https://wa.me/${LUMO_WHATSAPP}?text=${encodeURIComponent("Hola LUMO 🍃 Me gustaría recargar mi Balance LUMO.")}`}
+        href={`https://wa.me/${LUMO_WHATSAPP}?text=${encodeURIComponent("Hola LUMO 🍃 Me gustaría añadir balance a mi cuenta.")}`}
         target="_blank"
         rel="noopener"
         className="flex items-center justify-center gap-2 w-full rounded-xl py-3 font-inter text-sm spring-press"
         style={{ background: "rgba(37,211,102,0.08)", color: "#25D366", border: "1px solid rgba(37,211,102,0.15)" }}
       >
         <WhatsAppIcon size={16} />
-        Recargar por WhatsApp
+        Añadir balance por WhatsApp
       </a>
     </ModalOverlay>
   );
