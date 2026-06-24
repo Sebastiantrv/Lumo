@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP, POLL_INTERVAL_MS } from "@/lib/constants";
 import { formatDateLabel, formatHora, formatCreatedDate, capitalize, isCutoffPassed } from "@/lib/dates";
-import html2canvas from "html2canvas";
 
 /* ---------- types ---------- */
 
@@ -321,41 +320,72 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
     if (!contentRef.current) return;
     setSharing(true);
     try {
-      const clone = contentRef.current.cloneNode(true) as HTMLElement;
+      const el = contentRef.current;
+      const w = el.offsetWidth;
+      const h = el.scrollHeight;
+      const scale = 3;
+
+      const clone = el.cloneNode(true) as HTMLElement;
       clone.querySelector(".ficha-close-btn")?.remove();
       clone.querySelector(".ficha-share-block")?.remove();
       Object.assign(clone.style, {
-        position: "fixed",
-        left: "-9999px",
-        top: "0",
-        width: `${contentRef.current.offsetWidth}px`,
-        height: "auto",
-        maxHeight: "none",
-        overflow: "visible",
-        background: "#FDFBF7",
-        zIndex: "-1",
+        width: `${w}px`, height: "auto", maxHeight: "none",
+        overflow: "visible", background: "#FDFBF7",
       });
-      clone.querySelectorAll("*").forEach((el) => {
-        const s = (el as HTMLElement).style;
+      clone.querySelectorAll("*").forEach((n) => {
+        const s = (n as HTMLElement).style;
         if (s?.animation) s.animation = "none";
         if (s?.overflow === "auto" || s?.overflowY === "auto") { s.overflow = "visible"; s.overflowY = "visible"; }
       });
-      document.body.appendChild(clone);
-      await document.fonts.ready;
-      const canvas = await html2canvas(clone, { backgroundColor: "#FDFBF7", scale: 3, useCORS: true, windowWidth: contentRef.current.offsetWidth });
-      document.body.removeChild(clone);
+
+      const styles = Array.from(document.querySelectorAll("style, link[rel='stylesheet']"))
+        .map((s) => s.outerHTML).join("");
+
+      const fonts = Array.from(document.fonts);
+      const fontCss: string[] = [];
+      for (const f of fonts) {
+        try {
+          const data = await (f as FontFace).loaded;
+          fontCss.push(`@font-face { font-family: '${data.family}'; font-weight: ${data.weight}; font-style: ${data.style}; }`);
+        } catch {}
+      }
+
+      const wrapper = document.createElement("div");
+      wrapper.appendChild(clone);
+      const html = `<div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;background:#FDFBF7">${styles}<style>${fontCss.join("")}</style>${wrapper.innerHTML}</div>`;
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(svgBlob);
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = reject;
+        img.src = url;
+      });
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w * scale;
+      canvas.height = h * scale;
+      const ctx = canvas.getContext("2d")!;
+      ctx.scale(scale, scale);
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+
       const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
       if (!blob) { setSharing(false); return; }
       const file = new File([blob], `Ficha-LUMO-${formulaNombre}.png`, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         await navigator.share({ title: `Ficha LUMO — ${formulaNombre}`, files: [file] });
       } else {
-        const url = URL.createObjectURL(blob);
+        const dlUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
-        a.href = url;
+        a.href = dlUrl;
         a.download = file.name;
         a.click();
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(dlUrl);
       }
     } catch {}
     setSharing(false);
