@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
       razon_adopcion: body.razon_adopcion ?? "",
       mejora_abierta: body.mejora_abierta || null,
       pedido_token: body.pedido_token || null,
+      numero_pedido: body.numero_pedido || null,
       submitted_at: body.submitted_at ?? new Date().toISOString(),
     });
 
@@ -64,4 +65,48 @@ export async function POST(req: NextRequest) {
     console.error("Unexpected feedback error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
+
+export async function PATCH(req: NextRequest) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const ip = req.headers.get("x-forwarded-for") ?? req.ip ?? "unknown";
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  const body = await req.json();
+  const pedidoToken = body.pedido_token;
+  const addendum = typeof body.addendum === "string" ? body.addendum.trim() : "";
+  if (!pedidoToken || !addendum) {
+    return NextResponse.json({ error: "pedido_token and addendum are required" }, { status: 400 });
+  }
+
+  const { data: existing } = await supabase
+    .from("feedback")
+    .select("id, mejora_abierta")
+    .eq("pedido_token", pedidoToken)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (!existing) {
+    return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
+  }
+
+  const updated = existing.mejora_abierta
+    ? `${existing.mejora_abierta}\n\n[Adicional] ${addendum}`
+    : `[Adicional] ${addendum}`;
+
+  const { error } = await supabase
+    .from("feedback")
+    .update({ mejora_abierta: updated })
+    .eq("id", existing.id);
+
+  if (error) {
+    return NextResponse.json({ error: "Failed to update" }, { status: 500 });
+  }
+  return NextResponse.json({ ok: true });
 }

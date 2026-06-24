@@ -249,6 +249,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   const [formulas, setFormulas] = useState<FormulaWithIngredients[]>([]);
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [movimientos, setMovimientos] = useState<Movimiento[]>([]);
+  const [feedbackTokens, setFeedbackTokens] = useState<Set<string>>(new Set());
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showReserva, setShowReserva] = useState(false);
@@ -294,7 +295,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
       return;
     }
 
-    const [{ data: f }, { data: recetas }, { data: p }, { data: m }] = await Promise.all([
+    const [{ data: f }, { data: recetas }, { data: p }, { data: m }, { data: fbData }] = await Promise.all([
       supabase.from("formulas").select("id, nombre, slug, color_acento, precio").order("nombre"),
       supabase.from("recetas").select("formula_id, ingredientes(nombre)"),
       supabase
@@ -307,6 +308,10 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
         .select("id, tipo, monto, descripcion, referencia_pedido, created_at")
         .eq("cliente_id", miembro.id)
         .order("created_at", { ascending: false }),
+      supabase
+        .from("feedback")
+        .select("pedido_token")
+        .not("pedido_token", "is", null),
     ]);
 
     const formulasWithIng: FormulaWithIngredients[] = ((f ?? []) as unknown as Formula[]).map((formula) => {
@@ -321,6 +326,9 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
     setFormulas(formulasWithIng);
     setPedidos((p ?? []) as unknown as Pedido[]);
     setMovimientos((m ?? []) as unknown as Movimiento[]);
+    const tokens = (p ?? []).map((ped: { token: string | null }) => ped.token).filter(Boolean) as string[];
+    const fbTokenSet = new Set((fbData ?? []).map((fb: { pedido_token: string }) => fb.pedido_token).filter((t: string) => tokens.includes(t)));
+    setFeedbackTokens(fbTokenSet);
     setBalance((m ?? []).reduce((s: number, mov: { monto: number }) => s + mov.monto, 0));
     setLoading(false);
   }, [miembro.id, onLogout]);
@@ -542,11 +550,23 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
                   </div>
                   {p.token && (
                     <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-                      <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>Entregado</span>
-                      <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
-                        Cuéntanos tu experiencia
-                        <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-                      </span>
+                      {feedbackTokens.has(p.token) ? (
+                        <>
+                          <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
+                            <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                            Retroalimentación enviada
+                          </span>
+                          <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>Gracias</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>Entregado</span>
+                          <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
+                            Cuéntanos tu experiencia
+                            <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                 </Link>
@@ -583,7 +603,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
         <div style={{ animation: "lumoFadeIn 0.3s ease both" }} key={tab}>
           {tab === "historial" && (
-            <HistorialTab pedidos={pedidosHistorial} movimientos={movimientos} />
+            <HistorialTab pedidos={pedidosHistorial} movimientos={movimientos} feedbackTokens={feedbackTokens} />
           )}
 
           {tab === "perfil" && (
@@ -1554,7 +1574,7 @@ function ConciergeSection({ miembro, pedidos, formulas, onReservar }: {
 }
 
 /* ── Historial tab ── */
-function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos: Movimiento[] }) {
+function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedido[]; movimientos: Movimiento[]; feedbackTokens: Set<string> }) {
   const [section, setSection] = useState<"entregas" | "balance">("entregas");
 
   const hasPedidos = pedidos.length > 0;
@@ -1620,11 +1640,23 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
               </div>
               {p.estado === "entregado" && p.token && (
                 <div className="flex items-center justify-between mt-2.5 pt-2.5" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
-                  <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>Entregado</span>
-                  <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
-                    Cuéntanos tu experiencia
-                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
-                  </span>
+                  {feedbackTokens.has(p.token) ? (
+                    <>
+                      <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
+                        <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        Retroalimentación enviada
+                      </span>
+                      <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>Gracias</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>Entregado</span>
+                      <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
+                        Cuéntanos tu experiencia
+                        <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+                      </span>
+                    </>
+                  )}
                 </div>
               )}
               {p.estado === "cancelado" && (

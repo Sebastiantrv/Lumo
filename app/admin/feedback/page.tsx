@@ -18,6 +18,8 @@ type Feedback = {
   submitted_at: string;
   created_at: string;
   formula_asignada: string | null;
+  numero_pedido: number | null;
+  pedido_token: string | null;
 };
 
 type ClienteConFormula = {
@@ -241,6 +243,9 @@ function FeedbackCard({ fb, matchedFormula, formulaNames, onAsignar, showPendien
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <span className="font-inter text-sm font-medium truncate" style={{ color: "#F5F0E8" }}>{fb.nombre}</span>
+          {fb.numero_pedido && (
+            <span className="font-inter text-xs px-1.5 py-0.5 rounded shrink-0" style={{ background: "rgba(255,255,255,0.06)", color: "#8A8A8A" }}>#{fb.numero_pedido}</span>
+          )}
           {matchedFormula && !editing && (
             <button
               onClick={() => setEditing(true)}

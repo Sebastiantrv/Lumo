@@ -174,6 +174,7 @@ export default function MiPedidoPage({
   const [adjustDate, setAdjustDate] = useState("");
   const [adjustSending, setAdjustSending] = useState(false);
   const [adjustSent, setAdjustSent] = useState(false);
+  const [hasFeedback, setHasFeedback] = useState(false);
 
   useEffect(() => {
     document.documentElement.style.backgroundColor = "#F4EFE7";
@@ -211,7 +212,17 @@ export default function MiPedidoPage({
       setPedidos(data as unknown as Pedido[]);
     }
 
+    async function checkFeedback() {
+      const { data } = await supabase
+        .from("feedback")
+        .select("id")
+        .eq("pedido_token", token)
+        .limit(1);
+      if (data && data.length > 0) setHasFeedback(true);
+    }
+
     fetchPedidos();
+    checkFeedback();
     const interval = setInterval(fetchPedidos, POLL_INTERVAL_MS);
     return () => clearInterval(interval);
   }, [token]);
@@ -615,17 +626,28 @@ export default function MiPedidoPage({
                 gap: 6,
                 padding: "10px 20px",
                 borderRadius: 100,
-                background: "#1A1A1A",
-                color: "#F4EFE7",
+                background: hasFeedback ? "rgba(74,94,58,0.08)" : "#1A1A1A",
+                color: hasFeedback ? "#4A5E3A" : "#F4EFE7",
                 fontSize: 13,
                 fontWeight: 500,
                 textDecoration: "none",
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-              </svg>
-              Mi experiencia
+              {hasFeedback ? (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  Retroalimentación enviada
+                </>
+              ) : (
+                <>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                  </svg>
+                  Mi experiencia
+                </>
+              )}
             </a>
           )}
 

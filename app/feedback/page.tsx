@@ -59,7 +59,7 @@ const RECOMENDACION_OPTIONS = [
   "No lo recomendaría todavía",
 ];
 
-const PRECIO_OPTIONS = ["$65", "$75", "$85", "$95+"];
+const PRECIO_OPTIONS = ["$75", "$85", "$95+"];
 
 const RAZON_OPTIONS = [
   "Cuidar mejor lo que consumo",
@@ -85,6 +85,10 @@ function FeedbackContent() {
   const [direction, setDirection] = useState<"forward" | "backward">("forward");
   const [animKey, setAnimKey] = useState(0);
   const [clientName, setClientName] = useState("");
+  const [numeroPedido, setNumeroPedido] = useState<number | null>(null);
+  const [existingFeedback, setExistingFeedback] = useState(false);
+  const [addendum, setAddendum] = useState("");
+  const [addendumSent, setAddendumSent] = useState(false);
   const [data, setData] = useState<FormData>({
     nombre: "",
     sabor_rating: 0,
@@ -100,18 +104,27 @@ function FeedbackContent() {
 
   useEffect(() => {
     if (!pedidoToken) return;
-    supabase
-      .from("pedidos")
-      .select("clientes(nombre)")
-      .eq("token", pedidoToken)
-      .single()
-      .then(({ data }) => {
-        const nombre = (data as { clientes: { nombre: string } | null } | null)?.clientes?.nombre;
-        if (nombre) {
-          setClientName(nombre);
-          setData((d) => ({ ...d, nombre }));
-        }
-      });
+    (async () => {
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("clientes(nombre), numero_pedido")
+        .eq("token", pedidoToken)
+        .single();
+      const nombre = (pedido as { clientes: { nombre: string } | null; numero_pedido: number | null } | null)?.clientes?.nombre;
+      const numPedido = (pedido as { numero_pedido: number | null } | null)?.numero_pedido ?? null;
+      if (nombre) {
+        setClientName(nombre);
+        setData((d) => ({ ...d, nombre }));
+      }
+      if (numPedido) setNumeroPedido(numPedido);
+
+      const { data: existing } = await supabase
+        .from("feedback")
+        .select("id")
+        .eq("pedido_token", pedidoToken)
+        .limit(1);
+      if (existing && existing.length > 0) setExistingFeedback(true);
+    })();
   }, [pedidoToken]);
 
   function goTo(next: number, dir: "forward" | "backward") {
@@ -152,6 +165,7 @@ function FeedbackContent() {
     const payload = {
       ...data,
       pedido_token: pedidoToken || null,
+      numero_pedido: numeroPedido || null,
       recomendacion: data.recomendacion.join(" | "),
       razon_adopcion: data.razon_adopcion.join(" | "),
       mejora_abierta: data.mejora_abierta.trim() || null,
@@ -211,7 +225,75 @@ function FeedbackContent() {
             </div>
           )}
 
-          <div key={animKey} style={animStyle}>
+          {/* Already submitted */}
+          {existingFeedback && step === 0 && (
+            <div className="flex flex-col gap-6" style={{ animation: "stepInRight 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
+              <div className="flex flex-col gap-4">
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(74,94,58,0.12)", border: "1.5px solid #4A5E3A" }}
+                >
+                  <CheckIcon />
+                </div>
+                <h2
+                  className="font-cormorant font-light"
+                  style={{ fontSize: "clamp(2rem, 8vw, 3rem)", lineHeight: 1.1, color: T.text }}
+                >
+                  Ya recibimos tu retroalimentación{numeroPedido ? ` del pedido #${numeroPedido}` : ""}.
+                </h2>
+                <p className="font-inter leading-relaxed" style={{ fontSize: "clamp(0.85rem, 3.3vw, 1rem)", color: T.textSub }}>
+                  Si quieres agregar algo más, escríbelo aquí abajo.
+                </p>
+              </div>
+              {addendumSent ? (
+                <div className="flex flex-col gap-4 items-center">
+                  <p className="font-inter text-sm" style={{ color: T.green }}>Comentario adicional enviado. Gracias.</p>
+                  <Link
+                    href="/"
+                    className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
+                    style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: T.btnPrimary, color: T.btnText }}
+                  >
+                    Volver a LUMO <span aria-hidden="true">→</span>
+                  </Link>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  <LightTextarea
+                    placeholder="Comentario adicional (opcional)"
+                    value={addendum}
+                    onChange={setAddendum}
+                  />
+                  <button
+                    onClick={async () => {
+                      if (!addendum.trim()) return;
+                      try {
+                        await fetch("/api/feedback", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ pedido_token: pedidoToken, addendum: addendum.trim() }),
+                        });
+                      } catch {}
+                      setAddendumSent(true);
+                    }}
+                    disabled={!addendum.trim()}
+                    className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press disabled:opacity-40"
+                    style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: T.btnPrimary, color: T.btnText }}
+                  >
+                    Enviar comentario <span aria-hidden="true">→</span>
+                  </button>
+                  <Link
+                    href="/"
+                    className="w-full inline-flex items-center justify-center font-inter spring-press py-2"
+                    style={{ fontSize: "clamp(0.82rem, 3.2vw, 0.95rem)", color: T.textSub }}
+                  >
+                    ← Volver a LUMO
+                  </Link>
+                </div>
+              )}
+            </div>
+          )}
+
+          {(!existingFeedback || step > 0) && <div key={animKey} style={animStyle}>
             {/* 0: Intro */}
             {step === 0 && (
               <div className="flex flex-col gap-8">
@@ -431,7 +513,7 @@ function FeedbackContent() {
                 </div>
               </div>
             )}
-          </div>
+          </div>}
         </div>
       </section>
       </main>
