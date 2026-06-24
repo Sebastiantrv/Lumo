@@ -335,8 +335,10 @@ function FichaMiembro({ cliente, stats, movimientos, balance, onClose, onEditar,
   onClose: () => void; onEditar: () => void; onPedido: () => void; onRecarga: () => void; onReload: () => void;
 }) {
   const [toggling, setToggling] = useState(false);
+  const [catLocal, setCatLocal] = useState(cliente.categoria ?? (cliente.empresa ? "empresa" : "amigo"));
   async function handleToggleActivo() { setToggling(true); await adminWrite("clientes", "update", { activo: !cliente.activo }, [{ column: "id", value: cliente.id }]); onReload(); setToggling(false); }
   async function handleEliminar() { if (!window.confirm(`¿Eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`)) return; await adminWrite("clientes", "delete", {}, [{ column: "id", value: cliente.id }]); onClose(); onReload(); }
+  async function handleCatChange(cat: string) { setCatLocal(cat); await adminWrite("clientes", "update", { categoria: cat }, [{ column: "id", value: cliente.id }]); onReload(); }
   const miembroDesde = new Date(cliente.created_at).toLocaleDateString("es-MX", { month: "long", year: "numeric" });
 
   return (
@@ -355,7 +357,6 @@ function FichaMiembro({ cliente, stats, movimientos, balance, onClose, onEditar,
                 <h2 className="font-cormorant text-xl" style={{ color: "#F5F0E8" }}>{cliente.nombre}</h2>
                 <div className="flex items-center gap-2 mt-0.5">
                   {cliente.codigo_miembro && <span className="font-inter text-xs font-medium" style={{ color: "#B8860B" }}>{cliente.codigo_miembro}</span>}
-                  {(() => { const cat = cliente.categoria ?? (cliente.empresa ? "empresa" : "amigo"); const catLabel = cat === "empresa" ? "Empresa" : cat === "vecino" ? "Vecino" : "Amigo"; const catColor = cat === "empresa" ? "#4A5E3A" : cat === "vecino" ? "#B8860B" : "#8A8A8A"; return <span className="font-inter text-[0.65rem] px-1.5 py-0.5 rounded" style={{ background: `${catColor}15`, color: catColor }}>{catLabel}</span>; })()}
                   <span className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Miembro desde {miembroDesde}</span>
                 </div>
               </div>
@@ -373,6 +374,32 @@ function FichaMiembro({ cliente, stats, movimientos, balance, onClose, onEditar,
             )}
             {cliente.email && <span className="font-inter text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", color: "#8A8A8A" }}>{cliente.email}</span>}
             {cliente.empresa && <span className="font-inter text-xs px-3 py-2 rounded-lg" style={{ background: "rgba(255,255,255,0.04)", color: "#8A8A8A" }}>{cliente.empresa}</span>}
+          </div>
+        </div>
+
+        {/* Quick category selector */}
+        <div className="px-6 py-3" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <p className="font-inter text-[0.65rem] uppercase tracking-widest mb-2" style={{ color: "#555" }}>Categoría</p>
+          <div className="flex gap-1.5">
+            {([
+              { id: "empresa", label: "Empresa", color: "#4A5E3A" },
+              { id: "vecino", label: "Vecino", color: "#B8860B" },
+              { id: "amigo", label: "Amigo / Otro", color: "#8A8A8A" },
+            ] as const).map((cat) => {
+              const active = catLocal === cat.id;
+              return (
+                <button key={cat.id} onClick={() => handleCatChange(cat.id)}
+                  className="flex-1 rounded-lg py-1.5 font-inter text-xs transition-all"
+                  style={{
+                    background: active ? `${cat.color}20` : "rgba(255,255,255,0.03)",
+                    border: active ? `1px solid ${cat.color}50` : "1px solid rgba(255,255,255,0.06)",
+                    color: active ? cat.color : "#555",
+                    fontWeight: active ? 500 : 400,
+                  }}>
+                  {cat.label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
