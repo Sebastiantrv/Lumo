@@ -687,8 +687,24 @@ function ReservaFlow({
   if (success) {
     const newBalance = balance - total;
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: CREAM, overscrollBehavior: "none" }}>
-        <div className="flex-1 flex flex-col items-center justify-center px-6">
+      <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: CREAM, overscrollBehavior: "none" }}>
+        {/* Botanical corner detail */}
+        <div className="absolute top-0 right-0 pointer-events-none" style={{ opacity: 0.12, animation: "lumoFadeUp 1.2s ease 0.2s both" }}>
+          <svg width="180" height="220" viewBox="0 0 180 220" fill="none" style={{ transform: "translate(30px, -20px) rotate(15deg)" }}>
+            <path d="M90 210C90 210 85 160 75 130C65 100 40 75 30 60C20 45 15 25 20 15C25 5 35 10 40 20C45 30 50 55 60 75C70 95 80 120 85 145" stroke={VERDE} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+            <ellipse cx="20" cy="15" rx="18" ry="10" transform="rotate(-35 20 15)" fill={VERDE} opacity="0.3" />
+            <ellipse cx="35" cy="40" rx="16" ry="9" transform="rotate(-20 35 40)" fill={VERDE} opacity="0.25" />
+            <ellipse cx="50" cy="68" rx="15" ry="8" transform="rotate(-10 50 68)" fill={VERDE} opacity="0.2" />
+            <ellipse cx="65" cy="95" rx="14" ry="8" transform="rotate(5 65 95)" fill={VERDE} opacity="0.18" />
+            <ellipse cx="78" cy="120" rx="13" ry="7" transform="rotate(15 78 120)" fill={VERDE} opacity="0.15" />
+            <path d="M95 200C95 200 100 165 110 140C120 115 140 95 150 85C160 75 170 65 168 55C166 45 155 48 150 58C145 68 135 90 125 110C115 130 105 155 100 175" stroke={VERDE} strokeWidth="1.2" strokeLinecap="round" fill="none" />
+            <ellipse cx="168" cy="55" rx="15" ry="8" transform="rotate(35 168 55)" fill={VERDE} opacity="0.22" />
+            <ellipse cx="152" cy="80" rx="14" ry="7" transform="rotate(20 152 80)" fill={VERDE} opacity="0.18" />
+            <ellipse cx="138" cy="105" rx="12" ry="7" transform="rotate(10 138 105)" fill={VERDE} opacity="0.15" />
+          </svg>
+        </div>
+
+        <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
           <div style={{ animation: "lumoFadeUp 0.8s ease both" }} className="text-center max-w-sm md:max-w-md">
             <div
               className="w-16 h-16 rounded-full mx-auto mb-5 flex items-center justify-center"
@@ -1031,6 +1047,20 @@ function ReservaFlow({
 }
 
 /* ── Formula card (premium editorial, multi-select) ── */
+const BOTTLE_IMAGES: Record<string, string> = {
+  "verde-fresco": "/bottle-verde.png",
+  "rojo-vital": "/bottle-rojo.png",
+  "tropical-hydrate": "/bottle-tropical.png",
+};
+
+function getBottleImage(slug: string): string | null {
+  if (BOTTLE_IMAGES[slug]) return BOTTLE_IMAGES[slug];
+  for (const [key, val] of Object.entries(BOTTLE_IMAGES)) {
+    if (slug.includes(key.split("-")[0])) return val;
+  }
+  return null;
+}
+
 function FormulaCard({ formula, cantidad, delay, onAdd, onRemove }: {
   formula: FormulaWithIngredients;
   cantidad: number;
@@ -1040,6 +1070,7 @@ function FormulaCard({ formula, cantidad, delay, onAdd, onRemove }: {
 }) {
   const color = formula.color_acento;
   const selected = cantidad > 0;
+  const bottleImg = getBottleImage(formula.slug);
   return (
     <div
       className="rounded-2xl text-left relative overflow-hidden transition-all duration-200"
@@ -1054,49 +1085,63 @@ function FormulaCard({ formula, cantidad, delay, onAdd, onRemove }: {
       {/* Top accent line */}
       <div className="h-[2px] transition-all duration-200" style={{ background: selected ? `linear-gradient(90deg, ${color}40, ${color}80, ${color}40)` : `linear-gradient(90deg, ${color}10, ${color}20, ${color}10)` }} />
 
-      <div className="p-5 relative">
+      <div className="p-4 relative">
         {/* Color accent — subtle halo top-right */}
         <div className="absolute top-0 right-0 w-24 h-24 rounded-full pointer-events-none" style={{ background: color, opacity: 0.04, transform: "translate(30%, -40%)", filter: "blur(16px)" }} />
 
-        <div className="relative z-10">
-          <div className="flex items-center gap-2 mb-1.5">
-            <div className="w-2 h-2 rounded-full" style={{ background: color }} />
-            <h3 className="font-cormorant font-light text-[1.15rem]" style={{ color: "#1A1A1A" }}>
-              {formula.nombre}
-            </h3>
-          </div>
-
-          {formula.ingredientes.length > 0 && (
-            <p className="font-inter text-[0.7rem] mb-2 flex items-center gap-1" style={{ color: "#9A9A8A" }}>
-              <LeafIcon size={11} color="#9A9A8A" />
-              {formula.ingredientes.join(" · ")}
-            </p>
+        <div className="relative z-10 flex gap-3">
+          {/* Bottle image */}
+          {bottleImg && (
+            <div className="flex-shrink-0 flex items-center justify-center" style={{ width: 56 }}>
+              <img
+                src={bottleImg}
+                alt={formula.nombre}
+                className="object-contain drop-shadow-sm"
+                style={{ height: 80, width: "auto", opacity: 0.92 }}
+              />
+            </div>
           )}
 
-          <p className="font-inter text-[0.7rem] italic mb-3" style={{ color: "#B0B0A0" }}>
-            {formula.descripcion}
-          </p>
+          {/* Content */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: color }} />
+              <h3 className="font-cormorant font-light text-[1.15rem] truncate" style={{ color: "#1A1A1A" }}>
+                {formula.nombre}
+              </h3>
+            </div>
 
-          <div className="flex items-center justify-between">
-            <span className="font-inter text-[0.7rem]" style={{ color: "#9A9A8A" }}>
-              ${formula.precio} por botella
-            </span>
-
-            {selected ? (
-              <div className="flex items-center gap-2">
-                <button onClick={onRemove} className="w-8 h-8 rounded-xl flex items-center justify-center spring-press" style={{ background: `${color}06`, border: `1px solid ${color}12` }}>
-                  <span style={{ color, fontSize: "1.1rem" }}>−</span>
-                </button>
-                <span className="font-cormorant font-light text-lg w-6 text-center" style={{ color: "#1A1A1A" }}>{cantidad}</span>
-                <button onClick={onAdd} className="w-8 h-8 rounded-xl flex items-center justify-center spring-press" style={{ background: `${color}06`, border: `1px solid ${color}12` }}>
-                  <span style={{ color, fontSize: "1.1rem" }}>+</span>
-                </button>
-              </div>
-            ) : (
-              <button onClick={onAdd} className="font-inter text-[0.7rem] px-3.5 py-1.5 rounded-full spring-press" style={{ background: `${color}06`, color, border: `1px solid ${color}12` }}>
-                Agregar
-              </button>
+            {formula.ingredientes.length > 0 && (
+              <p className="font-inter text-[0.7rem] mb-1.5" style={{ color: "#9A9A8A" }}>
+                {formula.ingredientes.join(" · ")}
+              </p>
             )}
+
+            <p className="font-inter text-[0.7rem] italic mb-2.5" style={{ color: "#B0B0A0" }}>
+              {formula.descripcion}
+            </p>
+
+            <div className="flex items-center justify-between">
+              <span className="font-inter text-[0.7rem]" style={{ color: "#9A9A8A" }}>
+                ${formula.precio} por botella
+              </span>
+
+              {selected ? (
+                <div className="flex items-center gap-2">
+                  <button onClick={onRemove} className="w-8 h-8 rounded-xl flex items-center justify-center spring-press" style={{ background: `${color}06`, border: `1px solid ${color}12` }}>
+                    <span style={{ color, fontSize: "1.1rem" }}>−</span>
+                  </button>
+                  <span className="font-cormorant font-light text-lg w-6 text-center" style={{ color: "#1A1A1A" }}>{cantidad}</span>
+                  <button onClick={onAdd} className="w-8 h-8 rounded-xl flex items-center justify-center spring-press" style={{ background: `${color}06`, border: `1px solid ${color}12` }}>
+                    <span style={{ color, fontSize: "1.1rem" }}>+</span>
+                  </button>
+                </div>
+              ) : (
+                <button onClick={onAdd} className="font-inter text-[0.7rem] px-3.5 py-1.5 rounded-full spring-press" style={{ background: `${color}06`, color, border: `1px solid ${color}12` }}>
+                  Agregar
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

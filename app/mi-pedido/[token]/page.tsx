@@ -49,7 +49,7 @@ function EstadoBadge({ estado }: { estado: string }) {
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={c.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M5 13l4 4L19 7" />
       </svg>
-      <span className="font-inter" style={{ fontSize: 13, fontWeight: 600, color: c.color, letterSpacing: "0.02em" }}>
+      <span className="font-inter" style={{ fontSize: 12, fontWeight: 500, color: c.color, letterSpacing: "0.03em" }}>
         {c.label}
       </span>
     </div>
@@ -360,11 +360,12 @@ export default function MiPedidoPage({
       <h1
         className="font-cormorant"
         style={{
-          fontSize: 38,
-          fontWeight: 400,
+          fontSize: 34,
+          fontWeight: 300,
           color: "#1A1A1A",
           margin: 0,
           textAlign: "center",
+          letterSpacing: "-0.01em",
           animation: "pedidoFadeUp 0.7s ease 0.1s both",
         }}
       >
@@ -373,10 +374,11 @@ export default function MiPedidoPage({
       <p
         className="font-inter"
         style={{
-          color: "#8A8580",
-          fontSize: 15,
+          color: "#9A9490",
+          fontSize: 13,
           marginTop: 8,
           marginBottom: 12,
+          letterSpacing: "0.02em",
           animation: "pedidoFadeUp 0.7s ease 0.2s both",
         }}
       >
@@ -407,57 +409,58 @@ export default function MiPedidoPage({
       >
         {/* Formula lines (grouped) */}
         {(() => {
-          const grouped = pedidos.reduce<{ nombre: string; color: string; cantidad: number }[]>((acc, ped) => {
+          const bottleMap: Record<string, string> = {
+            "verde-fresco": "/bottle-verde.png",
+            "rojo-vital": "/bottle-rojo.png",
+            "tropical-hydrate": "/bottle-tropical.png",
+          };
+          function getBottle(slug: string): string | null {
+            if (bottleMap[slug]) return bottleMap[slug];
+            for (const [key, val] of Object.entries(bottleMap)) {
+              if (slug.includes(key.split("-")[0])) return val;
+            }
+            return null;
+          }
+
+          const grouped = pedidos.reduce<{ nombre: string; color: string; cantidad: number; slug: string }[]>((acc, ped) => {
             const name = ped.formulas?.nombre ?? "Formula";
             const existing = acc.find((g) => g.nombre === name);
             if (existing) {
               existing.cantidad += ped.cantidad ?? 1;
             } else {
-              acc.push({ nombre: name, color: ped.formulas?.color_acento ?? "#4A5E3A", cantidad: ped.cantidad ?? 1 });
+              acc.push({ nombre: name, color: ped.formulas?.color_acento ?? "#4A5E3A", cantidad: ped.cantidad ?? 1, slug: ped.formulas?.slug ?? "" });
             }
             return acc;
           }, []);
           const isSingle = grouped.length === 1;
 
-          return grouped.map((g, idx) => (
-            <div key={g.nombre} style={{ marginBottom: idx < grouped.length - 1 ? 12 : 6 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
-                <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
-                  <div
-                    style={{
-                      position: "absolute",
-                      inset: -3,
-                      borderRadius: "50%",
-                      background: g.color,
-                      animation: `accentPulse 3s ease-in-out ${idx * 0.8}s infinite`,
-                      opacity: 0.3,
-                    }}
-                  />
-                  <div
-                    style={{
-                      position: "relative",
-                      width: 12,
-                      height: 12,
-                      borderRadius: "50%",
-                      background: g.color,
-                      boxShadow: `0 0 8px ${g.color}44`,
-                    }}
-                  />
+          return grouped.map((g, idx) => {
+            const bottleImg = getBottle(g.slug);
+            return (
+              <div key={g.nombre} style={{ marginBottom: idx < grouped.length - 1 ? 12 : 6 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 2 }}>
+                  {bottleImg ? (
+                    <img src={bottleImg} alt={g.nombre} style={{ width: 32, height: 48, objectFit: "contain", opacity: 0.9, flexShrink: 0 }} />
+                  ) : (
+                    <div style={{ position: "relative", width: 12, height: 12, flexShrink: 0 }}>
+                      <div style={{ position: "absolute", inset: -3, borderRadius: "50%", background: g.color, animation: `accentPulse 3s ease-in-out ${idx * 0.8}s infinite`, opacity: 0.3 }} />
+                      <div style={{ position: "relative", width: 12, height: 12, borderRadius: "50%", background: g.color, boxShadow: `0 0 8px ${g.color}44` }} />
+                    </div>
+                  )}
+                  <div>
+                    <span className="font-cormorant" style={{ fontSize: isSingle ? 24 : 20, fontWeight: 300, color: "#1A1A1A", display: "block" }}>
+                      {g.nombre}
+                    </span>
+                    {(!isSingle || g.cantidad > 1) && (
+                      <span className="font-inter" style={{ fontSize: 12, color: "#9A9490" }}>
+                        {g.cantidad} {g.cantidad === 1 ? "botella" : "botellas"}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <span
-                  className="font-cormorant"
-                  style={{ fontSize: isSingle ? 26 : 22, fontWeight: 600, color: "#1A1A1A" }}
-                >
-                  {g.nombre}
-                </span>
-                {(!isSingle || g.cantidad > 1) && (
-                  <span className="font-inter" style={{ fontSize: 13, color: "#9A9490", marginLeft: "auto" }}>
-                    ×{g.cantidad}
-                  </span>
-                )}
               </div>
-            </div>
-          ));
+            );
+          });
         })()}
 
         {/* Details row */}
@@ -744,7 +747,7 @@ export default function MiPedidoPage({
           >
             {adjustStep === "choose" && (
               <>
-                <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 6 }}>
+                <h2 className="font-cormorant" style={{ fontSize: 24, fontWeight: 300, color: "#1A1A1A", marginBottom: 6 }}>
                   Ajustar pedido
                 </h2>
                 <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 24 }}>
@@ -804,7 +807,7 @@ export default function MiPedidoPage({
 
             {adjustStep === "date" && (
               <>
-                <h2 className="font-cormorant" style={{ fontSize: 24, color: "#1A1A1A", marginBottom: 6 }}>
+                <h2 className="font-cormorant" style={{ fontSize: 24, fontWeight: 300, color: "#1A1A1A", marginBottom: 6 }}>
                   Nueva fecha
                 </h2>
                 <p className="font-inter" style={{ fontSize: 13, color: "#8A8580", marginBottom: 20 }}>
