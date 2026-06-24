@@ -349,7 +349,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
     );
   }
 
-  const groupedActivos = groupByToken(pedidosActivos);
+  const groupedActivos = groupByToken(pedidosActivos).sort((a, b) => a.diaEntrega.localeCompare(b.diaEntrega));
 
   // Reservation flow takes over the screen
   if (showReserva) {
@@ -1369,15 +1369,23 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
                   {p.numero_pedido && <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>#{p.numero_pedido}</span>}
                 </div>
               </div>
-              <span
-                className="font-inter text-xs px-2 py-0.5 rounded-full flex-shrink-0"
-                style={{
-                  background: p.estado === "entregado" ? "rgba(109,191,103,0.1)" : p.estado === "cancelado" ? "rgba(122,32,48,0.08)" : "rgba(184,134,11,0.08)",
-                  color: p.estado === "entregado" ? "#6DBF67" : p.estado === "cancelado" ? ROJO : TROPICAL,
-                }}
-              >
-                {estadoLabel[p.estado] ?? p.estado}
-              </span>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                <span
+                  className="font-inter text-xs px-2 py-0.5 rounded-full"
+                  style={{
+                    background: p.estado === "entregado" ? "rgba(109,191,103,0.1)" : p.estado === "cancelado" ? "rgba(122,32,48,0.08)" : "rgba(184,134,11,0.08)",
+                    color: p.estado === "entregado" ? "#6DBF67" : p.estado === "cancelado" ? ROJO : TROPICAL,
+                  }}
+                >
+                  {estadoLabel[p.estado] ?? p.estado}
+                </span>
+                {p.estado === "entregado" && p.token && (
+                  <span className="font-inter text-xs flex items-center gap-0.5" style={{ color: VERDE }}>
+                    Mi experiencia
+                    <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+                  </span>
+                )}
+              </div>
             </Link>
           ))
         )}

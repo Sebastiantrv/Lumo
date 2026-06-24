@@ -73,16 +73,23 @@ export default function SemanaPage() {
     await load(true);
   }
 
-  async function avanzarEstado(ids: string[], estadoActual: string, horaEntrega?: string) {
-    const siguiente =
+  async function avanzarEstado(ids: string[], estadoActual: string, horaEntrega?: string, targetEstado?: string) {
+    const siguiente = targetEstado ?? (
       estadoActual === "pendiente" ? "confirmado"
       : estadoActual === "confirmado" ? "preparado"
       : estadoActual === "preparado" ? "entregado"
-      : "pendiente";
+      : "pendiente"
+    );
 
-    const payload: Record<string, string> = { estado: siguiente };
-    if (siguiente === "preparado") payload.hora_preparado = new Date().toISOString();
-    if (siguiente === "entregado" && horaEntrega) payload.hora_entrega_estimada = horaEntrega;
+    const payload: Record<string, unknown> = { estado: siguiente };
+    if (siguiente === "preparado") {
+      payload.hora_preparado = new Date().toISOString();
+      if (horaEntrega) payload.hora_entrega_estimada = horaEntrega;
+    }
+    if (siguiente === "pendiente") {
+      payload.hora_preparado = null;
+      payload.hora_entrega_estimada = null;
+    }
 
     await Promise.all(ids.map((id) => adminWrite("pedidos", "update", payload, [{ column: "id", value: id }])));
     await load(true);
@@ -187,7 +194,7 @@ export default function SemanaPage() {
                           onAplazar={(fecha) => aplazar(ids, fecha)}
                           onMoverFecha={(fecha) => moverFecha(ids, fecha)}
                           onCambiarFormula={cambiarFormula}
-                          onAvanzarEstado={(hora) => avanzarEstado(ids, group[0].estado, hora)}
+                          onAvanzarEstado={(hora, target) => avanzarEstado(ids, group[0].estado, hora, target)}
                           showAplazarPicker={aplazarPickerFor === groupKey}
                           onOpenAplazar={() => setAplazarPickerFor(groupKey)}
                           onCloseAplazar={() => setAplazarPickerFor(null)}
@@ -217,7 +224,7 @@ function PedidoRow({
   onAplazar: (fecha: string) => void;
   onMoverFecha: (fecha: string) => void;
   onCambiarFormula: (id: string, formulaId: string) => void;
-  onAvanzarEstado: (hora?: string) => void;
+  onAvanzarEstado: (hora?: string, targetEstado?: string) => void;
   showAplazarPicker: boolean;
   onOpenAplazar: () => void;
   onCloseAplazar: () => void;
@@ -226,6 +233,7 @@ function PedidoRow({
   onCloseMover: () => void;
 }) {
   const [showDeliveryPicker, setShowDeliveryPicker] = useState(false);
+  const [showEstadoMenu, setShowEstadoMenu] = useState(false);
   const first = group[0];
   const tipo = first.tipo_pedido ?? "normal";
   const rechazado = first.estado_extra === "rechazado";
@@ -307,26 +315,13 @@ function PedidoRow({
             <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲</span>
           )}
           <TipoBadge tipo={tipo} />
-          {first.estado !== "entregado" && first.estado !== "cancelado" ? (
-            <button
-              onClick={() => {
-                if (first.estado === "confirmado") {
-                  setShowDeliveryPicker(!showDeliveryPicker);
-                } else {
-                  onAvanzarEstado();
-                }
-              }}
-              className="font-inter text-xs px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-80"
-              style={estadoBadge(first.estado)}
-              title="Avanzar estado"
-            >
-              {first.estado} →
-            </button>
-          ) : (
-            <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={estadoBadge(first.estado)}>
-              {first.estado}
-            </span>
-          )}
+          <button
+            onClick={() => setShowEstadoMenu(!showEstadoMenu)}
+            className="font-inter text-xs px-2 py-0.5 rounded-full cursor-pointer transition-opacity hover:opacity-80"
+            style={estadoBadge(first.estado)}
+          >
+            {first.estado} ▾
+          </button>
         </div>
       </div>
 
@@ -411,6 +406,33 @@ function PedidoRow({
         </div>
       )}
 
+      {showEstadoMenu && !showDeliveryPicker && (
+        <div className="flex items-center gap-1.5 mt-1">
+          {(["pendiente", "confirmado", "preparado", "entregado"] as const).map((e) => (
+            <button
+              key={e}
+              onClick={() => {
+                if (e === first.estado) { setShowEstadoMenu(false); return; }
+                if (e === "preparado" && first.estado !== "preparado") {
+                  setShowDeliveryPicker(true);
+                } else {
+                  setShowEstadoMenu(false);
+                  onAvanzarEstado(undefined, e);
+                }
+              }}
+              className="rounded-lg px-2.5 py-1 font-inter text-xs"
+              style={e === first.estado
+                ? { background: "rgba(255,255,255,0.12)", color: "#F5F0E8", border: "1px solid rgba(255,255,255,0.2)" }
+                : { background: "rgba(255,255,255,0.04)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.08)" }
+              }
+            >
+              {e}
+            </button>
+          ))}
+          <button onClick={() => setShowEstadoMenu(false)} className="font-inter text-xs ml-1" style={{ color: "#555" }}>✕</button>
+        </div>
+      )}
+
       {showDeliveryPicker && (
         <div className="flex flex-col gap-2 mt-1">
           <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Hora de entrega estimada:</p>
@@ -418,7 +440,7 @@ function PedidoRow({
             {DELIVERY_RANGES.map((range) => (
               <button
                 key={range}
-                onClick={() => { setShowDeliveryPicker(false); onAvanzarEstado(range); }}
+                onClick={() => { setShowDeliveryPicker(false); setShowEstadoMenu(false); onAvanzarEstado(range); }}
                 className="rounded-lg px-3 py-1.5 font-inter text-xs font-medium"
                 style={{ background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" }}
               >
@@ -426,7 +448,7 @@ function PedidoRow({
               </button>
             ))}
           </div>
-          <button onClick={() => setShowDeliveryPicker(false)} className="font-inter text-xs text-left mt-0.5" style={{ color: "#555" }}>Cancelar</button>
+          <button onClick={() => { setShowDeliveryPicker(false); setShowEstadoMenu(false); }} className="font-inter text-xs text-left mt-0.5" style={{ color: "#555" }}>Cancelar</button>
         </div>
       )}
 

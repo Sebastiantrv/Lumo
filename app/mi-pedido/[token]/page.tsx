@@ -92,14 +92,14 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
         return (
           <div key={step.key} style={{ display: "flex", gap: 16 }}>
             {/* Circle + connector line */}
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 28 }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", width: 20 }}>
               <div
                 style={{
                   position: "relative",
-                  width: 28,
-                  height: 28,
+                  width: 20,
+                  height: 20,
                   borderRadius: "50%",
-                  border: isActive ? "none" : "2px solid #D4D0C8",
+                  border: isActive ? "none" : "1.5px solid #D4D0C8",
                   background: isActive ? accentColor : "transparent",
                   flexShrink: 0,
                   transition: "all 0.5s ease",
@@ -108,10 +108,10 @@ function Timeline({ estado, hora_preparado, hora_entrega_estimada, created_at, a
                 {isCurrent && (
                   <div style={{
                     position: "absolute",
-                    inset: -4,
+                    inset: -3,
                     borderRadius: "50%",
                     background: accentColor,
-                    opacity: 0.3,
+                    opacity: 0.25,
                     animation: "accentPulse 2.5s ease-in-out infinite",
                   }} />
                 )}
@@ -381,11 +381,6 @@ export default function MiPedidoPage({
       >
         Tu jugo de hoy · {orderLabel}
       </p>
-
-      {/* Estado badge */}
-      <div style={{ marginBottom: 28, animation: "pedidoFadeUp 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.5s both" }}>
-        <EstadoBadge estado={globalEstado} />
-      </div>
 
       {/* Main card */}
       <div
