@@ -184,12 +184,12 @@ const FICHA_DATA: Record<string, {
     vnr: [
       { nutriente: "Vitamina C", porcentaje: 90, cantidad: "54.2 mg aprox." },
       { nutriente: "Potasio", porcentaje: 30, cantidad: "1,039 mg aprox." },
-      { nutriente: "Folato", porcentaje: 38, cantidad: "143 µg aprox." },
+      { nutriente: "Vitamina B9 · Folato", porcentaje: 38, cantidad: "143 µg aprox." },
     ],
     botanico: [
-      { title: "Nitratos de hoja verde", source: "Espinaca y apio", description: "Compuestos vegetales presentes en hojas verdes, estudiados por su relación con la disponibilidad de óxido nítrico." },
-      { title: "Folato vegetal", source: "Espinaca", description: "Micronutriente naturalmente presente en vegetales de hoja verde." },
-      { title: "Luteína y zeaxantina", source: "Espinaca", description: "Carotenoides presentes en hojas verdes, asociados con el perfil pigmentario y antioxidante de la espinaca." },
+      { title: "Nitratos de hoja verde", source: "Espinaca y apio", description: "Compuestos vegetales presentes en hojas verdes y tallos verdes, estudiados por su relación con la disponibilidad de óxido nítrico." },
+      { title: "Flavonoides de manzana", source: "Manzana verde", description: "Compuestos fenólicos presentes naturalmente en la manzana, parte de su perfil antioxidante vegetal." },
+      { title: "Gingeroles", source: "Jengibre", description: "Compuestos característicos del jengibre, responsables de su nota aromática intensa y estudiados por su actividad antioxidante." },
     ],
   },
   rojo: {
@@ -205,7 +205,7 @@ const FICHA_DATA: Record<string, {
     vnr: [
       { nutriente: "Vitamina C", porcentaje: 94, cantidad: "56.6 mg aprox." },
       { nutriente: "Potasio", porcentaje: 46, cantidad: "1,607 mg aprox." },
-      { nutriente: "Folato", porcentaje: 47, cantidad: "178 µg aprox." },
+      { nutriente: "Vitamina B9 · Folato", porcentaje: 47, cantidad: "178 µg aprox." },
     ],
     botanico: [
       { title: "Nitratos vegetales", source: "Betabel", description: "Compuestos naturalmente presentes en el betabel, estudiados por su relación con el óxido nítrico y la función vascular." },
@@ -226,12 +226,12 @@ const FICHA_DATA: Record<string, {
     vnr: [
       { nutriente: "Vitamina C", porcentaje: 136, cantidad: "81.7 mg aprox." },
       { nutriente: "Potasio", porcentaje: 16, cantidad: "575 mg aprox." },
-      { nutriente: "Folato", porcentaje: 11, cantidad: "42 µg aprox." },
+      { nutriente: "Vitamina B9 · Folato", porcentaje: 11, cantidad: "42 µg aprox." },
     ],
     botanico: [
       { title: "Flavanonas cítricas", source: "Limón", description: "Compuestos vegetales presentes en cítricos, parte del perfil fenólico natural de la fórmula." },
       { title: "Gingeroles", source: "Jengibre", description: "Compuestos característicos del jengibre, responsables de su nota aromática y estudiados por su actividad antioxidante." },
-      { title: "Ácidos orgánicos", source: "Piña y limón", description: "Aportan acidez natural, frescura sensorial y equilibrio al perfil tropical de la fórmula." },
+      { title: "Bromelina", source: "Piña", description: "Enzima naturalmente presente en la piña, parte de su perfil botánico característico." },
     ],
   },
 };
@@ -321,16 +321,28 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
     if (!contentRef.current) return;
     setSharing(true);
     try {
-      const closeBtn = contentRef.current.querySelector(".ficha-close-btn") as HTMLElement | null;
-      if (closeBtn) closeBtn.style.display = "none";
-      const canvas = await html2canvas(contentRef.current, {
-        backgroundColor: "#FDFBF7",
-        scale: 2,
-        useCORS: true,
-        scrollY: -contentRef.current.scrollTop,
-        height: contentRef.current.scrollHeight,
+      const clone = contentRef.current.cloneNode(true) as HTMLElement;
+      clone.querySelector(".ficha-close-btn")?.remove();
+      clone.querySelector(".ficha-share-block")?.remove();
+      Object.assign(clone.style, {
+        position: "fixed",
+        left: "-9999px",
+        top: "0",
+        width: `${contentRef.current.offsetWidth}px`,
+        height: "auto",
+        maxHeight: "none",
+        overflow: "visible",
+        background: "#FDFBF7",
+        zIndex: "-1",
       });
-      if (closeBtn) closeBtn.style.display = "";
+      clone.querySelectorAll("[style]").forEach((el) => {
+        const s = (el as HTMLElement).style;
+        if (s.animation) s.animation = "none";
+        if (s.overflow === "auto" || s.overflowY === "auto") { s.overflow = "visible"; s.overflowY = "visible"; }
+      });
+      document.body.appendChild(clone);
+      const canvas = await html2canvas(clone, { backgroundColor: "#FDFBF7", scale: 2, useCORS: true });
+      document.body.removeChild(clone);
       const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/png"));
       if (!blob) { setSharing(false); return; }
       const file = new File([blob], `Ficha-LUMO-${formulaNombre}.png`, { type: "image/png" });
@@ -532,7 +544,7 @@ function FichaLumoSheet({ formulaNombre, formulaSlug, accentColor, onClose }: {
             </div>
 
             {/* Compartir ficha */}
-            <div style={{ animation: "fichaStagger 0.4s ease 0.4s both" }}>
+            <div className="ficha-share-block" style={{ animation: "fichaStagger 0.4s ease 0.4s both" }}>
               <button
                 onClick={handleShare}
                 disabled={sharing}
