@@ -110,6 +110,14 @@ export default function AdminHoy() {
     setUpdating(null);
   }
 
+  async function eliminarGroup(ids: string[]) {
+    if (!confirm("¿Eliminar este pedido? El cliente ya no lo verá, pero se conservará en admin.")) return;
+    setUpdating(ids[0]);
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "eliminado" }, [{ column: "id", value: id }])));
+    await load();
+    setUpdating(null);
+  }
+
   async function confirmarEnvasadoGroup(ids: string[], horaEntrega: string) {
     setShowDeliveryPicker(null);
     setUpdating(ids[0]);
@@ -414,6 +422,14 @@ export default function AdminHoy() {
                         </svg>
                       </button>
                     )}
+                    <button
+                        onClick={() => eliminarGroup(group.ids)}
+                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
+                        title="Eliminar (ocultar al cliente)"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#555" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
+                      </button>
                     {group.estado === "cancelado" && (
                       <button
                         onClick={() => reactivarGroup(group.ids)}

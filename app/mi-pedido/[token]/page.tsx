@@ -235,7 +235,8 @@ export default function MiPedidoPage({
         .select(
           "*, created_at, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento)"
         )
-        .eq("token", token);
+        .eq("token", token)
+        .neq("estado", "eliminado");
 
       if (error || !data || data.length === 0) {
         setNotFound(true);

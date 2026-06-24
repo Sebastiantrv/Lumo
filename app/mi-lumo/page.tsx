@@ -327,11 +327,16 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   useEffect(() => { load(); }, [load]);
 
   const hoy = new Date().toISOString().split("T")[0];
-  const pedidosActivos = pedidos.filter(
+  const hace3Dias = new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0];
+  const pedidosVisibles = pedidos.filter((p) => p.estado !== "eliminado");
+  const pedidosActivos = pedidosVisibles.filter(
     (p) => p.estado !== "cancelado" && p.dia_entrega >= hoy
   );
-  const pedidosHistorial = pedidos.filter(
-    (p) => p.estado === "cancelado" || p.dia_entrega < hoy
+  const pedidosRecientes = pedidosVisibles.filter(
+    (p) => (p.estado === "cancelado" || p.dia_entrega < hoy) && p.dia_entrega >= hace3Dias
+  );
+  const pedidosHistorial = pedidosVisibles.filter(
+    (p) => p.dia_entrega < hace3Dias
   );
 
   const memberSince = new Date(miembro.created_at).toLocaleDateString("es-MX", {
@@ -506,6 +511,49 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
                 : "Añade balance o reserva directamente tu próxima mañana."}
             </p>
           </div>
+        )}
+
+        {/* ── Recent deliveries ── */}
+        {pedidosRecientes.length > 0 && (
+          <section className="mx-5 mb-7" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.55s" }}>
+            <h2 className="font-cormorant font-light text-lg mb-3" style={{ color: "#1A1A1A" }}>
+              Entregas recientes
+            </h2>
+            <div className="flex flex-col gap-2.5">
+              {pedidosRecientes.map((p) => (
+                <Link
+                  key={p.id}
+                  href={p.token ? `/mi-pedido/${p.token}` : "#"}
+                  className="rounded-2xl p-4 spring-press block"
+                  style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.04)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.formulas?.color_acento ?? VERDE }} />
+                    <span className="font-inter text-sm flex-1" style={{ color: "#2D2D2D" }}>
+                      {p.cantidad}x {p.formulas?.nombre ?? "Fórmula"}
+                    </span>
+                    <span className="font-inter text-xs" style={{ color: "#C0C0B0" }}>
+                      {formatDateShort(p.dia_entrega)}
+                    </span>
+                  </div>
+                  {p.estado === "entregado" && p.token && (
+                    <div className="flex items-center justify-between mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+                      <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>Entregado</span>
+                      <span className="font-inter text-xs flex items-center gap-1" style={{ color: VERDE }}>
+                        Cuéntanos tu experiencia
+                        <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6" /></svg>
+                      </span>
+                    </div>
+                  )}
+                  {p.estado === "cancelado" && (
+                    <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+                      <span className="font-inter text-xs" style={{ color: ROJO }}>Cancelado</span>
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          </section>
         )}
 
         {/* ── Tabs ── */}

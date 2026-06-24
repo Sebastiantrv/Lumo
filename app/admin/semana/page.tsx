@@ -100,6 +100,18 @@ export default function SemanaPage() {
     await load(true);
   }
 
+  async function cancelarPedido(ids: string[]) {
+    if (!confirm("¿Cancelar este pedido?")) return;
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "cancelado" }, [{ column: "id", value: id }])));
+    await load(true);
+  }
+
+  async function eliminarPedido(ids: string[]) {
+    if (!confirm("¿Eliminar este pedido? El cliente ya no lo verá, pero se conservará en admin.")) return;
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "eliminado" }, [{ column: "id", value: id }])));
+    await load(true);
+  }
+
   function groupByToken(list: Pedido[]) {
     const map = new Map<string, Pedido[]>();
     for (const p of list) {
@@ -195,6 +207,8 @@ export default function SemanaPage() {
                           onMoverFecha={(fecha) => moverFecha(ids, fecha)}
                           onCambiarFormula={cambiarFormula}
                           onAvanzarEstado={(hora, target) => avanzarEstado(ids, group[0].estado, hora, target)}
+                          onCancelar={() => cancelarPedido(ids)}
+                          onEliminar={() => eliminarPedido(ids)}
                           showAplazarPicker={aplazarPickerFor === groupKey}
                           onOpenAplazar={() => setAplazarPickerFor(groupKey)}
                           onCloseAplazar={() => setAplazarPickerFor(null)}
@@ -216,7 +230,7 @@ export default function SemanaPage() {
 }
 
 function PedidoRow({
-  group, formulas, onSetExtra, onAplazar, onMoverFecha, onCambiarFormula, onAvanzarEstado, showAplazarPicker, onOpenAplazar, onCloseAplazar, showMoverPicker, onOpenMover, onCloseMover,
+  group, formulas, onSetExtra, onAplazar, onMoverFecha, onCambiarFormula, onAvanzarEstado, onCancelar, onEliminar, showAplazarPicker, onOpenAplazar, onCloseAplazar, showMoverPicker, onOpenMover, onCloseMover,
 }: {
   group: Pedido[];
   formulas: Formula[];
@@ -225,6 +239,8 @@ function PedidoRow({
   onMoverFecha: (fecha: string) => void;
   onCambiarFormula: (id: string, formulaId: string) => void;
   onAvanzarEstado: (hora?: string, targetEstado?: string) => void;
+  onCancelar: () => void;
+  onEliminar: () => void;
   showAplazarPicker: boolean;
   onOpenAplazar: () => void;
   onCloseAplazar: () => void;
@@ -310,6 +326,24 @@ function PedidoRow({
               <line x1="5" y1="1" x2="5" y2="4" />
               <line x1="11" y1="1" x2="11" y2="4" />
             </svg>
+          </button>
+          {first.estado !== "cancelado" && first.estado !== "eliminado" && (
+            <button
+              onClick={onCancelar}
+              className="w-6 h-6 rounded-md flex items-center justify-center"
+              style={{ background: "rgba(122,32,48,0.08)", color: "#7A2030", border: "1px solid rgba(122,32,48,0.15)" }}
+              title="Cancelar pedido"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          )}
+          <button
+            onClick={onEliminar}
+            className="w-6 h-6 rounded-md flex items-center justify-center"
+            style={{ background: "rgba(255,255,255,0.04)", color: "#555", border: "1px solid rgba(255,255,255,0.08)" }}
+            title="Eliminar (ocultar al cliente)"
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" /><line x1="10" y1="11" x2="10" y2="17" /><line x1="14" y1="11" x2="14" y2="17" /></svg>
           </button>
           {first.es_sorpresa && (
             <span className="font-inter text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.3)" }}>🎲</span>
@@ -491,6 +525,8 @@ function estadoBadge(estado: string): React.CSSProperties {
   if (estado === "pendiente") return { ...base, background: "rgba(255,255,255,0.08)", color: "#8A8A8A", border: "1px solid rgba(255,255,255,0.12)" };
   if (estado === "confirmado") return { ...base, background: "rgba(74,94,58,0.15)", color: "#4A5E3A", border: "1px solid rgba(74,94,58,0.3)" };
   if (estado === "preparado") return { ...base, background: "rgba(184,134,11,0.2)", color: "#E6A800", border: "1px solid rgba(184,134,11,0.35)" };
+  if (estado === "cancelado") return { ...base, background: "rgba(122,32,48,0.15)", color: "#7A2030", border: "1px solid rgba(122,32,48,0.3)" };
+  if (estado === "eliminado") return { ...base, background: "rgba(255,255,255,0.04)", color: "#555", border: "1px solid rgba(255,255,255,0.08)", textDecoration: "line-through" as const };
   return { ...base, background: "rgba(74,94,58,0.2)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.35)" };
 }
 
