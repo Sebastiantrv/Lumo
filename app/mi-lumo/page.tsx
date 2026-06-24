@@ -689,19 +689,18 @@ function ReservaFlow({
     return (
       <div className="min-h-screen flex flex-col relative overflow-hidden" style={{ background: CREAM, overscrollBehavior: "none" }}>
         {/* Botanical corner detail */}
-        <div className="absolute top-0 right-0 pointer-events-none" style={{ opacity: 0.12, animation: "lumoFadeUp 1.2s ease 0.2s both" }}>
-          <svg width="180" height="220" viewBox="0 0 180 220" fill="none" style={{ transform: "translate(30px, -20px) rotate(15deg)" }}>
-            <path d="M90 210C90 210 85 160 75 130C65 100 40 75 30 60C20 45 15 25 20 15C25 5 35 10 40 20C45 30 50 55 60 75C70 95 80 120 85 145" stroke={VERDE} strokeWidth="1.5" strokeLinecap="round" fill="none" />
-            <ellipse cx="20" cy="15" rx="18" ry="10" transform="rotate(-35 20 15)" fill={VERDE} opacity="0.3" />
-            <ellipse cx="35" cy="40" rx="16" ry="9" transform="rotate(-20 35 40)" fill={VERDE} opacity="0.25" />
-            <ellipse cx="50" cy="68" rx="15" ry="8" transform="rotate(-10 50 68)" fill={VERDE} opacity="0.2" />
-            <ellipse cx="65" cy="95" rx="14" ry="8" transform="rotate(5 65 95)" fill={VERDE} opacity="0.18" />
-            <ellipse cx="78" cy="120" rx="13" ry="7" transform="rotate(15 78 120)" fill={VERDE} opacity="0.15" />
-            <path d="M95 200C95 200 100 165 110 140C120 115 140 95 150 85C160 75 170 65 168 55C166 45 155 48 150 58C145 68 135 90 125 110C115 130 105 155 100 175" stroke={VERDE} strokeWidth="1.2" strokeLinecap="round" fill="none" />
-            <ellipse cx="168" cy="55" rx="15" ry="8" transform="rotate(35 168 55)" fill={VERDE} opacity="0.22" />
-            <ellipse cx="152" cy="80" rx="14" ry="7" transform="rotate(20 152 80)" fill={VERDE} opacity="0.18" />
-            <ellipse cx="138" cy="105" rx="12" ry="7" transform="rotate(10 138 105)" fill={VERDE} opacity="0.15" />
-          </svg>
+        <div className="absolute top-0 right-0 pointer-events-none" style={{ animation: "lumoFadeUp 1.2s ease 0.2s both" }}>
+          <img
+            src="/lumo_botanical_corner_sprig.png"
+            alt=""
+            style={{
+              width: 160,
+              height: "auto",
+              opacity: 0.1,
+              transform: "translate(25px, -15px) rotate(20deg)",
+              filter: "saturate(0.7)",
+            }}
+          />
         </div>
 
         <div className="flex-1 flex flex-col items-center justify-center px-6 relative z-10">
@@ -887,16 +886,19 @@ function ReservaFlow({
                     key={d.value}
                     onClick={() => !isCompleto && setDiaEntrega(d.value)}
                     disabled={isCompleto}
-                    className="rounded-2xl p-4 text-left flex items-center justify-between transition-all duration-200 spring-press disabled:opacity-40"
+                    className="rounded-2xl p-4 text-left flex items-center justify-between transition-all duration-200 spring-press disabled:opacity-40 relative overflow-hidden"
                     style={{
-                      background: isSelected ? `${VERDE}06` : "#fff",
-                      border: `1.5px solid ${isSelected ? `${VERDE}50` : "rgba(0,0,0,0.04)"}`,
-                      boxShadow: isSelected ? `0 4px 16px ${VERDE}12, inset 0 0 0 1px ${VERDE}10` : "0 1px 4px rgba(0,0,0,0.02)",
+                      background: "#fff",
+                      border: `1px solid ${isSelected ? `${VERDE}40` : "rgba(0,0,0,0.04)"}`,
+                      boxShadow: isSelected ? `0 4px 20px ${VERDE}10` : "0 1px 4px rgba(0,0,0,0.02)",
                       animation: "lumoFadeUp 0.3s ease both",
                       animationDelay: `${i * 0.04}s`,
                     }}
                   >
-                    <div>
+                    {isSelected && (
+                      <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-full" style={{ background: VERDE, animation: "lumoFadeUp 0.2s ease both" }} />
+                    )}
+                    <div className={isSelected ? "pl-2" : ""} style={{ transition: "padding 0.2s ease" }}>
                       <p className="font-cormorant font-light text-[1.1rem]" style={{ color: isCompleto ? "#B0B0A0" : "#1A1A1A" }}>
                         {d.dayLabel}
                       </p>
