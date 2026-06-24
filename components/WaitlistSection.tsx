@@ -71,6 +71,7 @@ export default function WaitlistSection() {
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [evitar, setEvitar] = useState<string[]>([]);
+  const [codigoMiembro, setCodigoMiembro] = useState("");
 
   function goTo(next: number, dir: "forward" | "backward") {
     setDirection(dir);
@@ -106,13 +107,16 @@ export default function WaitlistSection() {
       }),
     };
     try {
-      await fetch("/api/piloto", {
+      const res = await fetch("/api/piloto", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch (e) {
-      console.error("Submit error:", e);
+      const json = await res.json();
+      if (json.codigo_miembro) setCodigoMiembro(json.codigo_miembro);
+    } catch {
+      alert("No se pudo completar tu registro. Verifica tu conexión e intenta de nuevo.");
+      return;
     }
     goTo(7, "forward");
   }
@@ -300,38 +304,96 @@ export default function WaitlistSection() {
             </StepShell>
           )}
 
-          {/* 7: Confirmación */}
+          {/* 7: Bienvenida */}
           {step === 7 && (
             <div className="flex flex-col gap-8">
-              <div className="flex flex-col gap-5">
+              <style>{`
+                @keyframes welcomeFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+                @keyframes codeReveal { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+              `}</style>
+
+              <div className="flex flex-col gap-5" style={{ animation: "welcomeFadeUp 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both" }}>
                 <div className="w-14 h-14 rounded-full flex items-center justify-center"
                   style={{ background: "rgba(74,94,58,0.12)", border: "1.5px solid #4A5E3A" }}>
                   <CheckIcon />
                 </div>
 
                 <h2 className="font-cormorant font-light"
-                  style={{ fontSize: "clamp(2.4rem, 9.5vw, 3.6rem)", lineHeight: 1.1, color: T.text }}>
-                  Solicitud recibida.
+                  style={{ fontSize: "clamp(2.2rem, 9vw, 3.2rem)", lineHeight: 1.1, color: T.text }}>
+                  Bienvenido a LUMO.
                 </h2>
 
-                <div className="flex flex-col gap-3 rounded-2xl p-5"
-                  style={{ background: "rgba(255,255,255,0.7)", border: `1px solid ${T.cardBorder}`, backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}>
-                  <p className="font-inter leading-relaxed" style={{ fontSize: "clamp(0.85rem, 3.3vw, 1rem)", color: T.textSub }}>
-                    Ahora formas parte de los primeros interesados en probar LUMO.
+                <p className="font-inter leading-relaxed" style={{ fontSize: "clamp(0.85rem, 3.3vw, 1rem)", color: T.textSub }}>
+                  Tu registro está completo, {data.nombre.split(" ")[0]}.
+                </p>
+              </div>
+
+              {/* Código LUMO */}
+              {codigoMiembro && (
+                <div
+                  className="rounded-2xl p-6 text-center"
+                  style={{
+                    background: "rgba(255,255,255,0.7)",
+                    border: `1px solid ${T.cardBorder}`,
+                    backdropFilter: "blur(16px)",
+                    WebkitBackdropFilter: "blur(16px)",
+                    animation: "codeReveal 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.2s both",
+                  }}
+                >
+                  <p className="font-inter text-xs uppercase tracking-widest mb-3" style={{ color: T.textMuted }}>
+                    Tu código LUMO
                   </p>
-                  <p className="font-inter leading-relaxed" style={{ fontSize: "clamp(0.85rem, 3.3vw, 1rem)", color: T.textSub }}>
-                    Te confirmaremos disponibilidad para el siguiente lote por WhatsApp.
+                  <p className="font-cormorant font-light tracking-[0.15em]"
+                    style={{ fontSize: "clamp(2rem, 8vw, 2.6rem)", color: "#4A5E3A", lineHeight: 1 }}>
+                    {codigoMiembro}
+                  </p>
+                  <p className="font-inter text-xs mt-3" style={{ color: T.textMuted, lineHeight: 1.5 }}>
+                    Con este código accedes a Mi LUMO
                   </p>
                 </div>
+              )}
 
-                <p className="font-cormorant italic" style={{ fontSize: "clamp(1rem, 4vw, 1.2rem)", color: T.textSub }}>
-                  Mientras tanto, conoce nuestras fórmulas.
+              {/* Balance de cortesía */}
+              <div
+                className="flex items-start gap-4 rounded-2xl p-5"
+                style={{
+                  background: "rgba(74,94,58,0.04)",
+                  border: "1px solid rgba(74,94,58,0.10)",
+                  animation: "welcomeFadeUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.35s both",
+                }}
+              >
+                <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5"
+                  style={{ background: "rgba(74,94,58,0.10)" }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A5E3A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="font-inter font-medium text-sm" style={{ color: "#1A1A1A" }}>
+                    Tu Balance LUMO está listo
+                  </p>
+                  <p className="font-inter text-xs mt-1" style={{ color: T.textSub, lineHeight: 1.6 }}>
+                    Hemos preparado un balance de cortesía para que reserves tus primeras botellas desde Mi LUMO.
+                  </p>
+                </div>
+              </div>
+
+              {/* Siguiente paso */}
+              <div style={{ animation: "welcomeFadeUp 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) 0.5s both" }}>
+                <p className="font-inter text-xs mb-4" style={{ color: T.textMuted, lineHeight: 1.6 }}>
+                  Ingresa con tu código y elige el día que quieres recibir tu LUMO.
                 </p>
 
-                <Link href="/formulas"
-                  className="inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
+                <Link href="/mi-lumo"
+                  className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
                   style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: T.btnPrimary, color: T.btnText }}>
-                  Ver fórmulas <span aria-hidden="true">→</span>
+                  Ir a Mi LUMO <span aria-hidden="true">→</span>
+                </Link>
+
+                <Link href="/formulas"
+                  className="w-full inline-flex items-center justify-center font-inter spring-press py-3 mt-2"
+                  style={{ fontSize: "clamp(0.82rem, 3.2vw, 0.95rem)", color: T.textMuted }}>
+                  Explorar fórmulas
                 </Link>
               </div>
             </div>
