@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
 import { SORPRESA_ID } from "@/lib/constants";
 import { todayStr, addDays, formatDateLabel, greeting, getWeekRange, getTipoPedido, localStr } from "@/lib/dates";
 import { fmtGramos } from "@/lib/format";
@@ -176,11 +177,13 @@ export default function AdminInicio() {
                           if (pedido?.token) {
                             const { data: peds } = await supabase.from("pedidos").select("id").eq("token", pedido.token);
                             if (peds?.length) {
-                              await supabase.from("pedidos").update({ dia_entrega: a.requested_date }).in("id", peds.map((p: { id: string }) => p.id));
+                              for (const p of peds) {
+                                await adminWrite("pedidos", "update", { dia_entrega: a.requested_date }, [{ column: "id", value: (p as { id: string }).id }]);
+                              }
                             }
                           }
                         }
-                        await supabase.from("ajustes_pedido").update({ status: "approved" }).eq("id", a.id);
+                        await adminWrite("ajustes_pedido", "update", { status: "approved" }, [{ column: "id", value: a.id }]);
                         load();
                       }}
                       className="rounded-lg px-3 py-1.5 font-inter text-xs font-semibold"
@@ -189,7 +192,7 @@ export default function AdminInicio() {
                     </button>
                     <button
                       onClick={async () => {
-                        await supabase.from("ajustes_pedido").update({ status: "rejected" }).eq("id", a.id);
+                        await adminWrite("ajustes_pedido", "update", { status: "rejected" }, [{ column: "id", value: a.id }]);
                         load();
                       }}
                       className="rounded-lg px-3 py-1.5 font-inter text-xs font-semibold"
@@ -519,7 +522,9 @@ function NuevoPedidoModal({ clientes, formulas, onClose, onSaved }: {
       };
     });
 
-    await supabase.from("pedidos").insert(rows);
+    for (const row of rows) {
+      await adminWrite("pedidos", "insert", row as unknown as Record<string, unknown>);
+    }
     onSaved();
   }
 

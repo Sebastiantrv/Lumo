@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
 import { localStr, getWeekDays, formatDateShort } from "@/lib/dates";
 
 type Pedido = {
@@ -49,24 +50,28 @@ export default function SemanaPage() {
   useEffect(() => { load(); }, [weekOffset]);
 
   async function setExtra(id: string, estado: string) {
-    await supabase.from("pedidos").update({ estado_extra: estado }).eq("id", id);
+    await adminWrite("pedidos", "update", { estado_extra: estado }, [{ column: "id", value: id }]);
     await load();
   }
 
   async function aplazar(ids: string[], fecha: string) {
-    await supabase.from("pedidos").update({ dia_entrega: fecha, estado_extra: "aplazado" }).in("id", ids);
+    for (const id of ids) {
+      await adminWrite("pedidos", "update", { dia_entrega: fecha, estado_extra: "aplazado" }, [{ column: "id", value: id }]);
+    }
     setAplazarPickerFor(null);
     await load();
   }
 
   async function moverFecha(ids: string[], fecha: string) {
-    await supabase.from("pedidos").update({ dia_entrega: fecha }).in("id", ids);
+    for (const id of ids) {
+      await adminWrite("pedidos", "update", { dia_entrega: fecha }, [{ column: "id", value: id }]);
+    }
     setMoverPickerFor(null);
     await load();
   }
 
   async function cambiarFormula(id: string, formulaId: string) {
-    await supabase.from("pedidos").update({ formula_id: formulaId }).eq("id", id);
+    await adminWrite("pedidos", "update", { formula_id: formulaId }, [{ column: "id", value: id }]);
     await load();
   }
 

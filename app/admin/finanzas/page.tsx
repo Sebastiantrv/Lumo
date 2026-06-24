@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
 
 type Formula = { id: string; nombre: string; slug: string; color_acento: string; precio: number };
 
@@ -68,7 +69,7 @@ export default function FinanzasPage() {
 
   async function updatePrecio(formulaId: string, precio: number) {
     setSavingPrecio(formulaId);
-    await supabase.from("formulas").update({ precio }).eq("id", formulaId);
+    await adminWrite("formulas", "update", { precio }, [{ column: "id", value: formulaId }]);
     setFormulas((prev) => prev.map((f) => f.id === formulaId ? { ...f, precio } : f));
     setSavingPrecio(null);
     setSavedPrecio(formulaId);
@@ -76,12 +77,12 @@ export default function FinanzasPage() {
   }
 
   async function toggleRegalo(pedidoId: string, actual: boolean) {
-    await supabase.from("pedidos").update({ es_regalo: !actual }).eq("id", pedidoId);
+    await adminWrite("pedidos", "update", { es_regalo: !actual }, [{ column: "id", value: pedidoId }]);
     setPedidos((prev) => prev.map((p) => p.id === pedidoId ? { ...p, es_regalo: !actual } : p));
   }
 
   async function updateDescuento(pedidoId: string, descuento: number) {
-    await supabase.from("pedidos").update({ descuento }).eq("id", pedidoId);
+    await adminWrite("pedidos", "update", { descuento }, [{ column: "id", value: pedidoId }]);
     setPedidos((prev) => prev.map((p) => p.id === pedidoId ? { ...p, descuento } : p));
   }
 

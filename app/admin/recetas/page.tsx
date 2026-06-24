@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
 
 type Receta = {
   id: string;
@@ -46,10 +47,7 @@ export default function RecetasPage() {
 
   async function updateGramos(recetaId: string, nuevoGramos: number) {
     setSaving(recetaId);
-    await supabase
-      .from("recetas")
-      .update({ gramos: nuevoGramos, updated_at: new Date().toISOString() })
-      .eq("id", recetaId);
+    await adminWrite("recetas", "update", { gramos: nuevoGramos, updated_at: new Date().toISOString() }, [{ column: "id", value: recetaId }]);
     setSaving(null);
     setSaved(recetaId);
     setTimeout(() => setSaved(null), 1500);

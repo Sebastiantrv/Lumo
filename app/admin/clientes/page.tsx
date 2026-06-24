@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
 import { SORPRESA_ID } from "@/lib/constants";
 import { getTipoPedido, formatDateShort } from "@/lib/dates";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -299,8 +300,8 @@ function FichaMiembro({ cliente, stats, movimientos, balance, onClose, onEditar,
   onClose: () => void; onEditar: () => void; onPedido: () => void; onRecarga: () => void; onReload: () => void;
 }) {
   const [toggling, setToggling] = useState(false);
-  async function handleToggleActivo() { setToggling(true); await supabase.from("clientes").update({ activo: !cliente.activo }).eq("id", cliente.id); onReload(); setToggling(false); }
-  async function handleEliminar() { if (!window.confirm(`¿Eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`)) return; await supabase.from("clientes").delete().eq("id", cliente.id); onClose(); onReload(); }
+  async function handleToggleActivo() { setToggling(true); await adminWrite("clientes", "update", { activo: !cliente.activo }, [{ column: "id", value: cliente.id }]); onReload(); setToggling(false); }
+  async function handleEliminar() { if (!window.confirm(`¿Eliminar a ${cliente.nombre}? Esta acción no se puede deshacer.`)) return; await adminWrite("clientes", "delete", {}, [{ column: "id", value: cliente.id }]); onClose(); onReload(); }
   const miembroDesde = new Date(cliente.created_at).toLocaleDateString("es-MX", { month: "long", year: "numeric" });
 
   return (
@@ -423,7 +424,7 @@ function RecargaBalanceModal({ clienteId, clienteNombre, codigoMiembro, onClose,
     e.preventDefault();
     if (!isValid) return;
     setSaving(true);
-    await supabase.from("movimientos_balance").insert({ cliente_id: clienteId, tipo: "recarga", monto: montoFinal, descripcion });
+    await adminWrite("movimientos_balance", "insert", { cliente_id: clienteId, tipo: "recarga", monto: montoFinal, descripcion });
     onSaved();
   }
 
@@ -476,7 +477,7 @@ function NuevoMiembroModal({ clientes, onClose, onSaved }: { clientes: Cliente[]
     const existingCodes = clientes.map((c) => c.codigo_miembro).filter(Boolean) as string[];
     let codigo = generarCodigoMiembro(); let attempts = 0;
     while (existingCodes.includes(codigo) && attempts < 50) { codigo = generarCodigoMiembro(); attempts++; }
-    await supabase.from("clientes").insert({ nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, activo: true, codigo_miembro: codigo });
+    await adminWrite("clientes", "insert", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, activo: true, codigo_miembro: codigo });
     onSaved();
   }
 
@@ -504,7 +505,7 @@ function EditarMiembroModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault(); setSaving(true);
-    await supabase.from("clientes").update({ nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null }).eq("id", cliente.id);
+    await adminWrite("clientes", "update", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null }, [{ column: "id", value: cliente.id }]);
     onSaved();
   }
 
@@ -546,7 +547,7 @@ function NuevoPedidoModal({ clienteId, clienteNombre, formulas, balanceDisponibl
     e.preventDefault(); setSaving(true);
     let realFormulaId = formulaId; let esSorpresa = false;
     if (formulaId === SORPRESA_ID) { realFormulaId = formulas[Math.floor(Math.random() * formulas.length)]?.id ?? formulas[0]?.id ?? ""; esSorpresa = true; }
-    await supabase.from("pedidos").insert({ cliente_id: clienteId, formula_id: realFormulaId, cantidad: parseInt(cantidad), dia_entrega: diaEntrega, notas: notas || null, tipo_pedido: getTipoPedido(diaEntrega), es_sorpresa: esSorpresa, ingredientes_excluidos: excluidos.length > 0 ? excluidos : null, preferencia_sorpresa: preferencia || null });
+    await adminWrite("pedidos", "insert", { cliente_id: clienteId, formula_id: realFormulaId, cantidad: parseInt(cantidad), dia_entrega: diaEntrega, notas: notas || null, tipo_pedido: getTipoPedido(diaEntrega), es_sorpresa: esSorpresa, ingredientes_excluidos: excluidos.length > 0 ? excluidos : null, preferencia_sorpresa: preferencia || null });
     onSaved();
   }
 

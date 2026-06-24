@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
 
 type Feedback = {
   id: string;
@@ -82,7 +83,7 @@ export default function AdminFeedbackPage() {
   useEffect(() => { load(); }, []);
 
   async function asignarFormula(feedbackId: string, formula: string) {
-    await supabase.from("feedback").update({ formula_asignada: formula }).eq("id", feedbackId);
+    await adminWrite("feedback", "update", { formula_asignada: formula }, [{ column: "id", value: feedbackId }]);
     setItems((prev) => prev.map((i) => i.id === feedbackId ? { ...i, formula_asignada: formula } : i));
   }
 

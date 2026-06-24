@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
 import { DELIVERY_RANGES, LUMO_DOMAIN, WHATSAPP_BATCH_DELAY_MS } from "@/lib/constants";
 import { todayStr, localStr, formatDateLabel, formatHora, greeting } from "@/lib/dates";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
@@ -58,7 +59,7 @@ export default function AdminHoy() {
   async function reactivarGroup(ids: string[]) {
     if (!confirm("¿Reactivar este pedido? Se marcará como pendiente.")) return;
     setUpdating(ids[0]);
-    await supabase.from("pedidos").update({ estado: "pendiente", hora_preparado: null, hora_entrega_estimada: null }).in("id", ids);
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "pendiente", hora_preparado: null, hora_entrega_estimada: null }, [{ column: "id", value: id }])));
     await load();
     setUpdating(null);
   }
@@ -66,7 +67,7 @@ export default function AdminHoy() {
   async function moverFechaGroup(ids: string[], fecha: string) {
     setShowMoverPicker(null);
     setUpdating(ids[0]);
-    await supabase.from("pedidos").update({ dia_entrega: fecha }).in("id", ids);
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { dia_entrega: fecha }, [{ column: "id", value: id }])));
     await load();
     setUpdating(null);
   }
@@ -96,7 +97,7 @@ export default function AdminHoy() {
       updateData.hora_preparado = null;
       updateData.hora_entrega_estimada = null;
     }
-    await supabase.from("pedidos").update(updateData).in("id", ids);
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", updateData, [{ column: "id", value: id }])));
     await load();
     setUpdating(null);
   }
@@ -104,7 +105,7 @@ export default function AdminHoy() {
   async function cancelarGroup(ids: string[]) {
     if (!confirm("¿Cancelar este pedido?")) return;
     setUpdating(ids[0]);
-    await supabase.from("pedidos").update({ estado: "cancelado" }).in("id", ids);
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "cancelado" }, [{ column: "id", value: id }])));
     await load();
     setUpdating(null);
   }
@@ -112,11 +113,11 @@ export default function AdminHoy() {
   async function confirmarEnvasadoGroup(ids: string[], horaEntrega: string) {
     setShowDeliveryPicker(null);
     setUpdating(ids[0]);
-    await supabase.from("pedidos").update({
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", {
       estado: "preparado",
       hora_preparado: new Date().toISOString(),
       hora_entrega_estimada: horaEntrega,
-    }).in("id", ids);
+    }, [{ column: "id", value: id }])));
     await load();
     setUpdating(null);
   }
@@ -124,7 +125,7 @@ export default function AdminHoy() {
   async function marcarTodoEntregado() {
     const ids = pedidos.filter((p) => p.estado !== "entregado" && p.estado !== "cancelado").map((p) => p.id);
     if (!ids.length) return;
-    await supabase.from("pedidos").update({ estado: "entregado" }).in("id", ids);
+    await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "entregado" }, [{ column: "id", value: id }])));
     await load();
   }
 
