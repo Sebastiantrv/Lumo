@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP } from "@/lib/constants";
+import { todayStr } from "@/lib/dates";
 
 /* ── Types ── */
 type Miembro = {
@@ -326,8 +327,8 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
   useEffect(() => { load(); }, [load]);
 
-  const hoy = new Date().toISOString().split("T")[0];
-  const hace3Dias = new Date(Date.now() - 3 * 86400000).toISOString().split("T")[0];
+  const hoy = todayStr();
+  const hace3Dias = (() => { const d = new Date(); d.setDate(d.getDate() - 3); return d.toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" }); })();
   const pedidosVisibles = pedidos.filter((p) => p.estado !== "eliminado");
   const pedidosActivos = pedidosVisibles.filter(
     (p) => p.dia_entrega >= hoy && p.estado !== "cancelado" && p.estado !== "entregado"
