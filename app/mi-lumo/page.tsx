@@ -555,6 +555,14 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
           </section>
         )}
 
+        {/* ── Concierge: Tu ritual + Recomendado + Actividad ── */}
+        <ConciergeSection
+          miembro={miembro}
+          pedidos={pedidosVisibles}
+          formulas={formulas}
+          onReservar={(formulaId) => { setShowReserva(true); }}
+        />
+
         {/* ── Tabs ── */}
         <div className="mx-5 mb-4 flex gap-1 rounded-xl p-1" style={{ background: "rgba(74,94,58,0.04)" }}>
           {(["historial", "perfil"] as const).map((t) => (
@@ -1334,6 +1342,217 @@ function MiLumoFooter() {
   );
 }
 
+/* ── Concierge section ── */
+
+const FORMULA_FLAVOR_TAGS: Record<string, string[]> = {
+  "verde fresco": ["Ligero", "Fresco", "Herbal"],
+  "rojo vital": ["Intenso", "Terroso", "Dulce"],
+  "tropical hydrate": ["Frutal", "Brillante", "Hidratante"],
+};
+
+function derivePreferences(pedidos: Pedido[], miembro: Miembro) {
+  const entregados = pedidos.filter((p) => p.estado === "entregado");
+  const totalEntregas = new Set(entregados.map((p) => p.token ?? p.id)).size;
+  const totalBotellas = entregados.reduce((s, p) => s + p.cantidad, 0);
+
+  const formulaCounts = new Map<string, { nombre: string; color: string; count: number; id: string }>();
+  for (const p of entregados) {
+    const key = p.formula_id;
+    const existing = formulaCounts.get(key);
+    if (existing) existing.count += p.cantidad;
+    else formulaCounts.set(key, { nombre: p.formulas?.nombre ?? "—", color: p.formulas?.color_acento ?? VERDE, count: p.cantidad, id: key });
+  }
+  const sorted = Array.from(formulaCounts.values()).sort((a, b) => b.count - a.count);
+  const favorita = sorted[0] ?? null;
+  const formulasProbadas = formulaCounts.size;
+
+  const tags: string[] = [];
+  const seen = new Set<string>();
+  for (const f of sorted) {
+    const key = f.nombre.toLowerCase();
+    for (const [match, flavorTags] of Object.entries(FORMULA_FLAVOR_TAGS)) {
+      if (key.includes(match.split(" ")[0])) {
+        for (const t of flavorTags) {
+          if (!seen.has(t) && tags.length < 3) { tags.push(t); seen.add(t); }
+        }
+      }
+    }
+  }
+
+  const restricciones = miembro.restricciones
+    ? miembro.restricciones.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+    : [];
+
+  const notasPreferida = miembro.notas?.match(/Fórmula preferida:\s*(.+?)(?:\s*\||$)/)?.[1]?.trim() ?? null;
+
+  return { totalEntregas, totalBotellas, formulasProbadas, favorita, tags, restricciones, notasPreferida };
+}
+
+function getRecommendation(
+  prefs: ReturnType<typeof derivePreferences>,
+  formulas: FormulaWithIngredients[],
+): { formula: FormulaWithIngredients; reason: string } | null {
+  if (formulas.length === 0) return null;
+
+  const restriccionesSet = new Set(prefs.restricciones);
+
+  function hasRestriction(f: FormulaWithIngredients): boolean {
+    return f.ingredientes.some((ing) => restriccionesSet.has(ing.toLowerCase()));
+  }
+
+  const safe = formulas.filter((f) => !hasRestriction(f));
+  const pool = safe.length > 0 ? safe : formulas;
+
+  if (prefs.notasPreferida) {
+    const match = pool.find((f) => f.nombre.toLowerCase().includes(prefs.notasPreferida!.toLowerCase()));
+    if (match) return { formula: match, reason: "Por tu preferencia al registrarte." };
+  }
+
+  if (prefs.favorita) {
+    const leastTried = pool
+      .filter((f) => f.id !== prefs.favorita!.id)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre));
+    if (leastTried.length > 0) {
+      const tags = prefs.tags;
+      const tagDesc = tags.length > 0
+        ? `Por tu preferencia por sabores ${tags.slice(0, 2).map((t) => t.toLowerCase()).join(" y ")}.`
+        : "Para que descubras algo nuevo.";
+      return { formula: leastTried[0], reason: tagDesc };
+    }
+  }
+
+  const first = pool[0];
+  return { formula: first, reason: "Nuestra fórmula ideal para empezar." };
+}
+
+function ConciergeSection({ miembro, pedidos, formulas, onReservar }: {
+  miembro: Miembro;
+  pedidos: Pedido[];
+  formulas: FormulaWithIngredients[];
+  onReservar: (formulaId: string) => void;
+}) {
+  const prefs = derivePreferences(pedidos, miembro);
+  const recommendation = getRecommendation(prefs, formulas);
+  const hasData = prefs.totalEntregas > 0;
+
+  return (
+    <section className="mx-5 mb-7 flex flex-col gap-4" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.6s" }}>
+      {/* Tu ritual LUMO */}
+      <div className="rounded-2xl p-5" style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}>
+        <div className="flex items-center gap-2 mb-3">
+          <LeafIcon size={14} color={VERDE} />
+          <h3 className="font-cormorant font-light text-base" style={{ color: "#1A1A1A" }}>
+            Tu ritual LUMO
+          </h3>
+        </div>
+        {hasData ? (
+          <>
+            <p className="font-inter text-[0.8rem] leading-relaxed mb-3" style={{ color: "#6B6B5E" }}>
+              {prefs.tags.length > 0
+                ? `Tus elecciones tienden a sabores ${prefs.tags.slice(0, 2).map((t) => t.toLowerCase()).join(" y ")}.`
+                : `Tu fórmula más elegida: ${prefs.favorita?.nombre ?? "—"}.`}
+              {prefs.restricciones.length > 0 && " Evitamos ingredientes que marcaste como sensibles para ti."}
+            </p>
+            {prefs.tags.length > 0 && (
+              <div className="flex gap-2 flex-wrap">
+                {prefs.tags.map((tag, i) => (
+                  <span
+                    key={tag}
+                    className="font-inter text-[0.65rem] tracking-wide px-3 py-1 rounded-full"
+                    style={{
+                      background: "rgba(74,94,58,0.06)",
+                      color: VERDE,
+                      border: "1px solid rgba(74,94,58,0.1)",
+                      animation: "lumoFadeUp 0.4s ease both",
+                      animationDelay: `${0.7 + i * 0.08}s`,
+                    }}
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="font-inter text-[0.8rem] leading-relaxed" style={{ color: "#9A9A8A" }}>
+            Conforme pruebes más fórmulas, LUMO ajustará mejor tus recomendaciones.
+          </p>
+        )}
+      </div>
+
+      {/* Recomendado para ti */}
+      {recommendation && (
+        <div
+          className="rounded-2xl overflow-hidden"
+          style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}
+        >
+          <div className="h-[2px]" style={{ background: `linear-gradient(90deg, ${recommendation.formula.color_acento}30, ${recommendation.formula.color_acento}60, ${recommendation.formula.color_acento}30)` }} />
+          <div className="p-5">
+            <h3 className="font-cormorant font-light text-base mb-4" style={{ color: "#1A1A1A" }}>
+              Recomendado para ti
+            </h3>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: recommendation.formula.color_acento }} />
+              <span className="font-cormorant font-light text-lg" style={{ color: "#1A1A1A" }}>
+                {recommendation.formula.nombre}
+              </span>
+            </div>
+            <p className="font-inter text-[0.75rem] mb-4" style={{ color: "#9A9A8A" }}>
+              {recommendation.reason}
+            </p>
+            <button
+              onClick={() => onReservar(recommendation.formula.id)}
+              className="font-inter text-[0.75rem] font-medium px-5 py-2.5 rounded-xl spring-press transition-all"
+              style={{
+                background: `${recommendation.formula.color_acento}08`,
+                color: recommendation.formula.color_acento,
+                border: `1px solid ${recommendation.formula.color_acento}18`,
+              }}
+            >
+              Reservar esta fórmula
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Tu actividad */}
+      <div className="rounded-2xl p-5" style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}>
+        <h3 className="font-cormorant font-light text-base mb-4" style={{ color: "#1A1A1A" }}>
+          Tu actividad
+        </h3>
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center gap-3">
+            <span className="font-cormorant font-light text-2xl w-10 text-right" style={{ color: "#1A1A1A" }}>
+              {prefs.totalEntregas}
+            </span>
+            <span className="font-inter text-[0.8rem]" style={{ color: "#8A8A7A" }}>
+              {prefs.totalEntregas === 1 ? "mañana" : "mañanas"} con LUMO
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="font-cormorant font-light text-2xl w-10 text-right" style={{ color: "#1A1A1A" }}>
+              {prefs.totalBotellas}
+            </span>
+            <span className="font-inter text-[0.8rem]" style={{ color: "#8A8A7A" }}>
+              {prefs.totalBotellas === 1 ? "botella entregada" : "botellas entregadas"}
+            </span>
+          </div>
+          {prefs.formulasProbadas > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="font-cormorant font-light text-2xl w-10 text-right" style={{ color: "#1A1A1A" }}>
+                {prefs.formulasProbadas}
+              </span>
+              <span className="font-inter text-[0.8rem]" style={{ color: "#8A8A7A" }}>
+                {prefs.formulasProbadas === 1 ? "fórmula probada" : "fórmulas probadas"}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ── Historial tab ── */
 function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos: Movimiento[] }) {
   const [section, setSection] = useState<"entregas" | "balance">("entregas");
@@ -1444,17 +1663,6 @@ function HistorialTab({ pedidos, movimientos }: { pedidos: Pedido[]; movimientos
 
 /* ── Perfil tab ── */
 function PerfilTab({ miembro, pedidos, onLogout }: { miembro: Miembro; pedidos: Pedido[]; onLogout: () => void }) {
-  const totalEntregas = pedidos.filter((p) => p.estado === "entregado").length;
-  const totalBotellas = pedidos.filter((p) => p.estado === "entregado").reduce((s, p) => s + p.cantidad, 0);
-
-  const formulaCounts = new Map<string, { nombre: string; color: string; count: number }>();
-  for (const p of pedidos.filter((p) => p.estado === "entregado")) {
-    const existing = formulaCounts.get(p.formula_id);
-    if (existing) existing.count += p.cantidad;
-    else formulaCounts.set(p.formula_id, { nombre: p.formulas?.nombre ?? "—", color: p.formulas?.color_acento ?? VERDE, count: p.cantidad });
-  }
-  const favorita = Array.from(formulaCounts.values()).sort((a, b) => b.count - a.count)[0];
-
   const cambioMsg = encodeURIComponent(`Hola LUMO 🍃 Soy ${miembro.nombre} (${miembro.codigo_miembro}). Me gustaría actualizar mis datos de miembro.`);
 
   return (
@@ -1467,7 +1675,6 @@ function PerfilTab({ miembro, pedidos, onLogout }: { miembro: Miembro; pedidos: 
           <InfoRow label="WhatsApp" value={miembro.telefono ?? "—"} />
           {miembro.email && <InfoRow label="Email" value={miembro.email} />}
           {miembro.empresa && <InfoRow label="Empresa" value={miembro.empresa} />}
-          {miembro.restricciones && <InfoRow label="Restricciones" value={miembro.restricciones} />}
         </div>
         <a
           href={`https://wa.me/${LUMO_WHATSAPP}?text=${cambioMsg}`}
@@ -1481,19 +1688,27 @@ function PerfilTab({ miembro, pedidos, onLogout }: { miembro: Miembro; pedidos: 
         </a>
       </div>
 
+      {/* Preferencias LUMO */}
       <div className="rounded-2xl p-5" style={{ background: "#fff" }}>
-        <h3 className="font-cormorant font-semibold text-base mb-3" style={{ color: "#2D2D2D" }}>Mi actividad</h3>
-        <div className="grid grid-cols-2 gap-3">
-          <StatBox label="Entregas" value={String(totalEntregas)} />
-          <StatBox label="Botellas" value={String(totalBotellas)} />
+        <h3 className="font-cormorant font-semibold text-base mb-3" style={{ color: "#2D2D2D" }}>Preferencias LUMO</h3>
+        <div className="flex flex-col gap-2">
+          {miembro.restricciones ? (
+            <div className="flex items-start gap-2 rounded-xl p-3" style={{ background: "rgba(224,80,112,0.04)", border: "1px solid rgba(224,80,112,0.08)" }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#E05070" strokeWidth="2" strokeLinecap="round" style={{ marginTop: 1, flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" /><line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+              </svg>
+              <div>
+                <span className="font-inter text-[0.7rem]" style={{ color: "#8A8A7A" }}>Ingredientes que prefieres evitar</span>
+                <p className="font-inter text-xs font-medium mt-0.5" style={{ color: "#2D2D2D" }}>{miembro.restricciones}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="font-inter text-xs" style={{ color: "#9A9A8A" }}>Sin restricciones registradas.</p>
+          )}
         </div>
-        {favorita && (
-          <div className="mt-3 flex items-center gap-2 rounded-xl p-3" style={{ background: "rgba(74,94,58,0.04)" }}>
-            <div className="w-3 h-3 rounded-full" style={{ background: favorita.color }} />
-            <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>Favorita:</span>
-            <span className="font-inter text-xs font-medium" style={{ color: "#2D2D2D" }}>{favorita.nombre}</span>
-          </div>
-        )}
+        <p className="font-inter text-[0.65rem] mt-3" style={{ color: "#B5B5A5" }}>
+          Usaremos tus preferencias para ajustar recomendaciones futuras.
+        </p>
       </div>
 
       <button
@@ -1608,15 +1823,6 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div className="flex justify-between py-1.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
       <span className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{label}</span>
       <span className="font-inter text-sm" style={{ color: "#2D2D2D" }}>{value}</span>
-    </div>
-  );
-}
-
-function StatBox({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl p-3 text-center" style={{ background: "rgba(74,94,58,0.04)" }}>
-      <p className="font-cormorant font-semibold text-xl" style={{ color: "#2D2D2D" }}>{value}</p>
-      <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>{label}</p>
     </div>
   );
 }
