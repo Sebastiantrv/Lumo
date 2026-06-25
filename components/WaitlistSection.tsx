@@ -72,6 +72,7 @@ export default function WaitlistSection() {
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [evitar, setEvitar] = useState<string[]>([]);
   const [codigoMiembro, setCodigoMiembro] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   function goTo(next: number, dir: "forward" | "backward") {
     setDirection(dir);
@@ -97,6 +98,8 @@ export default function WaitlistSection() {
   }
 
   async function submit() {
+    if (submitting) return;
+    setSubmitting(true);
     const payload = {
       ...data,
       restricciones: evitar.length > 0 ? evitar.join(", ") : "Ninguno",
@@ -116,6 +119,7 @@ export default function WaitlistSection() {
       if (json.codigo_miembro) setCodigoMiembro(json.codigo_miembro);
     } catch {
       alert("No se pudo completar tu registro. Verifica tu conexión e intenta de nuevo.");
+      setSubmitting(false);
       return;
     }
     goTo(7, "forward");
@@ -265,7 +269,7 @@ export default function WaitlistSection() {
           {step === 6 && (
             <StepShell label="¿Hay algún ingrediente que prefieras evitar?"
               sublabel="Opcional — toca los que no te gusten."
-              onNext={submit} onBack={back} nextLabel="Enviar solicitud →">
+              onNext={submit} onBack={back} nextLabel={submitting ? "Registrando..." : "Enviar solicitud →"} disabled={submitting}>
               <div className="flex flex-col gap-5">
                 {INGREDIENTES_POR_FORMULA.map((grupo) => (
                   <div key={grupo.formula} className="flex flex-col gap-2.5">
@@ -412,9 +416,9 @@ export default function WaitlistSection() {
 }
 
 /* ── Step shell ── */
-function StepShell({ label, sublabel, children, onNext, onBack, showBack = true, nextLabel = "Continuar →" }: {
+function StepShell({ label, sublabel, children, onNext, onBack, showBack = true, nextLabel = "Continuar →", disabled = false }: {
   label: string; sublabel?: string; children: React.ReactNode;
-  onNext: () => void; onBack: () => void; showBack?: boolean; nextLabel?: string;
+  onNext: () => void; onBack: () => void; showBack?: boolean; nextLabel?: string; disabled?: boolean;
 }) {
   return (
     <div className="flex flex-col gap-7">
@@ -431,9 +435,9 @@ function StepShell({ label, sublabel, children, onNext, onBack, showBack = true,
       </div>
       <div className="flex flex-col gap-3">{children}</div>
       <div className="flex flex-col gap-3">
-        <button onClick={onNext}
+        <button onClick={onNext} disabled={disabled}
           className="w-full inline-flex items-center justify-between font-inter font-medium rounded-full spring-press"
-          style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: "#0D0D0D", color: "#F4EFE7" }}>
+          style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)", padding: "0.9rem 1.5rem", background: disabled ? "#6A6A6A" : "#0D0D0D", color: "#F4EFE7", transition: "background 0.2s ease" }}>
           {nextLabel} <span aria-hidden="true">{nextLabel.includes("→") ? "" : "→"}</span>
         </button>
         {showBack && (
