@@ -19,12 +19,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "LUMO — Prensados en frío",
   description:
-    "Jugos naturales prensados en frío, hechos cada mañana en lotes limitados.",
-  metadataBase: new URL("https://lumo-three-beta.vercel.app"),
+    "Jugos prensados en frío, hechos cada mañana en lotes limitados.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_SITE_URL ?? "https://lumo-three-beta.vercel.app"
+  ),
   openGraph: {
     title: "LUMO — Prensados en frío",
     description:
-      "Jugos naturales prensados en frío, hechos cada mañana en lotes limitados.",
+      "Jugos prensados en frío, hechos cada mañana en lotes limitados.",
     type: "website",
     locale: "es_MX",
     siteName: "LUMO",
@@ -41,7 +43,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "LUMO — Prensados en frío",
     description:
-      "Jugos naturales prensados en frío, hechos cada mañana en lotes limitados.",
+      "Jugos prensados en frío, hechos cada mañana en lotes limitados.",
     images: ["/og-image.png"],
   },
   icons: {
