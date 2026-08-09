@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useState } from "react";
 import Reveal from "./landing/Reveal";
+import SectionMarker from "./landing/SectionMarker";
+import { PLANO } from "./landing/tokens";
 
 type Product = {
   id: string;
@@ -81,18 +83,20 @@ export default function FormulasSection() {
     <section
       id="formulas"
       className="px-6 md:px-12 lg:px-20"
-      style={{ paddingTop: "clamp(4rem, 10vw, 7rem)", paddingBottom: "clamp(5rem, 12vw, 8rem)" }}
+      style={{
+        // No seam here: the ingredient band above opens this chapter,
+        // and the two share one plane.
+        background: PLANO.base,
+        paddingTop: "clamp(3rem, 8vw, 5rem)",
+        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+      }}
       aria-label="Nuestras fórmulas"
     >
       <div className="max-w-6xl mx-auto">
+        <SectionMarker num="04" label="Las fórmulas" />
+
         <Reveal y={16} duration={1.1}>
           <div style={{ maxWidth: 620, marginBottom: "clamp(3rem, 8vw, 4.5rem)" }}>
-            <p
-              className="font-inter uppercase"
-              style={{ fontSize: 11, letterSpacing: "0.22em", color: "#4A5E3A", marginBottom: "1.5rem" }}
-            >
-              Las fórmulas
-            </p>
             <h2
               className="font-cormorant font-light text-[#F5F0E8]"
               style={{

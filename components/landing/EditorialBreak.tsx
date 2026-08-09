@@ -2,19 +2,31 @@
 
 import { useReveal, EASE } from "./Reveal";
 import MaskedLines from "./MaskedLines";
+import { PLANO, type Plano } from "./tokens";
 
 /**
  * A visual breath between sections. One line of type, one hairline.
  * Deliberately sparse — these carry the narrative, not information.
  */
-export default function EditorialBreak({ children }: { children: React.ReactNode }) {
+export default function EditorialBreak({
+  children,
+  tone = "base",
+}: {
+  children: React.ReactNode;
+  /** Must match the chapter it closes, so the plane reads as continuous. */
+  tone?: Plano;
+}) {
   const { ref, visible } = useReveal({ threshold: 0.4 });
 
   return (
     <div
       ref={ref}
       className="px-6 md:px-12 lg:px-20"
-      style={{ paddingTop: "clamp(5rem, 14vw, 9rem)", paddingBottom: "clamp(5rem, 14vw, 9rem)" }}
+      style={{
+        background: PLANO[tone],
+        paddingTop: "clamp(5rem, 14vw, 9rem)",
+        paddingBottom: "clamp(5rem, 14vw, 9rem)",
+      }}
     >
       <div className="max-w-2xl mx-auto flex flex-col items-center gap-8">
         <div

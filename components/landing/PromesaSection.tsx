@@ -2,33 +2,34 @@
 
 import Reveal from "./Reveal";
 import MaskedLines from "./MaskedLines";
+import SectionMarker from "./SectionMarker";
+import { PLANO, SEAM } from "./tokens";
 
 export default function PromesaSection() {
   return (
     <section
       id="promesa"
       className="px-6 md:px-12 lg:px-20"
-      style={{ paddingTop: "clamp(6rem, 16vw, 11rem)", paddingBottom: "clamp(4rem, 10vw, 7rem)" }}
+      style={{
+        background: PLANO.raised,
+        borderTop: `1px solid ${SEAM}`,
+        // The loudest type on the page after the hero. It gets the most air too.
+        paddingTop: "clamp(7rem, 18vw, 13rem)",
+        paddingBottom: "clamp(7rem, 18vw, 13rem)",
+      }}
       aria-label="La promesa LUMO"
     >
       {/* Reading measure held near 700px — the page should never ask the eye to travel. */}
       <div style={{ maxWidth: 700 }} className="mx-auto flex flex-col gap-10">
-        <Reveal y={16} duration={1.1}>
-          <p
-            className="font-inter uppercase"
-            style={{ fontSize: 11, letterSpacing: "0.22em", color: "#4A5E3A" }}
-          >
-            La promesa LUMO
-          </p>
-        </Reveal>
+        <SectionMarker num="01" label="La promesa" />
 
         <h2
           className="font-cormorant font-light"
           style={{
-            fontSize: "clamp(2rem, 6.4vw, 3.1rem)",
-            lineHeight: 1.18,
+            fontSize: "clamp(2.35rem, 7.8vw, 4.1rem)",
+            lineHeight: 1.13,
             color: "#F5F0E8",
-            letterSpacing: "-0.015em",
+            letterSpacing: "-0.02em",
           }}
         >
           <MaskedLines

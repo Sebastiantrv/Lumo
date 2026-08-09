@@ -1,6 +1,8 @@
 "use client";
 
 import Reveal from "./Reveal";
+import SectionMarker from "./SectionMarker";
+import { PLANO, SEAM } from "./tokens";
 
 export default function ExperienciaSection() {
   const pasos = [
@@ -40,18 +42,19 @@ export default function ExperienciaSection() {
     <section
       id="experiencia"
       className="px-6 md:px-12 lg:px-20"
-      style={{ paddingTop: "clamp(4rem, 10vw, 7rem)", paddingBottom: "clamp(5rem, 12vw, 8rem)" }}
+      style={{
+        background: PLANO.raised,
+        borderTop: `1px solid ${SEAM}`,
+        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
+        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+      }}
       aria-label="La experiencia LUMO"
     >
       <div className="max-w-5xl mx-auto">
+        <SectionMarker num="05" label="La experiencia" />
+
         <Reveal y={16} duration={1.1}>
           <div style={{ maxWidth: 620, marginBottom: "clamp(3.5rem, 9vw, 5.5rem)" }}>
-            <p
-              className="font-inter uppercase"
-              style={{ fontSize: 11, letterSpacing: "0.22em", color: "#4A5E3A", marginBottom: "1.5rem" }}
-            >
-              La experiencia
-            </p>
             <h2
               className="font-cormorant font-light"
               style={{

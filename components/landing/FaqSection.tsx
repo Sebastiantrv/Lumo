@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Reveal, { EASE } from "./Reveal";
+import SectionMarker from "./SectionMarker";
+import { PLANO, SEAM } from "./tokens";
 
 const faqs = [
   {
@@ -41,25 +43,28 @@ export default function FaqSection() {
     <section
       id="faq"
       className="px-6 md:px-12 lg:px-20"
-      style={{ paddingTop: "clamp(4rem, 10vw, 7rem)", paddingBottom: "clamp(5rem, 12vw, 8rem)" }}
+      style={{
+        // Deliberately the quietest chapter — it sits between two loud
+        // moments and should not compete with the closing frame.
+        background: PLANO.base,
+        borderTop: `1px solid ${SEAM}`,
+        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
+        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+      }}
       aria-label="Preguntas frecuentes"
     >
       <div style={{ maxWidth: 760 }} className="mx-auto">
+        <SectionMarker num="06" label="Preguntas" muted />
+
         <Reveal y={16} duration={1.1}>
           <div style={{ marginBottom: "clamp(2.5rem, 7vw, 4rem)" }}>
-            <p
-              className="font-inter uppercase"
-              style={{ fontSize: 11, letterSpacing: "0.22em", color: "#4A5E3A", marginBottom: "1.5rem" }}
-            >
-              Preguntas
-            </p>
             <h2
               className="font-cormorant font-light"
               style={{
-                fontSize: "clamp(1.9rem, 5.6vw, 2.9rem)",
-                lineHeight: 1.18,
-                color: "#F5F0E8",
-                letterSpacing: "-0.015em",
+                fontSize: "clamp(1.55rem, 4.2vw, 2.1rem)",
+                lineHeight: 1.2,
+                color: "rgba(245,240,232,0.88)",
+                letterSpacing: "-0.01em",
               }}
             >
               Lo que suelen preguntarnos

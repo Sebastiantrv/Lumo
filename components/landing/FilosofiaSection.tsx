@@ -1,6 +1,8 @@
 "use client";
 
 import Reveal from "./Reveal";
+import SectionMarker from "./SectionMarker";
+import { PLANO, SEAM } from "./tokens";
 
 type Principio = {
   icon: React.ReactNode;
@@ -41,22 +43,29 @@ export default function FilosofiaSection() {
     <section
       id="filosofia"
       className="px-6 md:px-12 lg:px-20"
-      style={{ paddingTop: "clamp(4rem, 10vw, 7rem)", paddingBottom: "clamp(4rem, 10vw, 7rem)" }}
+      style={{
+        background: PLANO.base,
+        borderTop: `1px solid ${SEAM}`,
+        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
+        paddingBottom: "clamp(4rem, 10vw, 7rem)",
+      }}
       aria-label="Nuestra filosofía"
     >
       <div className="max-w-5xl mx-auto">
+        <SectionMarker num="02" label="Filosofía" />
+
         <Reveal y={16} duration={1.1}>
           <h2
             className="font-cormorant font-light"
             style={{
-              fontSize: "clamp(1.7rem, 5vw, 2.4rem)",
+              fontSize: "clamp(1.9rem, 5.6vw, 2.9rem)",
               lineHeight: 1.2,
               color: "#F5F0E8",
               marginBottom: "clamp(3rem, 8vw, 4.5rem)",
-              letterSpacing: "-0.01em",
+              letterSpacing: "-0.015em",
             }}
           >
-            Nuestra filosofía
+            Cinco reglas que no negociamos
           </h2>
         </Reveal>
 

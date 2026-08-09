@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Reveal, { useReveal, EASE } from "./Reveal";
 import PrensadoModal from "./PrensadoModal";
+import SectionMarker from "./SectionMarker";
+import { PLANO, SEAM } from "./tokens";
 
 type Paso = {
   icon: React.ReactNode;
@@ -50,18 +52,19 @@ export default function ProcesoTimeline() {
     <section
       id="proceso"
       className="px-6 md:px-12 lg:px-20"
-      style={{ paddingTop: "clamp(4rem, 10vw, 7rem)", paddingBottom: "clamp(5rem, 12vw, 8rem)" }}
+      style={{
+        background: PLANO.raised,
+        borderTop: `1px solid ${SEAM}`,
+        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
+        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+      }}
       aria-label="Así nace una botella LUMO"
     >
       <div className="max-w-6xl mx-auto">
+        <SectionMarker num="03" label="El proceso" />
+
         <Reveal y={16} duration={1.1}>
           <div style={{ maxWidth: 640, marginBottom: "clamp(3.5rem, 9vw, 5.5rem)" }}>
-            <p
-              className="font-inter uppercase"
-              style={{ fontSize: 11, letterSpacing: "0.22em", color: "#4A5E3A", marginBottom: "1.5rem" }}
-            >
-              El proceso
-            </p>
             <h2
               className="font-cormorant font-light"
               style={{
@@ -158,7 +161,7 @@ function HorizontalTimeline({ pasos }: { pasos: Paso[] }) {
               style={{
                 width: 44,
                 height: 44,
-                background: "#0D0D0D",
+                background: PLANO.raised,
                 border: "1px solid rgba(74,94,58,0.45)",
                 color: "#4A5E3A",
                 opacity: visible ? 1 : 0,
@@ -225,7 +228,7 @@ function VerticalTimeline({ pasos }: { pasos: Paso[] }) {
               style={{
                 width: 44,
                 height: 44,
-                background: "#0D0D0D",
+                background: PLANO.raised,
                 border: "1px solid rgba(74,94,58,0.45)",
                 color: "#4A5E3A",
                 opacity: visible ? 1 : 0,

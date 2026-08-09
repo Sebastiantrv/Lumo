@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import Reveal, { useReveal, EASE } from "./Reveal";
 import MaskedLines from "./MaskedLines";
+import { PLANO, SEAM } from "./tokens";
 
 export default function CierreSection() {
   const [imgError, setImgError] = useState(false);
@@ -18,7 +19,9 @@ export default function CierreSection() {
       style={{
         paddingTop: "clamp(6rem, 18vw, 12rem)",
         paddingBottom: "clamp(6rem, 18vw, 12rem)",
-        background: "#0A0A0A",
+        // Deepest plane on the page. The narrative closes darker than it opened.
+        background: PLANO.deep,
+        borderTop: `1px solid ${SEAM}`,
       }}
       aria-label="Reservar tu LUMO"
     >
@@ -31,7 +34,7 @@ export default function CierreSection() {
           transform: "translate(-50%, -50%)",
           width: "min(520px, 90vw)",
           height: "min(520px, 90vw)",
-          background: "radial-gradient(circle, rgba(74,94,58,0.10) 0%, rgba(10,10,10,0) 68%)",
+          background: "radial-gradient(circle, rgba(74,94,58,0.10) 0%, rgba(6,6,6,0) 68%)",
         }}
       />
 
