@@ -25,9 +25,10 @@ export default function Navbar({ theme = "dark", sticky, onLogout }: { theme?: "
   }
 
   const navLinks = [
-    { href: "/formulas", label: "Fórmulas", num: "01" },
-    { href: "/proceso",  label: "Proceso",  num: "02" },
-    { href: "/piloto",   label: "Únete al piloto", num: "03" },
+    { href: "/",              label: "Inicio",         num: "01" },
+    { href: "/#formulas",     label: "Fórmulas",       num: "02" },
+    { href: "/#experiencia",  label: "La experiencia", num: "03" },
+    { href: "/piloto",        label: "Reservar",       num: "04" },
   ];
 
   return (

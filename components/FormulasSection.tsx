@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
+import Reveal from "./landing/Reveal";
 
 type Product = {
   id: string;
@@ -61,58 +62,168 @@ const products: Product[] = [
   },
 ];
 
+const SI_ENCONTRARAS = [
+  "Ingredientes reales",
+  "Información nutrimental",
+  "Bioactivos destacados",
+  "Producción diaria",
+];
+
+const NO_ENCONTRARAS = [
+  "Azúcar añadida",
+  "Conservadores",
+  "Colorantes",
+  "Concentrados",
+];
+
 export default function FormulasSection() {
   return (
     <section
       id="formulas"
-      className="px-5 md:px-12 lg:px-20 py-14 md:py-24"
+      className="px-6 md:px-12 lg:px-20"
+      style={{ paddingTop: "clamp(4rem, 10vw, 7rem)", paddingBottom: "clamp(5rem, 12vw, 8rem)" }}
       aria-label="Nuestras fórmulas"
     >
       <div className="max-w-6xl mx-auto">
-        <div className="mb-12 md:mb-16">
-          <h2
-            className="font-cormorant font-light italic text-[#F5F0E8] mb-3 spring-in"
-            style={{ fontSize: "clamp(2.6rem, 10vw, 4rem)", animationDelay: "0.04s" }}
-          >
-            Fórmulas
-          </h2>
-          <p
-            className="font-inter text-[#8A8A8A] spring-in"
-            style={{ fontSize: "clamp(0.9rem, 3.5vw, 1.125rem)", animationDelay: "0.10s" }}
-          >
-            Lo que necesitas. Nada más.
-          </p>
-        </div>
+        <Reveal y={16} duration={1.1}>
+          <div style={{ maxWidth: 620, marginBottom: "clamp(3rem, 8vw, 4.5rem)" }}>
+            <p
+              className="font-inter uppercase"
+              style={{ fontSize: 11, letterSpacing: "0.22em", color: "#4A5E3A", marginBottom: "1.5rem" }}
+            >
+              Las fórmulas
+            </p>
+            <h2
+              className="font-cormorant font-light text-[#F5F0E8]"
+              style={{
+                fontSize: "clamp(1.9rem, 5.6vw, 2.9rem)",
+                lineHeight: 1.18,
+                letterSpacing: "-0.015em",
+                marginBottom: "1.5rem",
+              }}
+            >
+              Tres perfiles. Un mismo estándar.
+            </h2>
+            <p className="font-inter" style={{ fontSize: "0.95rem", lineHeight: 1.85, color: "#8A8A8A" }}>
+              Cada receta fue diseñada para ofrecer un perfil distinto de sabor, utilizando
+              ingredientes reales cuidadosamente seleccionados.
+            </p>
+          </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-5">
           {products.map((product, i) => (
-            <ProductCard key={product.id} product={product} index={i} />
+            <Reveal key={product.id} delay={i * 0.1} y={20} duration={1}>
+              <ProductCard product={product} />
+            </Reveal>
           ))}
         </div>
 
-        <p
-          className="mt-12 font-inter text-[#8A8A8A] text-sm text-center spring-in"
-          style={{ animationDelay: "0.5s" }}
-        >
-          Sin conservadores. Sin sabores artificiales. Sin ingredientes innecesarios.
-        </p>
+        {/* ── Lo que encontrarás / lo que no ──
+            Rendered once. These are brand-level promises, identical across
+            all three formulas — repeating them per card would be noise. */}
+        <Reveal y={18} duration={1.05}>
+          <div
+            className="grid grid-cols-1 md:grid-cols-2"
+            style={{
+              marginTop: "clamp(3rem, 8vw, 4.5rem)",
+              border: "1px solid rgba(245,240,232,0.09)",
+              borderRadius: 16,
+              overflow: "hidden",
+            }}
+          >
+            <ListaPromesa
+              title="Lo que encontrarás"
+              items={SI_ENCONTRARAS}
+              tone="si"
+            />
+            <ListaPromesa
+              title="Lo que no encontrarás"
+              items={NO_ENCONTRARAS}
+              tone="no"
+            />
+          </div>
+        </Reveal>
       </div>
     </section>
   );
 }
 
-function ProductCard({ product, index }: { product: Product; index: number }) {
+function ListaPromesa({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: string[];
+  tone: "si" | "no";
+}) {
+  const esSi = tone === "si";
+  const color = esSi ? "#4A5E3A" : "#6A6A6A";
+
+  return (
+    <div
+      className={esSi ? "md:border-r" : ""}
+      style={{
+        padding: "clamp(1.75rem, 5vw, 2.5rem)",
+        borderRightColor: "rgba(245,240,232,0.09)",
+        borderTop: "0",
+      }}
+    >
+      <h3
+        className="font-inter uppercase"
+        style={{ fontSize: 10, letterSpacing: "0.2em", color, marginBottom: "1.5rem" }}
+      >
+        {title}
+      </h3>
+      <ul className="flex flex-col gap-3.5">
+        {items.map((item) => (
+          <li key={item} className="flex items-center gap-3">
+            <span style={{ color, flexShrink: 0, display: "flex" }} aria-hidden="true">
+              {esSi ? <CheckMark /> : <CrossMark />}
+            </span>
+            <span
+              className="font-inter"
+              style={{
+                fontSize: "0.88rem",
+                color: esSi ? "#F5F0E8" : "#7A7A7A",
+                textDecoration: esSi ? "none" : "none",
+              }}
+            >
+              {item}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function CheckMark() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="20 6 9 17 4 12" />
+    </svg>
+  );
+}
+
+function CrossMark() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function ProductCard({ product }: { product: Product }) {
   const [imgError, setImgError] = useState(false);
   const [iconError, setIconError] = useState(false);
 
   return (
     <article
-      className={`rounded-2xl p-6 md:p-9 grid grid-cols-[1fr_auto] lg:grid-cols-1 gap-6 items-center spring-press spring-in ${product.glassClass}`}
-      style={{
-        animationDelay: `${0.18 + index * 0.12}s`,
-        position: "relative",
-        overflow: "hidden",
-      }}
+      className={`rounded-2xl p-6 md:p-9 grid grid-cols-[1fr_auto] lg:grid-cols-1 gap-6 items-center h-full ${product.glassClass}`}
+      style={{ position: "relative", overflow: "hidden" }}
     >
       <div
         className="absolute top-0 left-8 right-8 h-px"
@@ -123,7 +234,7 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
             {!iconError ? (
-              <img src={product.iconImg} alt={product.name} fetchPriority="high" onError={() => setIconError(true)}
+              <img src={product.iconImg} alt="" loading="lazy" onError={() => setIconError(true)}
                 style={{ width: "100%", height: "100%", objectFit: "cover" }} />
             ) : (
               <div className="w-full h-full rounded-full flex items-center justify-center"
@@ -159,16 +270,19 @@ function ProductCard({ product, index }: { product: Product; index: number }) {
         </div>
       </div>
 
-      {/* Bottle image */}
-      <div className="relative flex-shrink-0 -my-2 -mr-1 lg:mx-auto lg:my-0" style={{ width: 145, height: 231 }}>
+      {/* Bottle image — narrow phones need the width back for the ingredient list */}
+      <div
+        className="relative flex-shrink-0 -my-2 -mr-1 lg:mx-auto lg:my-0"
+        style={{ width: "clamp(104px, 30vw, 145px)", aspectRatio: "145 / 231" }}
+      >
         {!imgError ? (
           <Image
             src={product.bottleImg}
             alt={product.name}
             fill
-            priority
+            loading="lazy"
             className="object-contain object-right drop-shadow-2xl"
-            sizes="145px"
+            sizes="(max-width: 480px) 30vw, 145px"
             onError={() => setImgError(true)}
           />
         ) : (

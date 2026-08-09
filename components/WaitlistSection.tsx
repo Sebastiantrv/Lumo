@@ -400,7 +400,7 @@ export default function WaitlistSection() {
                   Ir a Mi LUMO <span aria-hidden="true">→</span>
                 </Link>
 
-                <Link href="/formulas"
+                <Link href="/#formulas"
                   className="w-full inline-flex items-center justify-center font-inter spring-press py-3 mt-2"
                   style={{ fontSize: "clamp(0.82rem, 3.2vw, 0.95rem)", color: T.textMuted }}>
                   Explorar fórmulas

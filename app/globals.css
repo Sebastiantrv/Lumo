@@ -27,6 +27,23 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Anchored sections must clear the fixed navbar when scrolled to. */
+section[id] { scroll-margin-top: 96px; }
+
+/* Honour the OS setting. The narrative should read the same without motion. */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* ─── Glass utilities ─── */
 @layer utilities {
   .font-cormorant { font-family: var(--font-cormorant), Georgia, serif; }

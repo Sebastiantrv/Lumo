@@ -58,6 +58,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${cormorant.variable} ${inter.variable}`}>
+      <head>
+        {/* Scroll reveals start hidden and are shown by JS. Without scripts
+            the whole page below the hero would stay blank, so force them on. */}
+        <noscript>
+          <style>{`[data-reveal]{opacity:1!important;transform:none!important}`}</style>
+        </noscript>
+      </head>
       <body className="bg-[#0D0D0D] text-[#F5F0E8] font-sans antialiased">
         {children}
       </body>

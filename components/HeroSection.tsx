@@ -88,7 +88,7 @@ export default function HeroSection() {
               animationDelay: "0.22s",
             }}
           >
-            Jugos naturales<br />preparados en lotes<br />limitados y entregados<br />cada mañana.
+            Jugos preparados<br />en lotes limitados<br />y entregados<br />cada mañana.
           </p>
         </div>
 
@@ -106,10 +106,10 @@ export default function HeroSection() {
                 padding: "0.9rem 1.5rem",
               }}
             >
-              Unirme al piloto <span aria-hidden="true">→</span>
+              Reservar mi LUMO <span aria-hidden="true">→</span>
             </a>
             <a
-              href="/formulas"
+              href="#formulas"
               className="inline-flex items-center justify-between font-inter font-medium rounded-full spring-press text-[#F5F0E8]"
               style={{
                 fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
@@ -212,7 +212,7 @@ function BottleIllustration() {
         <rect x="103" y="314" width="54" height="0.6" fill="#333" />
         <text x="130" y="326" textAnchor="middle" fill="#777" fontFamily="Arial,sans-serif" fontSize="5.2">Prensados en frío.</text>
         <text x="130" y="336" textAnchor="middle" fill="#777" fontFamily="Arial,sans-serif" fontSize="5.2">Hechos cada mañana.</text>
-        <text x="130" y="350" textAnchor="middle" fill="#444" fontFamily="Arial,sans-serif" fontSize="4.8">250 ml</text>
+        <text x="130" y="350" textAnchor="middle" fill="#444" fontFamily="Arial,sans-serif" fontSize="4.8">350 ml</text>
 
         <ellipse cx="130" cy="431" rx="56" ry="6" fill="#0a0305" opacity="0.7" />
         <ellipse cx="130" cy="433" rx="42" ry="8" fill="#150608" opacity="0.4" />
