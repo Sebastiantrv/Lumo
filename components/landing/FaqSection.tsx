@@ -7,6 +7,16 @@ import { PLANO, SEAM, PAD } from "./tokens";
 
 const faqs = [
   {
+    q: "¿Las propiedades se pierden después de preparar el jugo?",
+    a: [
+      "No desaparecen de golpe.",
+      "Algunos compuestos naturales de frutas y verduras, como la vitamina C y ciertos antioxidantes, son sensibles al oxígeno, la luz, la temperatura y el paso del tiempo.",
+      "Por eso en LUMO producimos pequeñas cantidades cada mañana, refrigeramos de inmediato y recomendamos consumir tu jugo lo más fresco posible.",
+      "No buscamos que una botella dure semanas. Buscamos que llegue a ti en su mejor momento.",
+    ],
+    featured: true,
+  },
+  {
     q: "¿Cuánto dura un jugo?",
     a: "Hasta tres días refrigerado. Aun así, recomendamos tomarlo el mismo día: es cuando el sabor y el aroma están en su mejor punto.",
   },
@@ -37,7 +47,9 @@ const faqs = [
 ];
 
 export default function FaqSection() {
-  const [openIdx, setOpenIdx] = useState<number | null>(null);
+  // The featured question opens on arrival — it's the one visitors
+  // hesitate on most, so it shouldn't need a click to be read.
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
 
   return (
     <section
@@ -93,10 +105,12 @@ function FaqItem({
   open,
   onToggle,
 }: {
-  faq: { q: string; a: string };
+  faq: { q: string; a: string | string[]; featured?: boolean };
   open: boolean;
   onToggle: () => void;
 }) {
+  const paragraphs = Array.isArray(faq.a) ? faq.a : [faq.a];
+
   return (
     <div style={{ borderBottom: "1px solid rgba(245,240,232,0.09)" }}>
       <button
@@ -111,17 +125,27 @@ function FaqItem({
           transition: `opacity 0.25s ease`,
         }}
       >
-        <span
-          className="font-inter"
-          style={{
-            fontSize: "clamp(0.9rem, 2.6vw, 1rem)",
-            color: open ? "#F5F0E8" : "#CFC9C0",
-            fontWeight: 400,
-            lineHeight: 1.5,
-            transition: "color 0.35s ease",
-          }}
-        >
-          {faq.q}
+        <span className="flex flex-col gap-2">
+          {faq.featured && (
+            <span
+              className="font-inter uppercase"
+              style={{ fontSize: 9.5, letterSpacing: "0.2em", color: "#4A5E3A" }}
+            >
+              Pregunta común
+            </span>
+          )}
+          <span
+            className="font-inter"
+            style={{
+              fontSize: "clamp(0.9rem, 2.6vw, 1rem)",
+              color: open ? "#F5F0E8" : "#CFC9C0",
+              fontWeight: faq.featured ? 500 : 400,
+              lineHeight: 1.5,
+              transition: "color 0.35s ease",
+            }}
+          >
+            {faq.q}
+          </span>
         </span>
 
         {/* Plus that becomes a minus — the only motion the control needs. */}
@@ -166,19 +190,24 @@ function FaqItem({
         }}
       >
         <div style={{ overflow: "hidden" }}>
-          <p
-            className="font-inter"
-            style={{
-              fontSize: "0.875rem",
-              lineHeight: 1.85,
-              color: "#8A8A8A",
-              paddingBottom: "1.5rem",
-              paddingRight: "2rem",
-              maxWidth: 620,
-            }}
+          <div
+            className="flex flex-col gap-3"
+            style={{ paddingBottom: "1.5rem", paddingRight: "2rem", maxWidth: 620 }}
           >
-            {faq.a}
-          </p>
+            {paragraphs.map((p, i) => (
+              <p
+                key={i}
+                className="font-inter"
+                style={{
+                  fontSize: "0.875rem",
+                  lineHeight: 1.85,
+                  color: "#8A8A8A",
+                }}
+              >
+                {p}
+              </p>
+            ))}
+          </div>
         </div>
       </div>
     </div>
