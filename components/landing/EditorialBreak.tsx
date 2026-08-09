@@ -1,6 +1,7 @@
 "use client";
 
-import Reveal, { useReveal, EASE } from "./Reveal";
+import { useReveal, EASE } from "./Reveal";
+import MaskedLines from "./MaskedLines";
 
 /**
  * A visual breath between sections. One line of type, one hairline.
@@ -25,19 +26,17 @@ export default function EditorialBreak({ children }: { children: React.ReactNode
             transition: `transform 1.1s ${EASE}`,
           }}
         />
-        <Reveal delay={0.15} y={10} duration={1.1}>
-          <p
-            className="font-cormorant font-light italic text-center"
-            style={{
-              fontSize: "clamp(1.35rem, 4.6vw, 2rem)",
-              lineHeight: 1.4,
-              color: "rgba(245,240,232,0.62)",
-              letterSpacing: "0.005em",
-            }}
-          >
-            {children}
-          </p>
-        </Reveal>
+        <p
+          className="font-cormorant font-light italic text-center"
+          style={{
+            fontSize: "clamp(1.35rem, 4.6vw, 2rem)",
+            lineHeight: 1.4,
+            color: "rgba(245,240,232,0.62)",
+            letterSpacing: "0.005em",
+          }}
+        >
+          <MaskedLines delay={0.22} duration={1.25} lines={[children]} />
+        </p>
       </div>
     </div>
   );

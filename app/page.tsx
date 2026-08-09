@@ -8,6 +8,7 @@ import FormulasSection from "@/components/FormulasSection";
 import ExperienciaSection from "@/components/landing/ExperienciaSection";
 import FaqSection from "@/components/landing/FaqSection";
 import CierreSection from "@/components/landing/CierreSection";
+import ScrollProgress from "@/components/landing/ScrollProgress";
 import Footer from "@/components/Footer";
 
 export default function Home() {
@@ -16,6 +17,8 @@ export default function Home() {
       <header>
         <Navbar />
       </header>
+
+      <ScrollProgress />
 
       {/* Conocer la marca */}
       <HeroSection />

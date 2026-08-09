@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import Reveal, { useReveal, EASE } from "./Reveal";
+import MaskedLines from "./MaskedLines";
 
 export default function CierreSection() {
   const [imgError, setImgError] = useState(false);
@@ -11,6 +12,7 @@ export default function CierreSection() {
 
   return (
     <section
+      id="reservar"
       ref={ref}
       className="relative overflow-hidden px-6 md:px-12 lg:px-20"
       style={{
@@ -67,21 +69,27 @@ export default function CierreSection() {
           )}
         </div>
 
-        <Reveal y={16} duration={1.3}>
-          <h2
-            className="font-cormorant font-light"
-            style={{
-              fontSize: "clamp(1.75rem, 6vw, 3rem)",
-              lineHeight: 1.28,
-              color: "#F5F0E8",
-              letterSpacing: "-0.015em",
-            }}
-          >
-            La calidad no empieza cuando abres la botella.
-            <br />
-            <span style={{ color: "rgba(245,240,232,0.5)" }}>Empieza mucho antes.</span>
-          </h2>
-        </Reveal>
+        <h2
+          className="font-cormorant font-light"
+          style={{
+            fontSize: "clamp(1.75rem, 6vw, 3rem)",
+            lineHeight: 1.28,
+            color: "#F5F0E8",
+            letterSpacing: "-0.015em",
+          }}
+        >
+          <MaskedLines
+            delay={0.1}
+            stagger={0.16}
+            duration={1.3}
+            lines={[
+              "La calidad no empieza cuando abres la botella.",
+              <span key="b" style={{ color: "rgba(245,240,232,0.5)" }}>
+                Empieza mucho antes.
+              </span>,
+            ]}
+          />
+        </h2>
 
         <Reveal delay={0.18} y={12} duration={1.1}>
           <p

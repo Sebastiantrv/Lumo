@@ -1,6 +1,7 @@
 "use client";
 
 import Reveal from "./Reveal";
+import MaskedLines from "./MaskedLines";
 
 export default function PromesaSection() {
   return (
@@ -21,21 +22,20 @@ export default function PromesaSection() {
           </p>
         </Reveal>
 
-        <Reveal delay={0.1} y={18} duration={1.1}>
-          <h2
-            className="font-cormorant font-light"
-            style={{
-              fontSize: "clamp(2rem, 6.4vw, 3.1rem)",
-              lineHeight: 1.18,
-              color: "#F5F0E8",
-              letterSpacing: "-0.015em",
-            }}
-          >
-            No hacemos jugos.
-            <br />
-            Creamos un mejor comienzo para tu día.
-          </h2>
-        </Reveal>
+        <h2
+          className="font-cormorant font-light"
+          style={{
+            fontSize: "clamp(2rem, 6.4vw, 3.1rem)",
+            lineHeight: 1.18,
+            color: "#F5F0E8",
+            letterSpacing: "-0.015em",
+          }}
+        >
+          <MaskedLines
+            delay={0.05}
+            lines={["No hacemos jugos.", "Creamos un mejor comienzo para tu día."]}
+          />
+        </h2>
 
         <Reveal delay={0.2} y={16} duration={1.1}>
           <div className="flex flex-col gap-6">
