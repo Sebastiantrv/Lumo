@@ -28,7 +28,7 @@ export default function Navbar({ theme = "dark", sticky, onLogout }: { theme?: "
     { href: "/",              label: "Inicio",         num: "01" },
     { href: "/#formulas",     label: "Fórmulas",       num: "02" },
     { href: "/#experiencia",  label: "La experiencia", num: "03" },
-    { href: "/piloto",        label: "Reservar",       num: "04" },
+    { href: "/mi-lumo",       label: "Reservar",       num: "04" },
   ];
 
   return (

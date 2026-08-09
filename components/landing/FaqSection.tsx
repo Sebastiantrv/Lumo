@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Reveal, { EASE } from "./Reveal";
 import SectionMarker from "./SectionMarker";
-import { PLANO, SEAM } from "./tokens";
+import { PLANO, SEAM, PAD } from "./tokens";
 
 const faqs = [
   {
@@ -48,8 +48,8 @@ export default function FaqSection() {
         // moments and should not compete with the closing frame.
         background: PLANO.base,
         borderTop: `1px solid ${SEAM}`,
-        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
-        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+        paddingTop: PAD.chapterTop,
+        paddingBottom: PAD.chapterBottom,
       }}
       aria-label="Preguntas frecuentes"
     >

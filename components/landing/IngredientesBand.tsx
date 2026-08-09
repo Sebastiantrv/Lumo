@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import { useReveal, EASE } from "./Reveal";
-import { PLANO, SEAM } from "./tokens";
+import { PLANO, SEAM, PAD } from "./tokens";
 
 /** Crop dimensions of /ingredientes-band.jpg. */
 const BAND_W = 1536;
@@ -37,7 +37,7 @@ export default function IngredientesBand() {
       style={{
         background: PLANO.base,
         borderTop: `1px solid ${SEAM}`,
-        paddingTop: "clamp(3.5rem, 9vw, 6rem)",
+        paddingTop: "clamp(2.5rem, 6vw, 4rem)",
         // The settling zoom below scales a full-bleed element past 100%.
         // Without this the page scrolls sideways for the length of the animation.
         overflow: "hidden",

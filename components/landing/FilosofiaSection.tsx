@@ -2,7 +2,7 @@
 
 import Reveal from "./Reveal";
 import SectionMarker from "./SectionMarker";
-import { PLANO, SEAM } from "./tokens";
+import { PLANO, SEAM, PAD } from "./tokens";
 
 type Principio = {
   icon: React.ReactNode;
@@ -46,8 +46,8 @@ export default function FilosofiaSection() {
       style={{
         background: PLANO.base,
         borderTop: `1px solid ${SEAM}`,
-        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
-        paddingBottom: "clamp(4rem, 10vw, 7rem)",
+        paddingTop: PAD.chapterTop,
+        paddingBottom: PAD.chapterBottom,
       }}
       aria-label="Nuestra filosofía"
     >

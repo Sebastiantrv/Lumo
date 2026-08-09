@@ -232,9 +232,9 @@ function LoginScreen({ onLogin }: { onLogin: (m: Miembro) => void }) {
           </form>
 
           <p className="text-center mt-8 font-inter text-xs" style={{ color: "#A0A090" }}>
-            ¿No tienes código?{" "}
-            <a href={`https://wa.me/${LUMO_WHATSAPP}`} target="_blank" rel="noopener" style={{ color: VERDE, textDecoration: "underline" }}>
-              Escríbenos
+            ¿Aún no eres miembro?{" "}
+            <a href="/piloto" style={{ color: VERDE, textDecoration: "underline" }}>
+              Únete al piloto
             </a>
           </p>
         </div>

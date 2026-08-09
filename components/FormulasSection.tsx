@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 import Reveal from "./landing/Reveal";
 import SectionMarker from "./landing/SectionMarker";
-import { PLANO } from "./landing/tokens";
+import { PLANO, PAD } from "./landing/tokens";
 
 type Product = {
   id: string;
@@ -87,8 +87,8 @@ export default function FormulasSection() {
         // No seam here: the ingredient band above opens this chapter,
         // and the two share one plane.
         background: PLANO.base,
-        paddingTop: "clamp(3rem, 8vw, 5rem)",
-        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+        paddingTop: "clamp(2.5rem, 6vw, 4rem)",
+        paddingBottom: PAD.chapterBottom,
       }}
       aria-label="Nuestras fórmulas"
     >

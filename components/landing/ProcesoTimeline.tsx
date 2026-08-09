@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Reveal, { useReveal, EASE } from "./Reveal";
 import PrensadoModal from "./PrensadoModal";
 import SectionMarker from "./SectionMarker";
-import { PLANO, SEAM } from "./tokens";
+import { PLANO, SEAM, PAD } from "./tokens";
 
 type Paso = {
   icon: React.ReactNode;
@@ -55,8 +55,8 @@ export default function ProcesoTimeline() {
       style={{
         background: PLANO.raised,
         borderTop: `1px solid ${SEAM}`,
-        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
-        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+        paddingTop: PAD.chapterTop,
+        paddingBottom: PAD.chapterBottom,
       }}
       aria-label="Así nace una botella LUMO"
     >

@@ -99,7 +99,7 @@ export default function HeroSection() {
         >
           <div className="flex flex-col sm:flex-row gap-3">
             <a
-              href="/piloto"
+              href="/mi-lumo"
               className="inline-flex items-center justify-between bg-[#F5F0E8] text-[#0D0D0D] font-inter font-medium rounded-full spring-press"
               style={{
                 fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",

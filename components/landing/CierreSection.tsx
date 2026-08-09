@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import Reveal, { useReveal, EASE } from "./Reveal";
 import MaskedLines from "./MaskedLines";
-import { PLANO, SEAM } from "./tokens";
+import { PLANO, SEAM, PAD } from "./tokens";
 
 export default function CierreSection() {
   const [imgError, setImgError] = useState(false);
@@ -17,8 +17,8 @@ export default function CierreSection() {
       ref={ref}
       className="relative overflow-hidden px-6 md:px-12 lg:px-20"
       style={{
-        paddingTop: "clamp(6rem, 18vw, 12rem)",
-        paddingBottom: "clamp(6rem, 18vw, 12rem)",
+        paddingTop: PAD.closeY,
+        paddingBottom: PAD.closeY,
         // Deepest plane on the page. The narrative closes darker than it opened.
         background: PLANO.deep,
         borderTop: `1px solid ${SEAM}`,
@@ -113,7 +113,7 @@ export default function CierreSection() {
 
         <Reveal delay={0.3} y={12} duration={1.1}>
           <Link
-            href="/piloto"
+            href="/mi-lumo"
             className="inline-flex items-center gap-3 font-inter font-medium rounded-full spring-press"
             style={{
               marginTop: "clamp(2.5rem, 6vw, 3.5rem)",

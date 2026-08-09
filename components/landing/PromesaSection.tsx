@@ -3,7 +3,7 @@
 import Reveal from "./Reveal";
 import MaskedLines from "./MaskedLines";
 import SectionMarker from "./SectionMarker";
-import { PLANO, SEAM } from "./tokens";
+import { PLANO, SEAM, PAD } from "./tokens";
 
 export default function PromesaSection() {
   return (
@@ -14,8 +14,8 @@ export default function PromesaSection() {
         background: PLANO.raised,
         borderTop: `1px solid ${SEAM}`,
         // The loudest type on the page after the hero. It gets the most air too.
-        paddingTop: "clamp(7rem, 18vw, 13rem)",
-        paddingBottom: "clamp(7rem, 18vw, 13rem)",
+        paddingTop: PAD.promiseTop,
+        paddingBottom: PAD.chapterBottom,
       }}
       aria-label="La promesa LUMO"
     >

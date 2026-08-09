@@ -2,7 +2,7 @@
 
 import { useReveal, EASE } from "./Reveal";
 import MaskedLines from "./MaskedLines";
-import { PLANO, type Plano } from "./tokens";
+import { PLANO, PAD, type Plano } from "./tokens";
 
 /**
  * A visual breath between sections. One line of type, one hairline.
@@ -24,8 +24,8 @@ export default function EditorialBreak({
       className="px-6 md:px-12 lg:px-20"
       style={{
         background: PLANO[tone],
-        paddingTop: "clamp(5rem, 14vw, 9rem)",
-        paddingBottom: "clamp(5rem, 14vw, 9rem)",
+        paddingTop: PAD.breakY,
+        paddingBottom: PAD.breakY,
       }}
     >
       <div className="max-w-2xl mx-auto flex flex-col items-center gap-8">

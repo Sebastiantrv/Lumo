@@ -2,7 +2,7 @@
 
 import Reveal from "./Reveal";
 import SectionMarker from "./SectionMarker";
-import { PLANO, SEAM } from "./tokens";
+import { PLANO, SEAM, PAD } from "./tokens";
 
 export default function ExperienciaSection() {
   const pasos = [
@@ -45,8 +45,8 @@ export default function ExperienciaSection() {
       style={{
         background: PLANO.raised,
         borderTop: `1px solid ${SEAM}`,
-        paddingTop: "clamp(4.5rem, 11vw, 7.5rem)",
-        paddingBottom: "clamp(5rem, 12vw, 8rem)",
+        paddingTop: PAD.chapterTop,
+        paddingBottom: PAD.chapterBottom,
       }}
       aria-label="La experiencia LUMO"
     >
@@ -153,6 +153,9 @@ function MockReserva() {
   return (
     <MockFrame>
       <MockLabel>Elige tu fórmula</MockLabel>
+      {/* The one place in this mockup that borrows the real formula
+          palette — every row keeps a trace of its own color, not just
+          the selected one, so the three read as a set. */}
       <div className="flex flex-col gap-2">
         {opciones.map((o) => (
           <div
@@ -160,14 +163,15 @@ function MockReserva() {
             className="flex items-center gap-3 rounded-xl"
             style={{
               padding: "0.65rem 0.85rem",
-              border: o.active ? `1px solid ${o.color}` : "1px solid rgba(245,240,232,0.07)",
-              background: o.active ? `${o.color}14` : "transparent",
+              border: `1px solid ${o.color}${o.active ? "80" : "26"}`,
+              background: `${o.color}${o.active ? "1c" : "0a"}`,
+              transition: "background 0.3s ease, border-color 0.3s ease",
             }}
           >
-            <span style={{ width: 6, height: 6, borderRadius: 999, background: o.color, display: "block" }} />
+            <span style={{ width: 6, height: 6, borderRadius: 999, background: o.color, display: "block", flexShrink: 0 }} />
             <span
               className="font-inter"
-              style={{ fontSize: "0.78rem", color: o.active ? "#F5F0E8" : "#7A7A7A" }}
+              style={{ fontSize: "0.78rem", color: o.active ? "#F5F0E8" : `${o.color}c8`, fontWeight: o.active ? 500 : 400 }}
             >
               {o.label}
             </span>
