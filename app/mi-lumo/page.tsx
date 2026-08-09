@@ -6,6 +6,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { LUMO_WHATSAPP } from "@/lib/constants";
 import { todayStr } from "@/lib/dates";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import Navbar from "@/components/Navbar";
 
 /* ── Types ── */
@@ -372,6 +373,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   if (showReserva) {
     return (
       <ReservaFlow
+        miembro={miembro}
         clienteId={miembro.id}
         formulas={formulas}
         balance={balance}
@@ -617,9 +619,9 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
       <MiLumoFooter />
 
-      {/* Recarga placeholder modal */}
+      {/* Añadir Balance — solicitud por WhatsApp */}
       {showRecarga && (
-        <RecargaPlaceholder onClose={() => setShowRecarga(false)} />
+        <RecargaModal miembro={miembro} onClose={() => setShowRecarga(false)} />
       )}
     </div>
   );
@@ -632,12 +634,14 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 type ReservaLinea = { formulaId: string; cantidad: number };
 
 function ReservaFlow({
+  miembro,
   clienteId,
   formulas,
   balance,
   onClose,
   onSuccess,
 }: {
+  miembro: Miembro;
   clienteId: string;
   formulas: FormulaWithIngredients[];
   balance: number;
@@ -1116,7 +1120,7 @@ function ReservaFlow({
       </div>
 
       </div>
-      {showRecarga && <RecargaPlaceholder onClose={() => setShowRecarga(false)} />}
+      {showRecarga && <RecargaModal miembro={miembro} onClose={() => setShowRecarga(false)} />}
     </div>
   );
 }
@@ -1233,53 +1237,168 @@ function FormulaCard({ formula, cantidad, delay, onAdd, onRemove }: {
 }
 
 /* ── Recarga placeholder modal ── */
-function RecargaPlaceholder({ onClose }: { onClose: () => void }) {
+// Piloto-only reference for the "múltiplos de $85" hint below — not read
+// from formulas.precio, since that can vary per fórmula and this is a
+// quick-pick UX helper, not a computed price.
+const PRECIO_LUMO_REFERENCIA = 85;
+
+const MONTOS_RAPIDOS = [
+  { amount: 255, botellas: 3 },
+  { amount: 425, botellas: 5 },
+  { amount: 850, botellas: 10 },
+];
+
+function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => void }) {
+  const [selected, setSelected] = useState<number | "otro" | null>(null);
+  const [otroMonto, setOtroMonto] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const montoOtro = Number(otroMonto);
+  const montoFinal = selected === "otro" ? montoOtro : selected;
+  const montoValido = !!montoFinal && montoFinal > 0;
+  const otroNoMultiplo = selected === "otro" && montoOtro > 0 && montoOtro % PRECIO_LUMO_REFERENCIA !== 0;
+
+  function solicitar() {
+    if (!montoValido || !montoFinal) return;
+    const mensaje = [
+      "Hola, quiero añadir Balance LUMO.",
+      "",
+      `Nombre: ${miembro.nombre}`,
+      `Código LUMO: ${miembro.codigo_miembro}`,
+      `Monto solicitado: $${montoFinal.toLocaleString("es-MX")}`,
+      "",
+      "Quedo pendiente para confirmar la recarga.",
+    ].join("\n");
+    window.open(buildWhatsAppUrl(LUMO_WHATSAPP, mensaje), "_blank", "noopener");
+    setSent(true);
+  }
+
+  if (sent) {
+    return (
+      <ModalOverlay onClose={onClose}>
+        <div className="text-center py-3" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
+          <div
+            className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ background: `${VERDE}10`, animation: "lumoScaleIn 0.5s var(--spring) both" }}
+          >
+            <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke={VERDE} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" style={{ strokeDasharray: 20, strokeDashoffset: 20, animation: "checkStroke 0.6s ease 0.2s forwards" }} />
+            </svg>
+          </div>
+          <h2 className="font-cormorant font-light text-xl mb-2" style={{ color: "#2D2D2D" }}>
+            Tu solicitud está en camino
+          </h2>
+          <p className="font-inter text-xs leading-relaxed mb-6" style={{ color: "#8A8A7A" }}>
+            Tu balance se actualizará cuando confirmemos la recarga.
+          </p>
+          <button
+            onClick={onClose}
+            className="w-full rounded-xl py-3 font-inter text-sm font-medium spring-press"
+            style={{ background: VERDE, color: CREAM }}
+          >
+            Entendido
+          </button>
+        </div>
+      </ModalOverlay>
+    );
+  }
+
   return (
     <ModalOverlay onClose={onClose}>
-      <div className="text-center mb-5">
+      <div className="text-center mb-6">
         <div className="w-14 h-14 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: `${VERDE}10` }}>
           <DropIcon size={22} color={VERDE} />
         </div>
-        <h2 className="font-cormorant font-light text-xl mb-1" style={{ color: "#2D2D2D" }}>
+        <h2 className="font-cormorant font-light text-xl mb-2" style={{ color: "#2D2D2D" }}>
           Añadir Balance LUMO
         </h2>
-        <p className="font-inter text-xs" style={{ color: "#8A8A7A" }}>
-          Próximamente podrás añadir balance desde aquí.
+        <p className="font-inter text-xs leading-relaxed" style={{ color: "#8A8A7A" }}>
+          Por ahora, las recargas se confirman personalmente por WhatsApp para mantener el control del piloto y asegurar que cada saldo quede registrado correctamente.
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 mb-5">
-        {[
-          { amount: 300, label: "$300" },
-          { amount: 600, label: "$600" },
-          { amount: 1200, label: "$1,200" },
-        ].map(({ amount, label }) => (
-          <div
-            key={amount}
-            className="rounded-xl p-4 flex items-center justify-between"
-            style={{ background: `${VERDE}06`, border: `1px solid ${VERDE}12`, opacity: 0.6 }}
-          >
-            <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>{label}</span>
-            <span className="font-inter text-xs px-3 py-1 rounded-full" style={{ background: `${VERDE}10`, color: VERDE }}>
-              Próximamente
-            </span>
-          </div>
-        ))}
+      <div className="flex flex-col gap-2 mb-2">
+        {MONTOS_RAPIDOS.map(({ amount, botellas }) => {
+          const active = selected === amount;
+          return (
+            <button
+              key={amount}
+              onClick={() => setSelected(amount)}
+              className="rounded-xl p-4 flex items-center justify-between spring-press transition-all"
+              style={{
+                background: active ? `${VERDE}10` : "#fff",
+                border: active ? `1.5px solid ${VERDE}` : "1px solid rgba(0,0,0,0.06)",
+              }}
+            >
+              <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
+                ${amount.toLocaleString("es-MX")}
+              </span>
+              <span className="font-inter text-xs" style={{ color: active ? VERDE : "#A0A090" }}>
+                {botellas} LUMO
+              </span>
+            </button>
+          );
+        })}
+
+        <button
+          onClick={() => setSelected("otro")}
+          className="rounded-xl p-4 flex items-center justify-between spring-press transition-all"
+          style={{
+            background: selected === "otro" ? `${VERDE}10` : "#fff",
+            border: selected === "otro" ? `1.5px solid ${VERDE}` : "1px solid rgba(0,0,0,0.06)",
+          }}
+        >
+          <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
+            Otro monto
+          </span>
+          <span className="font-inter text-xs" style={{ color: "#A0A090" }}>→</span>
+        </button>
       </div>
 
-      <p className="font-inter text-xs text-center mb-4" style={{ color: "#A0A090" }}>
-        Mientras tanto, contáctanos por WhatsApp para añadir balance.
+      {selected === "otro" && (
+        <div className="mb-4" style={{ animation: "lumoFadeUp 0.3s ease both" }}>
+          <label htmlFor="monto-otro" className="font-inter text-xs block mb-1.5 mt-3" style={{ color: "#8A8A7A" }}>
+            Monto a solicitar
+          </label>
+          <div className="flex items-center rounded-xl overflow-hidden" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.08)" }}>
+            <span className="px-3 font-inter text-sm" style={{ color: "#A0A090" }}>$</span>
+            <input
+              id="monto-otro"
+              type="number"
+              min={1}
+              inputMode="numeric"
+              value={otroMonto}
+              onChange={(e) => setOtroMonto(e.target.value)}
+              placeholder="0"
+              className="w-full py-3 pr-4 font-inter outline-none"
+              style={{ background: "transparent", color: "#2D2D2D", fontSize: "16px" }}
+            />
+          </div>
+          {otroNoMultiplo && (
+            <p className="font-inter text-xs mt-1.5" style={{ color: "#B8860B" }}>
+              Los LUMO cuestan ${PRECIO_LUMO_REFERENCIA} c/u — considera ${255}, ${425} o ${850}.
+            </p>
+          )}
+        </div>
+      )}
+
+      <p className="font-inter text-xs text-center leading-relaxed mt-3 mb-4" style={{ color: "#A0A090" }}>
+        Tu balance se actualizará cuando confirmemos la recarga.
       </p>
-      <a
-        href={`https://wa.me/${LUMO_WHATSAPP}?text=${encodeURIComponent("Hola LUMO 🍃 Me gustaría añadir balance a mi cuenta.")}`}
-        target="_blank"
-        rel="noopener"
-        className="flex items-center justify-center gap-2 w-full rounded-xl py-3 font-inter text-sm spring-press"
-        style={{ background: "rgba(37,211,102,0.08)", color: "#25D366", border: "1px solid rgba(37,211,102,0.15)" }}
+
+      <button
+        onClick={solicitar}
+        disabled={!montoValido}
+        className="flex items-center justify-center gap-2 w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press transition-opacity"
+        style={{
+          background: montoValido ? VERDE : "rgba(0,0,0,0.06)",
+          color: montoValido ? CREAM : "#A0A090",
+          cursor: montoValido ? "pointer" : "default",
+        }}
       >
         <WhatsAppIcon size={16} />
-        Añadir balance por WhatsApp
-      </a>
+        Solicitar recarga
+      </button>
     </ModalOverlay>
   );
 }
@@ -1678,6 +1797,12 @@ function PerfilTab({ miembro, pedidos, onLogout }: { miembro: Miembro; pedidos: 
 
 /* ── Shared ── */
 function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
