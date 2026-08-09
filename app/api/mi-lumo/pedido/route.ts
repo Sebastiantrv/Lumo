@@ -42,8 +42,20 @@ export async function POST(req: NextRequest) {
   });
 
   if (error) {
+    // 42883 = undefined_function: the ONLY case where it's safe to fall
+    // back to the JS path, because it means the RPC genuinely isn't
+    // deployed yet. Any other error means the function exists and ran —
+    // falling back then would retry the write without the advisory lock
+    // crear_pedido_atomico uses to serialize bookings per day, silently
+    // reintroducing the capacity race this function exists to prevent.
+    if (error.code === "42883") {
+      console.warn("[pedido] crear_pedido_atomico no existe todavía, usando fallback JS");
+      return fallbackCreatePedido(supabase, cliente_id, lineas, dia_entrega);
+    }
+
     const msg = error.message ?? "";
-    // Business errors from the function
+    // Known business-rule errors raised deliberately by the function —
+    // safe to surface as-is, the frontend matches on these substrings.
     if (msg.includes("Balance insuficiente")) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
@@ -53,8 +65,21 @@ export async function POST(req: NextRequest) {
     if (msg.includes("no encontrad") || msg.includes("inactivo")) {
       return NextResponse.json({ error: msg }, { status: 404 });
     }
-    // Function doesn't exist or has a signature mismatch — use fallback
-    return fallbackCreatePedido(supabase, cliente_id, lineas, dia_entrega);
+
+    // Anything else is unexpected — log the detail server-side for
+    // debugging, but never leak it to the client, and never fall back.
+    console.error("[pedido] crear_pedido_atomico failed", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      cliente_id,
+      dia_entrega,
+    });
+    return NextResponse.json(
+      { error: "No pudimos confirmar tu pedido en este momento. Intenta nuevamente." },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data);
