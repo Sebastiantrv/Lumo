@@ -746,6 +746,197 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
    ══════════════════════════════════════════════ */
 type ReservaLinea = { formulaId: string; cantidad: number };
 
+// Packs de ocasión: atajos para armar pedido según momento de consumo.
+// No son recargas de balance ni descuentos — solo prellenan fórmulas y
+// cantidad, y el precio se calcula siempre desde formulas.precio (Supabase),
+// nunca hardcodeado, para no desalinearse si el precio por botella cambia.
+// Las fórmulas se identifican por slug, igual que el resto de Mi LUMO
+// (ver BOTTLE_IMAGES). Un pack solo se ofrece si TODAS sus fórmulas están
+// presentes en el catálogo activo cargado (`formulas`).
+const PACKS_OCASION: { id: string; nombre: string; frase: string; composicion: { slug: string; cantidad: number }[] }[] = [
+  {
+    id: "semana-ligera",
+    nombre: "Semana ligera",
+    frase: "Tres perfiles distintos para acompañar tu semana sin complicarla.",
+    composicion: [
+      { slug: "verde-fresco", cantidad: 1 },
+      { slug: "rojo-vital", cantidad: 1 },
+      { slug: "tropical-hydrate", cantidad: 1 },
+    ],
+  },
+  {
+    id: "rutina-oficina",
+    nombre: "Rutina oficina",
+    frase: "Una selección fresca y práctica para acompañar tus mañanas de oficina.",
+    composicion: [
+      { slug: "verde-fresco", cantidad: 2 },
+      { slug: "tropical-hydrate", cantidad: 1 },
+    ],
+  },
+  {
+    id: "pre-entreno",
+    nombre: "Pre-entreno",
+    frase: "Una selección pensada para acompañar tu rutina antes de entrenar, con un perfil fresco y frutal.",
+    composicion: [
+      { slug: "rojo-vital", cantidad: 1 },
+      { slug: "tropical-hydrate", cantidad: 1 },
+    ],
+  },
+  {
+    id: "manana-fresca",
+    nombre: "Mañana fresca",
+    frase: "Para quienes ya encontraron en Verde Fresco su ritual de mañana.",
+    composicion: [{ slug: "verde-fresco", cantidad: 2 }],
+  },
+];
+
+function PackOcasionSection({
+  formulas,
+  onElegir,
+}: {
+  formulas: FormulaWithIngredients[];
+  onElegir: (lineas: ReservaLinea[]) => void;
+}) {
+  const resueltos = PACKS_OCASION.map((pack) => {
+    const items = pack.composicion.map((c) => ({
+      cantidad: c.cantidad,
+      formula: formulas.find((f) => f.slug === c.slug) ?? null,
+    }));
+    const disponible = items.every((it) => it.formula !== null);
+    const totalBotellas = pack.composicion.reduce((s, c) => s + c.cantidad, 0);
+    const total = disponible
+      ? items.reduce((s, it) => s + (it.formula!.precio ?? 0) * it.cantidad, 0)
+      : 0;
+    return { pack, items, disponible, totalBotellas, total };
+  });
+
+  const disponibles = resueltos.filter((r) => r.disponible);
+
+  return (
+    <div className="mb-7">
+      <h3 className="font-cormorant font-light text-[1.15rem] mb-1" style={{ color: "#1A1A1A" }}>
+        Elige por momento
+      </h3>
+      <p className="font-inter text-[0.78rem] mb-4" style={{ color: "#9A9A8A" }}>
+        Selecciones simples para armar tu pedido más rápido.
+      </p>
+
+      {disponibles.length === 0 ? (
+        <div className="rounded-2xl p-5" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.04)" }}>
+          <p className="font-inter text-[0.8rem] mb-1" style={{ color: "#8A8A7A" }}>
+            Por ahora no hay selecciones disponibles.
+          </p>
+          <p className="font-inter text-[0.78rem]" style={{ color: "#B5B5A5" }}>
+            Puedes armar tu pedido manualmente.
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {resueltos.map((r, i) => (
+            <PackOcasionCard
+              key={r.pack.id}
+              resuelto={r}
+              delay={i * 0.05}
+              onElegir={() =>
+                r.disponible &&
+                onElegir(
+                  r.items.map((it) => ({ formulaId: it.formula!.id, cantidad: it.cantidad }))
+                )
+              }
+            />
+          ))}
+        </div>
+      )}
+
+      <a
+        href="#armar-manual"
+        onClick={(e) => {
+          e.preventDefault();
+          const el = document.getElementById("armar-manual");
+          const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          el?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+        }}
+        className="inline-block font-inter text-[0.75rem] mt-4 spring-press"
+        style={{ color: VERDE, textDecoration: "underline", textUnderlineOffset: "3px" }}
+      >
+        Armar mi pedido
+      </a>
+    </div>
+  );
+}
+
+function PackOcasionCard({
+  resuelto,
+  delay,
+  onElegir,
+}: {
+  resuelto: { pack: (typeof PACKS_OCASION)[number]; items: { cantidad: number; formula: FormulaWithIngredients | null }[]; disponible: boolean; totalBotellas: number; total: number };
+  delay: number;
+  onElegir: () => void;
+}) {
+  const [hover, setHover] = useState(false);
+  const { pack, items, disponible, totalBotellas, total } = resuelto;
+
+  return (
+    <div
+      onMouseEnter={() => disponible && setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="rounded-2xl p-4 flex flex-col"
+      style={{
+        background: "#fff",
+        border: `1px solid ${hover ? `${VERDE}30` : "rgba(0,0,0,0.05)"}`,
+        boxShadow: hover ? "0 4px 18px rgba(0,0,0,0.05)" : "0 1px 6px rgba(0,0,0,0.03)",
+        transform: hover ? "translateY(-1px)" : "none",
+        transition: "border-color 200ms ease-out, box-shadow 200ms ease-out, transform 200ms ease-out",
+        opacity: disponible ? 1 : 0.55,
+        animation: "lumoFadeUp 0.45s ease both",
+        animationDelay: `${delay}s`,
+      }}
+    >
+      <p className="font-cormorant font-light text-[1.15rem] mb-1.5" style={{ color: "#1A1A1A" }}>
+        {pack.nombre}
+      </p>
+      <p className="font-inter text-[0.75rem] leading-relaxed mb-3" style={{ color: "#8A8A7A" }}>
+        {pack.frase}
+      </p>
+
+      <div className="flex flex-wrap gap-1.5 mb-3.5">
+        {items.map((it, i) => (
+          <span
+            key={i}
+            className="font-inter text-[0.68rem] px-2.5 py-1 rounded-full"
+            style={{
+              background: it.formula ? `${it.formula.color_acento}0D` : "rgba(0,0,0,0.03)",
+              color: it.formula ? "#2D2D2D" : "#B0B0A0",
+              border: `1px solid ${it.formula ? `${it.formula.color_acento}1A` : "rgba(0,0,0,0.05)"}`,
+            }}
+          >
+            {it.cantidad}x {it.formula?.nombre ?? "Fórmula no disponible"}
+          </span>
+        ))}
+      </div>
+
+      <p className="font-inter text-[0.78rem] mb-3.5" style={{ color: "#1A1A1A" }}>
+        {totalBotellas} LUMO {disponible && `· $${total.toLocaleString("es-MX")}`}
+      </p>
+
+      {disponible ? (
+        <button
+          onClick={onElegir}
+          className="mt-auto w-full rounded-xl py-3 font-inter text-[0.78rem] font-medium spring-press transition-all"
+          style={{ background: `${VERDE}0A`, color: VERDE, border: `1px solid ${VERDE}22`, minHeight: 44 }}
+        >
+          Elegir este pack
+        </button>
+      ) : (
+        <p className="font-inter text-[0.72rem] leading-relaxed" style={{ color: "#B08A4A" }}>
+          Este pack no está disponible completo en este momento.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ReservaFlow({
   miembro,
   clienteId,
@@ -768,6 +959,7 @@ function ReservaFlow({
 }) {
   const [step, setStep] = useState<1 | 2 | 3>(prefill && prefill.length > 0 ? 2 : 1);
   const [lineas, setLineas] = useState<ReservaLinea[]>(prefill ?? []);
+  const [packMsg, setPackMsg] = useState(false);
   const [diaEntrega, setDiaEntrega] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -816,6 +1008,12 @@ function ReservaFlow({
     } else {
       setLineas([...lineas, { formulaId, cantidad: 1 }]);
     }
+  }
+
+  function elegirPack(lineasPack: ReservaLinea[]) {
+    setLineas(lineasPack);
+    setPackMsg(true);
+    setStep(2);
   }
 
   function removeFormula(formulaId: string) {
@@ -981,7 +1179,7 @@ function ReservaFlow({
     <div className="min-h-screen flex flex-col" style={{ background: CREAM, overscrollBehavior: "none" }}>
       {/* Top bar */}
       <div className="sticky top-0 z-40 px-5 py-3.5 flex items-center justify-between" style={{ background: "rgba(244,239,231,0.92)", backdropFilter: "blur(20px)", borderBottom: "1px solid rgba(0,0,0,0.04)" }}>
-        <button onClick={step === 1 ? onClose : () => setStep((step - 1) as 1 | 2)} className="font-inter text-[0.8rem] spring-press flex items-center gap-1.5" style={{ color: "#9A9A8A" }}>
+        <button onClick={step === 1 ? onClose : () => { setPackMsg(false); setStep((step - 1) as 1 | 2); }} className="font-inter text-[0.8rem] spring-press flex items-center gap-1.5" style={{ color: "#9A9A8A" }}>
           <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
           {step === 1 ? "Mi LUMO" : "Atrás"}
         </button>
@@ -1010,7 +1208,9 @@ function ReservaFlow({
       {/* Step content */}
       <div className="flex-1 px-5 pb-8">
         {step === 1 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
+          <div className="pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
+          <PackOcasionSection formulas={formulas} onElegir={elegirPack} />
+          <div id="armar-manual" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {formulas.map((f, i) => {
               const lineaCant = lineas.find((l) => l.formulaId === f.id)?.cantidad ?? 0;
               return (
@@ -1036,7 +1236,7 @@ function ReservaFlow({
                   </span>
                 </div>
                 <button
-                  onClick={() => setStep(2)}
+                  onClick={() => { setPackMsg(false); setStep(2); }}
                   className="w-full rounded-2xl py-3.5 font-inter text-sm font-medium spring-press"
                   style={{ background: VERDE, color: CREAM }}
                 >
@@ -1045,10 +1245,21 @@ function ReservaFlow({
               </div>
             )}
           </div>
+          </div>
         )}
 
         {step === 2 && (
           <div className="flex flex-col gap-4 pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
+            {packMsg && (
+              <div
+                className="rounded-xl px-4 py-3"
+                style={{ background: "rgba(74,94,58,0.05)", border: "1px solid rgba(74,94,58,0.1)", animation: "lumoFadeUp 0.4s ease both" }}
+              >
+                <p className="font-inter text-[0.78rem]" style={{ color: "#4A5E3A" }}>
+                  Listo. Preparamos tu selección; ahora elige la fecha.
+                </p>
+              </div>
+            )}
             <p className="font-inter text-[0.75rem]" style={{ color: "#9A9A8A" }}>
               Cada lote se prepara temprano y con cupo limitado.
             </p>
