@@ -746,81 +746,85 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
    ══════════════════════════════════════════════ */
 type ReservaLinea = { formulaId: string; cantidad: number };
 
-// Packs de ocasión: atajos para armar pedido según momento de consumo.
-// No son recargas de balance ni descuentos — solo prellenan fórmulas y
-// cantidad, y el precio se calcula siempre desde formulas.precio (Supabase),
-// nunca hardcodeado, para no desalinearse si el precio por botella cambia.
-// Las fórmulas se identifican por slug, igual que el resto de Mi LUMO
-// (ver BOTTLE_IMAGES). Un pack solo se ofrece si TODAS sus fórmulas están
-// presentes en el catálogo activo cargado (`formulas`).
-const PACKS_OCASION: { id: string; nombre: string; frase: string; composicion: { slug: string; cantidad: number }[] }[] = [
+// Momentos LUMO: sugerencias para elegir el próximo pedido. NO son packs
+// semanales ni suscripciones — cada sugerencia prellena una sola entrega,
+// y el flujo sigue teniendo exactamente una fecha por pedido.
+// Las fórmulas se identifican por slug ("verde" | "rojo" | "tropical",
+// según supabase-schema.sql) y el precio se calcula siempre desde
+// formulas.precio, nunca hardcodeado. Una sugerencia solo se ofrece si
+// TODAS sus fórmulas están en el catálogo cargado (`formulas`).
+const MOMENTOS_LUMO: {
+  id: string;
+  nombre: string;
+  copy: string;
+  cta: string;
+  composicion: { slug: string; cantidad: number }[];
+}[] = [
   {
-    id: "semana-ligera",
-    nombre: "Semana ligera",
-    frase: "Tres perfiles distintos para acompañar tu semana sin complicarla.",
+    id: "manana-fresca",
+    nombre: "Mañana fresca",
+    copy: "Perfil verde, fresco y ligero para empezar el día.",
+    cta: "Elegir Verde Fresco",
+    composicion: [{ slug: "verde", cantidad: 1 }],
+  },
+  {
+    id: "antes-de-entrenar",
+    nombre: "Antes de entrenar",
+    copy: "Perfil frutal con betabel, pensado para acompañar tu rutina antes de entrenar.",
+    cta: "Elegir Rojo Vital",
+    composicion: [{ slug: "rojo", cantidad: 1 }],
+  },
+  {
+    id: "perfil-tropical",
+    nombre: "Perfil tropical",
+    copy: "Perfil fresco, frutal y luminoso para una mañana más tropical.",
+    cta: "Elegir Tropical Hydrate",
+    composicion: [{ slug: "tropical", cantidad: 1 }],
+  },
+  {
+    id: "trio-de-prueba",
+    nombre: "Trío de prueba",
+    copy: "Una forma simple de conocer los tres perfiles en una sola entrega.",
+    cta: "Elegir trío",
     composicion: [
       { slug: "verde", cantidad: 1 },
       { slug: "rojo", cantidad: 1 },
       { slug: "tropical", cantidad: 1 },
     ],
   },
-  {
-    id: "rutina-oficina",
-    nombre: "Rutina oficina",
-    frase: "Una selección fresca y práctica para acompañar tus mañanas de oficina.",
-    composicion: [
-      { slug: "verde", cantidad: 2 },
-      { slug: "tropical", cantidad: 1 },
-    ],
-  },
-  {
-    id: "pre-entreno",
-    nombre: "Pre-entreno",
-    frase: "Una selección pensada para acompañar tu rutina antes de entrenar, con un perfil fresco y frutal.",
-    composicion: [
-      { slug: "rojo", cantidad: 1 },
-      { slug: "tropical", cantidad: 1 },
-    ],
-  },
-  {
-    id: "manana-fresca",
-    nombre: "Mañana fresca",
-    frase: "Para quienes ya encontraron en Verde Fresco su ritual de mañana.",
-    composicion: [{ slug: "verde", cantidad: 2 }],
-  },
 ];
 
-function PackOcasionSection({
+function MomentosLumoSection({
   formulas,
   onElegir,
 }: {
   formulas: FormulaWithIngredients[];
   onElegir: (lineas: ReservaLinea[]) => void;
 }) {
-  // Acordeón de una sola fila abierta: la lista arranca colapsada para no
-  // competir con el armado manual — solo nombre y total a primera vista.
-  const [abierto, setAbierto] = useState<string | null>(null);
+  // Estado "elegido" puramente visual: marca la card durante ~180ms antes
+  // de avanzar al paso de fecha, para que el tap se sienta confirmado.
+  const [elegido, setElegido] = useState<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
-  const resueltos = PACKS_OCASION.map((pack) => {
-    const items = pack.composicion.map((c) => ({
+  const resueltos = MOMENTOS_LUMO.map((momento) => {
+    const items = momento.composicion.map((c) => ({
       cantidad: c.cantidad,
       formula: formulas.find((f) => f.slug === c.slug) ?? null,
     }));
     const disponible = items.every((it) => it.formula !== null);
-    const totalBotellas = pack.composicion.reduce((s, c) => s + c.cantidad, 0);
+    const totalBotellas = momento.composicion.reduce((s, c) => s + c.cantidad, 0);
     const total = disponible
       ? items.reduce((s, it) => s + (it.formula!.precio ?? 0) * it.cantidad, 0)
       : 0;
-    return { pack, items, disponible, totalBotellas, total };
-  });
+    return { momento, items, disponible, totalBotellas, total };
+  }).filter((r) => r.disponible);
 
-  const disponibles = resueltos.filter((r) => r.disponible);
-
-  if (disponibles.length === 0) {
+  if (resueltos.length === 0) {
     return (
       <div className="mb-6">
         <p className="font-inter text-[0.78rem]" style={{ color: "#8A8A7A" }}>
-          Por ahora no hay selecciones disponibles.
+          Por ahora no hay sugerencias disponibles.
         </p>
         <p className="font-inter text-[0.78rem]" style={{ color: "#B5B5A5" }}>
           Puedes armar tu pedido manualmente.
@@ -829,34 +833,36 @@ function PackOcasionSection({
     );
   }
 
+  function seleccionar(r: (typeof resueltos)[number]) {
+    if (elegido) return;
+    setElegido(r.momento.id);
+    const lineas = r.items.map((it) => ({ formulaId: it.formula!.id, cantidad: it.cantidad }));
+    timer.current = setTimeout(() => onElegir(lineas), 180);
+  }
+
   return (
-    <div className="mb-7">
+    <div className="mb-8">
       <h3 className="font-cormorant font-light text-[1.15rem]" style={{ color: "#1A1A1A" }}>
         Elige por momento
       </h3>
-      <p className="font-inter text-[0.75rem] mb-3.5" style={{ color: "#9A9A8A" }}>
-        Selecciones simples para armar tu pedido más rápido.
+      <p className="font-inter text-[0.75rem] mb-4" style={{ color: "#9A9A8A" }}>
+        Sugerencias simples para elegir tu próximo LUMO.
       </p>
 
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.05)", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}
-      >
-        {disponibles.map((r, i) => (
-          <PackOcasionRow
-            key={r.pack.id}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {resueltos.map((r, i) => (
+          <MomentoCard
+            key={r.momento.id}
             resuelto={r}
-            primera={i === 0}
-            abierto={abierto === r.pack.id}
-            onToggle={() => setAbierto(abierto === r.pack.id ? null : r.pack.id)}
-            onElegir={() =>
-              onElegir(r.items.map((it) => ({ formulaId: it.formula!.id, cantidad: it.cantidad })))
-            }
+            delay={i * 0.06}
+            elegido={elegido === r.momento.id}
+            atenuado={elegido !== null && elegido !== r.momento.id}
+            onSeleccionar={() => seleccionar(r)}
           />
         ))}
       </div>
 
-      <p className="font-inter text-[0.72rem] mt-3" style={{ color: "#B5B5A5" }}>
+      <p className="font-inter text-[0.72rem] mt-4" style={{ color: "#B5B5A5" }}>
         ¿Prefieres elegir fórmula por fórmula?{" "}
         <a
           href="#armar-manual"
@@ -875,89 +881,99 @@ function PackOcasionSection({
   );
 }
 
-function PackOcasionRow({
+function MomentoCard({
   resuelto,
-  primera,
-  abierto,
-  onToggle,
-  onElegir,
+  delay,
+  elegido,
+  atenuado,
+  onSeleccionar,
 }: {
-  resuelto: { pack: (typeof PACKS_OCASION)[number]; items: { cantidad: number; formula: FormulaWithIngredients | null }[]; disponible: boolean; totalBotellas: number; total: number };
-  primera: boolean;
-  abierto: boolean;
-  onToggle: () => void;
-  onElegir: () => void;
+  resuelto: {
+    momento: (typeof MOMENTOS_LUMO)[number];
+    items: { cantidad: number; formula: FormulaWithIngredients | null }[];
+    totalBotellas: number;
+    total: number;
+  };
+  delay: number;
+  elegido: boolean;
+  atenuado: boolean;
+  onSeleccionar: () => void;
 }) {
-  const { pack, items, totalBotellas, total } = resuelto;
+  const [hover, setHover] = useState(false);
+  const { momento, items, totalBotellas, total } = resuelto;
+  const acentos = items.map((it) => it.formula!.color_acento);
+  const acento = acentos[0];
+  const esTrio = items.length > 1;
 
   return (
-    <div
+    <button
+      onClick={onSeleccionar}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      className="rounded-2xl overflow-hidden text-left flex flex-col spring-press w-full"
       style={{
-        borderTop: primera ? "none" : "1px solid rgba(0,0,0,0.04)",
-        background: abierto ? "rgba(74,94,58,0.025)" : "transparent",
-        transition: "background 200ms ease-out",
+        background: elegido ? `${acento}08` : "#fff",
+        border: `1px solid ${elegido ? `${acento}45` : hover ? `${acento}30` : "rgba(0,0,0,0.05)"}`,
+        boxShadow: hover || elegido ? "0 4px 18px rgba(0,0,0,0.05)" : "0 1px 6px rgba(0,0,0,0.03)",
+        transform: hover && !elegido ? "translateY(-1px)" : "none",
+        opacity: atenuado ? 0.5 : 1,
+        transition:
+          "border-color 200ms ease-out, box-shadow 200ms ease-out, transform 200ms ease-out, background 200ms ease-out, opacity 200ms ease-out",
+        animation: "lumoFadeUp 0.45s ease both",
+        animationDelay: `${delay}s`,
       }}
     >
-      <button
-        onClick={onToggle}
-        aria-expanded={abierto}
-        className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left spring-press"
-        style={{ minHeight: 44 }}
-      >
-        <span className="font-cormorant font-light text-[1.1rem] min-w-0 truncate" style={{ color: "#1A1A1A" }}>
-          {pack.nombre}
-        </span>
-        <span className="flex items-center gap-2.5 flex-shrink-0">
-          <span className="font-inter text-[0.72rem]" style={{ color: "#9A9A8A" }}>
-            {totalBotellas} LUMO · ${total.toLocaleString("es-MX")}
-          </span>
-          <svg
-            width={11}
-            height={11}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke={abierto ? VERDE : "#C0C0B0"}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            {abierto ? <polyline points="18 15 12 9 6 15" /> : <polyline points="6 9 12 15 18 9" />}
-          </svg>
-        </span>
-      </button>
+      {/* Marca visual: hilo de color con el acento de la(s) fórmula(s) */}
+      <div
+        className="h-[2px] w-full"
+        style={{
+          background: esTrio
+            ? `linear-gradient(90deg, ${acentos[0]}55, ${acentos[1]}55, ${acentos[2]}55)`
+            : `linear-gradient(90deg, ${acento}18, ${acento}55, ${acento}18)`,
+        }}
+      />
 
-      {abierto && (
-        <div className="px-4 pb-4" style={{ animation: "lumoFadeUp 0.3s ease both" }}>
-          <p className="font-inter text-[0.75rem] leading-relaxed mb-3" style={{ color: "#8A8A7A" }}>
-            {pack.frase}
+      <div className="p-5 flex flex-col flex-1">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: acento }} />
+          <p className="font-cormorant font-light text-[1.25rem] leading-tight" style={{ color: "#1A1A1A" }}>
+            {momento.nombre}
           </p>
-          <div className="flex flex-wrap gap-1.5 mb-3.5">
-            {items.map((it, i) => (
-              <span
-                key={i}
-                className="font-inter text-[0.68rem] px-2.5 py-1 rounded-full"
-                style={{
-                  background: `${it.formula!.color_acento}0D`,
-                  color: "#2D2D2D",
-                  border: `1px solid ${it.formula!.color_acento}1A`,
-                  animation: "lumoFadeUp 0.3s ease both",
-                  animationDelay: `${0.04 * i}s`,
-                }}
-              >
-                {it.cantidad}x {it.formula!.nombre}
-              </span>
-            ))}
-          </div>
-          <button
-            onClick={onElegir}
-            className="w-full rounded-xl py-3 font-inter text-[0.78rem] font-medium spring-press transition-all"
-            style={{ background: `${VERDE}0A`, color: VERDE, border: `1px solid ${VERDE}22`, minHeight: 44 }}
-          >
-            Elegir este pack
-          </button>
         </div>
-      )}
-    </div>
+
+        <p className="font-inter text-[0.72rem] mb-3" style={{ color: acento }}>
+          {items.map((it) => it.formula!.nombre).join(" · ")}
+        </p>
+
+        <p className="font-inter text-[0.75rem] leading-relaxed mb-4" style={{ color: "#8A8A7A" }}>
+          {momento.copy}
+        </p>
+
+        <p className="font-inter text-[0.75rem] mt-auto mb-3" style={{ color: "#1A1A1A" }}>
+          {totalBotellas} LUMO · ${total.toLocaleString("es-MX")}
+          {esTrio && (
+            <span className="font-inter text-[0.7rem] block mt-0.5" style={{ color: "#B5B5A5" }}>
+              En una sola entrega
+            </span>
+          )}
+        </p>
+
+        <span
+          className="w-full rounded-xl py-3 font-inter text-[0.78rem] font-medium text-center transition-all"
+          style={{
+            background: `${acento}0A`,
+            color: acento,
+            border: `1px solid ${acento}22`,
+            minHeight: 44,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {momento.cta}
+        </span>
+      </div>
+    </button>
   );
 }
 
@@ -1233,7 +1249,7 @@ function ReservaFlow({
       <div className="flex-1 px-5 pb-8">
         {step === 1 && (
           <div className="pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
-          <PackOcasionSection formulas={formulas} onElegir={elegirPack} />
+          <MomentosLumoSection formulas={formulas} onElegir={elegirPack} />
           <div id="armar-manual" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {formulas.map((f, i) => {
               const lineaCant = lineas.find((l) => l.formulaId === f.id)?.cantidad ?? 0;
@@ -1280,7 +1296,7 @@ function ReservaFlow({
                 style={{ background: "rgba(74,94,58,0.05)", border: "1px solid rgba(74,94,58,0.1)", animation: "lumoFadeUp 0.4s ease both" }}
               >
                 <p className="font-inter text-[0.78rem]" style={{ color: "#4A5E3A" }}>
-                  Listo. Preparamos tu selección; ahora elige la fecha.
+                  Listo. Ahora elige la fecha de entrega.
                 </p>
               </div>
             )}
