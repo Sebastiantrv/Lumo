@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createSessionToken } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -42,5 +43,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No encontramos una membresía con esos datos." }, { status: 404 });
   }
 
-  return NextResponse.json({ ok: true, miembro: cliente });
+  return NextResponse.json({
+    ok: true,
+    miembro: cliente,
+    // Signed separately from `cliente` — the frontend stores only this,
+    // never the raw client object, so localStorage can't be hand-edited
+    // into a session for a different cliente_id.
+    session_token: createSessionToken(cliente.id),
+  });
 }

@@ -23,3 +23,8 @@ export const LUMO_DOMAIN = "https://lumo-three-beta.vercel.app";
 
 export const POLL_INTERVAL_MS = 15_000;
 export const WHATSAPP_BATCH_DELAY_MS = 500;
+
+// Shared between the client session check (app/mi-lumo/page.tsx) and the
+// server-side token verification (/api/mi-lumo/session) — one source of
+// truth for how long a Mi LUMO session stays valid.
+export const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days

@@ -63,7 +63,7 @@ const VERDE = "#4A5E3A";
 const TROPICAL = "#B8860B";
 const ACCENT = "#E6A800";
 const ROJO = "#7A2030";
-const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+const SESSION_KEY = "lumo_session";
 
 const FORMULA_DESCRIPTIONS: Record<string, string> = {
   "verde fresco": "Ligero, herbal y fresco.",
@@ -75,6 +75,7 @@ const FORMULA_DESCRIPTIONS: Record<string, string> = {
 export default function MiLumoPage() {
   const [miembro, setMiembro] = useState<Miembro | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("");
 
   useEffect(() => {
     document.documentElement.style.backgroundColor = CREAM;
@@ -85,33 +86,64 @@ export default function MiLumoPage() {
     };
   }, []);
 
+  // localStorage only ever holds the opaque signed token now — no name,
+  // balance, phone, or cliente_id sits in the browser in the clear.
+  // Every load re-verifies that token against the server and trusts
+  // only what Supabase returns for it, so a hand-edited token (or one
+  // pointing at someone else's session) simply fails verification
+  // rather than granting access to their data.
   useEffect(() => {
-    const stored = localStorage.getItem("miembro_lumo");
-    if (stored) {
+    localStorage.removeItem("miembro_lumo"); // one-time cleanup of the old, unsigned session
+
+    const stored = localStorage.getItem(SESSION_KEY);
+    if (!stored) {
+      setLoading(false);
+      return;
+    }
+
+    (async () => {
+      let token: string | undefined;
       try {
-        const parsed = JSON.parse(stored);
-        const loginAt = parsed._loginAt ?? 0;
-        if (Date.now() - loginAt > SESSION_MAX_AGE_MS) {
-          localStorage.removeItem("miembro_lumo");
+        token = JSON.parse(stored).token;
+      } catch {
+        localStorage.removeItem(SESSION_KEY);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/mi-lumo/session", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+
+        if (res.ok) {
+          setMiembro(data.miembro);
         } else {
-          setMiembro(parsed);
+          localStorage.removeItem(SESSION_KEY);
+          setNotice(
+            res.status === 403
+              ? "Tu acceso a Mi LUMO no está activo en este momento."
+              : "Tu sesión expiró. Ingresa nuevamente para continuar."
+          );
         }
       } catch {
-        localStorage.removeItem("miembro_lumo");
+        localStorage.removeItem(SESSION_KEY);
+        setNotice("No pudimos verificar tu sesión. Ingresa nuevamente.");
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    })();
   }, []);
 
-  function handleLogin(m: Miembro) {
-    const withTimestamp = { ...m, _loginAt: Date.now() };
+  function handleLogin(m: Miembro, token: string) {
     setMiembro(m);
-    localStorage.setItem("miembro_lumo", JSON.stringify(withTimestamp));
+    setNotice("");
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ token }));
   }
 
   function handleLogout() {
     setMiembro(null);
-    localStorage.removeItem("miembro_lumo");
+    localStorage.removeItem(SESSION_KEY);
   }
 
   if (loading) {
@@ -126,14 +158,14 @@ export default function MiLumoPage() {
     );
   }
 
-  if (!miembro) return <LoginScreen onLogin={handleLogin} />;
+  if (!miembro) return <LoginScreen onLogin={handleLogin} notice={notice} />;
   return <Dashboard miembro={miembro} onLogout={handleLogout} />;
 }
 
 /* ══════════════════════════════════════════════
    LOGIN
    ══════════════════════════════════════════════ */
-function LoginScreen({ onLogin }: { onLogin: (m: Miembro) => void }) {
+function LoginScreen({ onLogin, notice }: { onLogin: (m: Miembro, token: string) => void; notice?: string }) {
   const searchParams = useSearchParams();
   const [codigo, setCodigo] = useState(() => searchParams.get("code") ?? "");
   const [telefono, setTelefono] = useState("");
@@ -157,7 +189,7 @@ function LoginScreen({ onLogin }: { onLogin: (m: Miembro) => void }) {
         setSubmitting(false);
         return;
       }
-      onLogin(data.miembro);
+      onLogin(data.miembro, data.session_token);
     } catch {
       setError("Error de conexión. Intenta de nuevo.");
       setSubmitting(false);
@@ -181,6 +213,15 @@ function LoginScreen({ onLogin }: { onLogin: (m: Miembro) => void }) {
               Tu espacio privado como miembro
             </p>
           </div>
+
+          {notice && (
+            <div
+              className="rounded-xl px-4 py-3 mb-6 text-center"
+              style={{ background: "rgba(74,94,58,0.05)", border: "1px solid rgba(74,94,58,0.1)", animation: "lumoFadeUp 0.5s ease both" }}
+            >
+              <p className="font-inter text-xs" style={{ color: "#6B6B5E" }}>{notice}</p>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4" style={{ animation: "lumoFadeUp 0.6s ease both", animationDelay: "0.2s" }}>
             <div>
