@@ -173,8 +173,9 @@ export default function AdminInicio() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={async () => {
+                        const pedido = a.pedidos as unknown as { token: string };
+
                         if (isDate && a.requested_date) {
-                          const pedido = a.pedidos as unknown as { token: string };
                           if (pedido?.token) {
                             const { data: peds } = await supabase.from("pedidos").select("id").eq("token", pedido.token);
                             if (peds?.length) {
@@ -183,7 +184,56 @@ export default function AdminInicio() {
                               }
                             }
                           }
+                        } else if (pedido?.token) {
+                          // "Convertir en Balance LUMO": cancela el pedido y acredita
+                          // su valor solo si todavía no se preparó — una vez envasado
+                          // el ingrediente ya se usó, así que ese caso queda para que
+                          // el admin lo resuelva manualmente, igual que hoy.
+                          const { data: peds } = await supabase
+                            .from("pedidos")
+                            .select("id, estado, cliente_id, cantidad, formulas(nombre, precio)")
+                            .eq("token", pedido.token);
+
+                          const grupo = (peds ?? []) as unknown as {
+                            id: string; estado: string; cliente_id: string; cantidad: number;
+                            formulas: { nombre: string; precio: number } | null;
+                          }[];
+
+                          const puedeAcreditar =
+                            grupo.length > 0 &&
+                            grupo.every((p) => p.estado === "pendiente" || p.estado === "confirmado");
+
+                          if (puedeAcreditar) {
+                            await Promise.all(
+                              grupo.map((p) =>
+                                adminWrite("pedidos", "update", { estado: "cancelado" }, [{ column: "id", value: p.id }])
+                              )
+                            );
+                            const totalAcreditado = grupo.reduce(
+                              (s, p) => s + (p.formulas?.precio ?? 0) * p.cantidad, 0
+                            );
+                            const resultados = await Promise.all(
+                              grupo.map((p) =>
+                                adminWrite("movimientos_balance", "insert", {
+                                  cliente_id: p.cliente_id,
+                                  tipo: "credito_lumo",
+                                  monto: (p.formulas?.precio ?? 0) * p.cantidad,
+                                  descripcion: `Balance LUMO por pedido cancelado: ${p.formulas?.nombre ?? "pedido"} x${p.cantidad}`,
+                                  referencia_pedido: p.id,
+                                })
+                              )
+                            );
+                            const fallo = resultados.find((r) => !r.ok);
+                            if (fallo) {
+                              alert(`El pedido se canceló, pero no se pudo acreditar el balance: ${fallo.error ?? "error desconocido"}. Ajústalo manualmente desde Clientes.`);
+                            } else {
+                              alert(`Pedido cancelado y $${totalAcreditado} acreditados a su Balance LUMO.`);
+                            }
+                          } else if (grupo.length > 0) {
+                            alert("Este pedido ya fue preparado — no se acredita automáticamente. Ajusta el balance manualmente desde Clientes si corresponde.");
+                          }
                         }
+
                         await adminWrite("ajustes_pedido", "update", { status: "approved" }, [{ column: "id", value: a.id }]);
                         load();
                       }}

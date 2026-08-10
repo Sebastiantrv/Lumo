@@ -20,12 +20,13 @@ type Pedido = {
   ingredientes_excluidos: string[] | null;
   preferencia_sorpresa: string | null;
   formula_id: string;
+  cliente_id: string;
   token: string | null;
   numero_pedido: number | null;
   hora_preparado: string | null;
   hora_entrega_estimada: string | null;
   clientes: { nombre: string; telefono: string | null } | null;
-  formulas: { nombre: string; slug: string; color_acento: string } | null;
+  formulas: { nombre: string; slug: string; color_acento: string; precio: number } | null;
 };
 
 type Receta = {
@@ -48,7 +49,7 @@ export default function AdminHoy() {
 
   async function load() {
     const [{ data: p }, { data: r }] = await Promise.all([
-      supabase.from("pedidos").select("*, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento)").eq("dia_entrega", fecha).order("created_at"),
+      supabase.from("pedidos").select("*, numero_pedido, clientes(nombre, telefono), formulas(nombre, slug, color_acento, precio)").eq("dia_entrega", fecha).order("created_at"),
       supabase.from("recetas").select("formula_id, gramos, ingredientes(nombre, unidad)"),
     ]);
     setPedidos(p ?? []);
@@ -105,9 +106,42 @@ export default function AdminHoy() {
   }
 
   async function cancelarGroup(ids: string[]) {
-    if (!confirm("¿Cancelar este pedido?")) return;
+    const grupo = pedidos.filter((p) => ids.includes(p.id));
+    // Solo se acredita balance automáticamente si ningún pedido del grupo ya
+    // se preparó — a partir de ahí el ingrediente ya se usó y el ajuste debe
+    // hacerse a mano.
+    const puedeAcreditar =
+      grupo.length > 0 && grupo.every((p) => p.estado === "pendiente" || p.estado === "confirmado");
+    const totalAcreditar = puedeAcreditar
+      ? grupo.reduce((s, p) => s + (p.formulas?.precio ?? 0) * p.cantidad, 0)
+      : 0;
+
+    const mensaje = puedeAcreditar
+      ? `¿Cancelar este pedido? Se acreditarán $${totalAcreditar} a su Balance LUMO.`
+      : "¿Cancelar este pedido? Ya fue preparado, así que no se acredita balance automáticamente.";
+    if (!confirm(mensaje)) return;
+
     setUpdating(ids[0]);
     await Promise.all(ids.map((id) => adminWrite("pedidos", "update", { estado: "cancelado" }, [{ column: "id", value: id }])));
+
+    if (puedeAcreditar) {
+      const resultados = await Promise.all(
+        grupo.map((p) =>
+          adminWrite("movimientos_balance", "insert", {
+            cliente_id: p.cliente_id,
+            tipo: "credito_lumo",
+            monto: (p.formulas?.precio ?? 0) * p.cantidad,
+            descripcion: `Balance LUMO por pedido cancelado: ${p.formulas?.nombre ?? "pedido"} x${p.cantidad}`,
+            referencia_pedido: p.id,
+          })
+        )
+      );
+      const fallo = resultados.find((r) => !r.ok);
+      if (fallo) {
+        alert(`El pedido se canceló, pero no se pudo acreditar el balance: ${fallo.error ?? "error desconocido"}. Ajústalo manualmente desde Clientes.`);
+      }
+    }
+
     await load();
     setUpdating(null);
   }
