@@ -1747,6 +1747,177 @@ function getRecommendation(
   return { formula: formulas[0], reason: "Nuestra fórmula ideal para empezar." };
 }
 
+/* ── Tu ritmo LUMO: insights de hábito, sin claims de salud ── */
+function diaSemanaLabel(dateStr: string): string {
+  const d = new Date(`${dateStr}T12:00:00`);
+  const label = d.toLocaleDateString("es-MX", { weekday: "long", timeZone: "America/Mexico_City" });
+  return label.charAt(0).toUpperCase() + label.slice(1);
+}
+
+function deriveRitmo(pedidosVisibles: Pedido[], formulas: FormulaWithIngredients[]) {
+  // "Disfrutados" es explícitamente lo entregado — nunca cuenta cancelados
+  // ni pedidos aún por preparar.
+  const entregados = pedidosVisibles.filter((p) => p.estado === "entregado");
+  const disfrutados = entregados.reduce((s, p) => s + p.cantidad, 0);
+
+  // Para el resto de las métricas (fórmula, día, ingredientes, mes) usamos
+  // todo lo no cancelado: refleja el ritmo real, incluyendo lo agendado.
+  const activos = pedidosVisibles.filter((p) => p.estado !== "cancelado");
+  const grupos = groupByToken(activos);
+
+  const formulaCounts = new Map<string, { id: string; nombre: string; color: string; count: number }>();
+  for (const p of activos) {
+    const existing = formulaCounts.get(p.formula_id);
+    if (existing) existing.count += p.cantidad;
+    else formulaCounts.set(p.formula_id, { id: p.formula_id, nombre: p.formulas?.nombre ?? "—", color: p.formulas?.color_acento ?? VERDE, count: p.cantidad });
+  }
+  const favoritaBase = Array.from(formulaCounts.values()).sort((a, b) => b.count - a.count)[0] ?? null;
+  const favorita = favoritaBase
+    ? { ...favoritaBase, descripcion: formulas.find((f) => f.id === favoritaBase.id)?.descripcion ?? null }
+    : null;
+
+  const diaCounts = new Map<string, number>();
+  for (const g of grupos) {
+    const label = diaSemanaLabel(g.diaEntrega);
+    diaCounts.set(label, (diaCounts.get(label) ?? 0) + 1);
+  }
+  const diaLumo = Array.from(diaCounts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+
+  const ingredienteCounts = new Map<string, number>();
+  for (const p of activos) {
+    const f = formulas.find((fo) => fo.id === p.formula_id);
+    for (const ing of f?.ingredientes ?? []) {
+      ingredienteCounts.set(ing, (ingredienteCounts.get(ing) ?? 0) + p.cantidad);
+    }
+  }
+  const ingredientes = Array.from(ingredienteCounts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([nombre]) => nombre);
+
+  const hoyD = new Date();
+  const mesActual = hoyD.toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" }).slice(0, 7);
+  const esteMes = activos
+    .filter((p) => p.dia_entrega.startsWith(mesActual))
+    .reduce((s, p) => s + p.cantidad, 0);
+
+  return { disfrutados, favorita, diaLumo, ingredientes, esteMes, totalPedidos: grupos.length };
+}
+
+function RitmoLumoCard({ pedidos, formulas, onReservar }: {
+  pedidos: Pedido[];
+  formulas: FormulaWithIngredients[];
+  onReservar: () => void;
+}) {
+  const [hover, setHover] = useState(false);
+  const ritmo = deriveRitmo(pedidos, formulas);
+
+  if (ritmo.totalPedidos === 0) {
+    return (
+      <div
+        className="rounded-2xl p-6 md:p-7 text-center"
+        style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.03)", animation: "lumoFadeUp 0.5s ease both" }}
+      >
+        <h3 className="font-cormorant font-light text-lg mb-2" style={{ color: "#1A1A1A" }}>
+          Tu ritmo LUMO está por comenzar
+        </h3>
+        <p className="font-inter text-[0.8rem] leading-relaxed mb-5" style={{ color: "#9A9A8A" }}>
+          Cuando disfrutes tus primeros pedidos, aquí verás tus fórmulas, días e ingredientes más frecuentes.
+        </p>
+        <button
+          onClick={onReservar}
+          className="font-inter text-[0.8rem] font-medium px-5 rounded-xl spring-press transition-all"
+          style={{ background: `${VERDE}08`, color: VERDE, border: `1px solid ${VERDE}15`, minHeight: 44 }}
+        >
+          Reservar mi LUMO
+        </button>
+      </div>
+    );
+  }
+
+  const metrics = [
+    { label: "LUMO disfrutados", value: `${ritmo.disfrutados}`, sub: ritmo.disfrutados === 1 ? "botella entregada" : "botellas entregadas" },
+    ritmo.favorita ? { label: "Tu fórmula más frecuente", value: ritmo.favorita.nombre, sub: ritmo.favorita.descripcion ?? undefined, color: ritmo.favorita.color } : null,
+    ritmo.diaLumo ? { label: "Tu día LUMO", value: ritmo.diaLumo, sub: undefined } : null,
+    { label: "Este mes", value: `${ritmo.esteMes}`, sub: ritmo.esteMes === 1 ? "mañana con LUMO" : "mañanas con LUMO" },
+  ].filter(Boolean) as { label: string; value: string; sub?: string; color?: string }[];
+
+  return (
+    <div
+      className="rounded-2xl p-6 md:p-7"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        background: "#fff",
+        border: `1px solid ${hover ? `${VERDE}22` : "rgba(0,0,0,0.04)"}`,
+        boxShadow: hover ? "0 4px 20px rgba(0,0,0,0.045)" : "0 1px 6px rgba(0,0,0,0.03)",
+        transform: hover ? "translateY(-1px)" : "none",
+        transition: "border-color 220ms ease-out, box-shadow 220ms ease-out, transform 220ms ease-out",
+        animation: "lumoFadeUp 0.5s ease both",
+      }}
+    >
+      <h3 className="font-cormorant font-light text-lg mb-1.5" style={{ color: "#1A1A1A" }}>
+        Tu ritmo LUMO
+      </h3>
+      <p className="font-inter text-[0.75rem] leading-relaxed mb-1" style={{ color: "#9A9A8A" }}>
+        Una mirada sencilla a cómo LUMO se integra a tu rutina.
+      </p>
+      {ritmo.totalPedidos === 1 && (
+        <p className="font-inter text-[0.72rem] mb-5" style={{ color: "#B5B5A5" }}>
+          Tu primer LUMO ya empezó a construir tu ritmo.
+        </p>
+      )}
+
+      <div className={`grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 ${ritmo.totalPedidos === 1 ? "mt-1" : "mt-5"}`}>
+        {metrics.map((m, i) => (
+          <div key={m.label} style={{ animation: "lumoFadeUp 0.4s ease both", animationDelay: `${0.08 * i}s` }}>
+            <p className="font-inter text-[0.65rem] tracking-[0.08em] uppercase mb-1.5" style={{ color: "#B5B5A5" }}>
+              {m.label}
+            </p>
+            <p className="font-cormorant font-light text-[1.6rem] leading-tight" style={{ color: m.color ?? "#1A1A1A" }}>
+              {m.value}
+            </p>
+            {m.sub && (
+              <p className="font-inter text-[0.72rem] mt-0.5" style={{ color: "#9A9A8A" }}>
+                {m.sub}
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(0,0,0,0.04)" }}>
+        <p className="font-inter text-[0.65rem] tracking-[0.08em] uppercase mb-2.5" style={{ color: "#B5B5A5" }}>
+          Ingredientes recurrentes
+        </p>
+        {ritmo.ingredientes.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {ritmo.ingredientes.map((ing, i) => (
+              <span
+                key={ing}
+                className="font-inter text-[0.72rem] px-3 py-1.5 rounded-full"
+                style={{
+                  background: "rgba(74,94,58,0.05)",
+                  color: "#4A5E3A",
+                  border: "1px solid rgba(74,94,58,0.1)",
+                  animation: "lumoFadeUp 0.4s ease both",
+                  animationDelay: `${0.1 + i * 0.06}s`,
+                }}
+              >
+                {ing}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="font-inter text-[0.75rem] leading-relaxed" style={{ color: "#9A9A8A" }}>
+            Conforme sigas pidiendo, aquí aparecerán tus ingredientes más recurrentes.
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ConciergeSection({ miembro, pedidos, formulas, onReservar }: {
   miembro: Miembro;
   pedidos: Pedido[];
@@ -1837,40 +2008,8 @@ function ConciergeSection({ miembro, pedidos, formulas, onReservar }: {
         </div>
       )}
 
-      {/* Tu actividad */}
-      <div className="rounded-2xl p-5" style={{ background: "#fff", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}>
-        <h3 className="font-cormorant font-light text-base mb-4" style={{ color: "#1A1A1A" }}>
-          Tu actividad
-        </h3>
-        <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <span className="font-cormorant font-light text-2xl w-10 text-right" style={{ color: "#1A1A1A" }}>
-              {prefs.totalEntregas}
-            </span>
-            <span className="font-inter text-[0.8rem]" style={{ color: "#8A8A7A" }}>
-              {prefs.totalEntregas === 1 ? "mañana" : "mañanas"} con LUMO
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="font-cormorant font-light text-2xl w-10 text-right" style={{ color: "#1A1A1A" }}>
-              {prefs.totalBotellas}
-            </span>
-            <span className="font-inter text-[0.8rem]" style={{ color: "#8A8A7A" }}>
-              {prefs.totalBotellas === 1 ? "botella entregada" : "botellas entregadas"}
-            </span>
-          </div>
-          {prefs.formulasProbadas > 0 && (
-            <div className="flex items-center gap-3">
-              <span className="font-cormorant font-light text-2xl w-10 text-right" style={{ color: "#1A1A1A" }}>
-                {prefs.formulasProbadas}
-              </span>
-              <span className="font-inter text-[0.8rem]" style={{ color: "#8A8A7A" }}>
-                {prefs.formulasProbadas === 1 ? "fórmula probada" : "fórmulas probadas"}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Tu ritmo LUMO */}
+      <RitmoLumoCard pedidos={pedidos} formulas={formulas} onReservar={() => onReservar("")} />
     </section>
   );
 }
