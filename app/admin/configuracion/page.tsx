@@ -31,6 +31,7 @@ type Seccion = "capacidad" | "dias" | "hora" | "rangos" | "whatsapp" | "precios"
 export default function ConfiguracionPage() {
   const [config, setConfig] = useState<LumoConfig>(CONFIG_DEFAULTS);
   const [formulas, setFormulas] = useState<Formula[]>([]);
+  const [formulasError, setFormulasError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState<Seccion | null>(null);
@@ -43,7 +44,15 @@ export default function ConfiguracionPage() {
       supabase.from("formulas").select("id, nombre, slug, color_acento, precio").order("nombre"),
     ]);
     setConfig(conf);
-    setFormulas((formulasRes.data ?? []) as Formula[]);
+    if (formulasRes.error) {
+      // Un error real (columna inexistente, RLS, etc.) no debe verse igual
+      // que "no hay fórmulas": el admin necesita saber cuál es el problema.
+      setFormulasError(formulasRes.error.message);
+      setFormulas([]);
+    } else {
+      setFormulasError(null);
+      setFormulas((formulasRes.data ?? []) as Formula[]);
+    }
     setLoading(false);
   }, []);
 
@@ -210,17 +219,29 @@ export default function ConfiguracionPage() {
 
       {/* ── Precios ── */}
       <Seccion titulo="Precios">
-        <Card
-          titulo="Precio por fórmula"
-          descripcion="Precio unitario de cada botella. Finanzas lo usa para calcular ingresos."
-          editando={editando === "precios"}
-          guardado={guardado === "precios"}
-          onEditar={() => abrir("precios")}
-          onCancelar={() => setEditando(null)}
-          valorNodo={
-            formulas.length === 0 ? (
-              <p className="font-inter text-sm" style={{ color: "#555" }}>Sin fórmulas registradas.</p>
-            ) : (
+        {formulasError ? (
+          <CardSistema
+            titulo="Precio por fórmula"
+            valor="No se pudo cargar"
+            motivo={`No se pudieron leer las fórmulas de Supabase: ${formulasError}`}
+            donde="Revisa que la tabla formulas exista y tenga la columna precio."
+          />
+        ) : formulas.length === 0 ? (
+          <CardSistema
+            titulo="Precio por fórmula"
+            valor="Sin fórmulas registradas"
+            motivo="No hay fórmulas en la tabla formulas todavía. Créalas directamente en Supabase; crear fórmulas nuevas está fuera del alcance de esta consola."
+            donde="Tabla formulas en Supabase"
+          />
+        ) : (
+          <Card
+            titulo="Precio por fórmula"
+            descripcion="Precio unitario de cada botella. Finanzas lo usa para calcular ingresos."
+            editando={editando === "precios"}
+            guardado={guardado === "precios"}
+            onEditar={() => abrir("precios")}
+            onCancelar={() => setEditando(null)}
+            valorNodo={
               <div className="flex flex-col gap-2">
                 {formulas.map((f) => (
                   <div key={f.id} className="flex items-center justify-between">
@@ -234,11 +255,11 @@ export default function ConfiguracionPage() {
                   </div>
                 ))}
               </div>
-            )
-          }
-        >
-          <EditorPrecios formulas={formulas} guardando={guardando} onError={setError} onGuardar={guardarPrecios} />
-        </Card>
+            }
+          >
+            <EditorPrecios formulas={formulas} guardando={guardando} onError={setError} onGuardar={guardarPrecios} />
+          </Card>
+        )}
       </Seccion>
 
       {/* ── Contacto ── */}
