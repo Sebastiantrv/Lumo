@@ -797,6 +797,10 @@ function PackOcasionSection({
   formulas: FormulaWithIngredients[];
   onElegir: (lineas: ReservaLinea[]) => void;
 }) {
+  // Acordeón de una sola fila abierta: la lista arranca colapsada para no
+  // competir con el armado manual — solo nombre y total a primera vista.
+  const [abierto, setAbierto] = useState<string | null>(null);
+
   const resueltos = PACKS_OCASION.map((pack) => {
     const items = pack.composicion.map((c) => ({
       cantidad: c.cantidad,
@@ -812,126 +816,146 @@ function PackOcasionSection({
 
   const disponibles = resueltos.filter((r) => r.disponible);
 
+  if (disponibles.length === 0) {
+    return (
+      <div className="mb-6">
+        <p className="font-inter text-[0.78rem]" style={{ color: "#8A8A7A" }}>
+          Por ahora no hay selecciones disponibles.
+        </p>
+        <p className="font-inter text-[0.78rem]" style={{ color: "#B5B5A5" }}>
+          Puedes armar tu pedido manualmente.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-7">
-      <h3 className="font-cormorant font-light text-[1.15rem] mb-1" style={{ color: "#1A1A1A" }}>
+      <h3 className="font-cormorant font-light text-[1.15rem]" style={{ color: "#1A1A1A" }}>
         Elige por momento
       </h3>
-      <p className="font-inter text-[0.78rem] mb-4" style={{ color: "#9A9A8A" }}>
+      <p className="font-inter text-[0.75rem] mb-3.5" style={{ color: "#9A9A8A" }}>
         Selecciones simples para armar tu pedido más rápido.
       </p>
 
-      {disponibles.length === 0 ? (
-        <div className="rounded-2xl p-5" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.04)" }}>
-          <p className="font-inter text-[0.8rem] mb-1" style={{ color: "#8A8A7A" }}>
-            Por ahora no hay selecciones disponibles.
-          </p>
-          <p className="font-inter text-[0.78rem]" style={{ color: "#B5B5A5" }}>
-            Puedes armar tu pedido manualmente.
-          </p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {resueltos.map((r, i) => (
-            <PackOcasionCard
-              key={r.pack.id}
-              resuelto={r}
-              delay={i * 0.05}
-              onElegir={() =>
-                r.disponible &&
-                onElegir(
-                  r.items.map((it) => ({ formulaId: it.formula!.id, cantidad: it.cantidad }))
-                )
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      <a
-        href="#armar-manual"
-        onClick={(e) => {
-          e.preventDefault();
-          const el = document.getElementById("armar-manual");
-          const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          el?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-        }}
-        className="inline-block font-inter text-[0.75rem] mt-4 spring-press"
-        style={{ color: VERDE, textDecoration: "underline", textUnderlineOffset: "3px" }}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.05)", boxShadow: "0 1px 6px rgba(0,0,0,0.03)" }}
       >
-        Armar mi pedido
-      </a>
+        {disponibles.map((r, i) => (
+          <PackOcasionRow
+            key={r.pack.id}
+            resuelto={r}
+            primera={i === 0}
+            abierto={abierto === r.pack.id}
+            onToggle={() => setAbierto(abierto === r.pack.id ? null : r.pack.id)}
+            onElegir={() =>
+              onElegir(r.items.map((it) => ({ formulaId: it.formula!.id, cantidad: it.cantidad })))
+            }
+          />
+        ))}
+      </div>
+
+      <p className="font-inter text-[0.72rem] mt-3" style={{ color: "#B5B5A5" }}>
+        ¿Prefieres elegir fórmula por fórmula?{" "}
+        <a
+          href="#armar-manual"
+          onClick={(e) => {
+            e.preventDefault();
+            const el = document.getElementById("armar-manual");
+            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            el?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+          }}
+          style={{ color: VERDE, textDecoration: "underline", textUnderlineOffset: "3px" }}
+        >
+          Armar mi pedido
+        </a>
+      </p>
     </div>
   );
 }
 
-function PackOcasionCard({
+function PackOcasionRow({
   resuelto,
-  delay,
+  primera,
+  abierto,
+  onToggle,
   onElegir,
 }: {
   resuelto: { pack: (typeof PACKS_OCASION)[number]; items: { cantidad: number; formula: FormulaWithIngredients | null }[]; disponible: boolean; totalBotellas: number; total: number };
-  delay: number;
+  primera: boolean;
+  abierto: boolean;
+  onToggle: () => void;
   onElegir: () => void;
 }) {
-  const [hover, setHover] = useState(false);
-  const { pack, items, disponible, totalBotellas, total } = resuelto;
+  const { pack, items, totalBotellas, total } = resuelto;
 
   return (
     <div
-      onMouseEnter={() => disponible && setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      className="rounded-2xl p-4 flex flex-col"
       style={{
-        background: "#fff",
-        border: `1px solid ${hover ? `${VERDE}30` : "rgba(0,0,0,0.05)"}`,
-        boxShadow: hover ? "0 4px 18px rgba(0,0,0,0.05)" : "0 1px 6px rgba(0,0,0,0.03)",
-        transform: hover ? "translateY(-1px)" : "none",
-        transition: "border-color 200ms ease-out, box-shadow 200ms ease-out, transform 200ms ease-out",
-        opacity: disponible ? 1 : 0.55,
-        animation: "lumoFadeUp 0.45s ease both",
-        animationDelay: `${delay}s`,
+        borderTop: primera ? "none" : "1px solid rgba(0,0,0,0.04)",
+        background: abierto ? "rgba(74,94,58,0.025)" : "transparent",
+        transition: "background 200ms ease-out",
       }}
     >
-      <p className="font-cormorant font-light text-[1.15rem] mb-1.5" style={{ color: "#1A1A1A" }}>
-        {pack.nombre}
-      </p>
-      <p className="font-inter text-[0.75rem] leading-relaxed mb-3" style={{ color: "#8A8A7A" }}>
-        {pack.frase}
-      </p>
-
-      <div className="flex flex-wrap gap-1.5 mb-3.5">
-        {items.map((it, i) => (
-          <span
-            key={i}
-            className="font-inter text-[0.68rem] px-2.5 py-1 rounded-full"
-            style={{
-              background: it.formula ? `${it.formula.color_acento}0D` : "rgba(0,0,0,0.03)",
-              color: it.formula ? "#2D2D2D" : "#B0B0A0",
-              border: `1px solid ${it.formula ? `${it.formula.color_acento}1A` : "rgba(0,0,0,0.05)"}`,
-            }}
-          >
-            {it.cantidad}x {it.formula?.nombre ?? "Fórmula no disponible"}
+      <button
+        onClick={onToggle}
+        aria-expanded={abierto}
+        className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left spring-press"
+        style={{ minHeight: 44 }}
+      >
+        <span className="font-cormorant font-light text-[1.1rem] min-w-0 truncate" style={{ color: "#1A1A1A" }}>
+          {pack.nombre}
+        </span>
+        <span className="flex items-center gap-2.5 flex-shrink-0">
+          <span className="font-inter text-[0.72rem]" style={{ color: "#9A9A8A" }}>
+            {totalBotellas} LUMO · ${total.toLocaleString("es-MX")}
           </span>
-        ))}
-      </div>
+          <svg
+            width={11}
+            height={11}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={abierto ? VERDE : "#C0C0B0"}
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            {abierto ? <polyline points="18 15 12 9 6 15" /> : <polyline points="6 9 12 15 18 9" />}
+          </svg>
+        </span>
+      </button>
 
-      <p className="font-inter text-[0.78rem] mb-3.5" style={{ color: "#1A1A1A" }}>
-        {totalBotellas} LUMO {disponible && `· $${total.toLocaleString("es-MX")}`}
-      </p>
-
-      {disponible ? (
-        <button
-          onClick={onElegir}
-          className="mt-auto w-full rounded-xl py-3 font-inter text-[0.78rem] font-medium spring-press transition-all"
-          style={{ background: `${VERDE}0A`, color: VERDE, border: `1px solid ${VERDE}22`, minHeight: 44 }}
-        >
-          Elegir este pack
-        </button>
-      ) : (
-        <p className="font-inter text-[0.72rem] leading-relaxed" style={{ color: "#B08A4A" }}>
-          Este pack no está disponible completo en este momento.
-        </p>
+      {abierto && (
+        <div className="px-4 pb-4" style={{ animation: "lumoFadeUp 0.3s ease both" }}>
+          <p className="font-inter text-[0.75rem] leading-relaxed mb-3" style={{ color: "#8A8A7A" }}>
+            {pack.frase}
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-3.5">
+            {items.map((it, i) => (
+              <span
+                key={i}
+                className="font-inter text-[0.68rem] px-2.5 py-1 rounded-full"
+                style={{
+                  background: `${it.formula!.color_acento}0D`,
+                  color: "#2D2D2D",
+                  border: `1px solid ${it.formula!.color_acento}1A`,
+                  animation: "lumoFadeUp 0.3s ease both",
+                  animationDelay: `${0.04 * i}s`,
+                }}
+              >
+                {it.cantidad}x {it.formula!.nombre}
+              </span>
+            ))}
+          </div>
+          <button
+            onClick={onElegir}
+            className="w-full rounded-xl py-3 font-inter text-[0.78rem] font-medium spring-press transition-all"
+            style={{ background: `${VERDE}0A`, color: VERDE, border: `1px solid ${VERDE}22`, minHeight: 44 }}
+          >
+            Elegir este pack
+          </button>
+        </div>
       )}
     </div>
   );
