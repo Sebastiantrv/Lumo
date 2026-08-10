@@ -101,6 +101,7 @@ function FeedbackContent() {
     mejora_abierta: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [submitError, setSubmitError] = useState("");
 
   useEffect(() => {
     if (!pedidoToken) return;
@@ -178,6 +179,7 @@ function FeedbackContent() {
         minute: "2-digit",
       }),
     };
+    setSubmitError("");
     try {
       await fetch("/api/feedback", {
         method: "POST",
@@ -185,7 +187,7 @@ function FeedbackContent() {
         body: JSON.stringify(payload),
       });
     } catch {
-      alert("No se pudo enviar tu retroalimentación. Verifica tu conexión e intenta de nuevo.");
+      setSubmitError("No pudimos enviar tu información. Verifica tu conexión e intenta de nuevo.");
       return;
     }
     goTo(10, "forward");
@@ -471,6 +473,9 @@ function FeedbackContent() {
                   value={data.mejora_abierta}
                   onChange={(v) => setData((d) => ({ ...d, mejora_abierta: v }))}
                 />
+                {submitError && (
+                  <p className="font-inter text-xs px-1" style={{ color: "#7A2030" }} role="alert">{submitError}</p>
+                )}
               </StepShell>
             )}
 

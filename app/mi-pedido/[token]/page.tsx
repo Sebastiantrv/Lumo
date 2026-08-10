@@ -693,7 +693,7 @@ export default function MiPedidoPage({
             className="font-cormorant"
             style={{ fontSize: 28, color: "#1A1A1A", marginBottom: 8 }}
           >
-            Pedido no encontrado
+            No pudimos encontrar este pedido
           </h1>
           <p className="font-inter" style={{ color: "#6A6A6A", fontSize: 15 }}>
             El enlace puede haber expirado o ser incorrecto.
@@ -1055,7 +1055,7 @@ export default function MiPedidoPage({
               marginBottom: 12,
             }}
           >
-            Lote confirmado — cambios ya no disponibles.{" "}
+            Este pedido ya no puede ajustarse desde aquí. Los cambios están disponibles hasta las 8:00 PM del día anterior a tu entrega.{" "}
             <a
               href={`https://wa.me/${lumoWhatsApp}?text=${encodeURIComponent(`Hola LUMO, necesito ayuda con mi pedido ${orderLabel}.`)}`}
               target="_blank"

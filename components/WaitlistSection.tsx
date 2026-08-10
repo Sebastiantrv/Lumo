@@ -71,6 +71,7 @@ export default function WaitlistSection() {
   });
   const [errors, setErrors] = useState<Partial<FormData>>({});
   const [evitar, setEvitar] = useState<string[]>([]);
+  const [submitError, setSubmitError] = useState("");
   const [codigoMiembro, setCodigoMiembro] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -109,6 +110,7 @@ export default function WaitlistSection() {
         hour: "2-digit", minute: "2-digit",
       }),
     };
+    setSubmitError("");
     try {
       const res = await fetch("/api/piloto", {
         method: "POST",
@@ -118,7 +120,7 @@ export default function WaitlistSection() {
       const json = await res.json();
       if (json.codigo_miembro) setCodigoMiembro(json.codigo_miembro);
     } catch {
-      alert("No se pudo completar tu registro. Verifica tu conexión e intenta de nuevo.");
+      setSubmitError("No pudimos completar tu registro. Verifica tu conexión e intenta de nuevo.");
       setSubmitting(false);
       return;
     }
@@ -305,6 +307,9 @@ export default function WaitlistSection() {
                   </div>
                 ))}
               </div>
+              {submitError && (
+                <p className="font-inter text-xs mt-1" style={{ color: T.error }} role="alert">{submitError}</p>
+              )}
             </StepShell>
           )}
 

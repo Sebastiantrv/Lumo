@@ -185,13 +185,13 @@ function LoginScreen({ onLogin, notice }: { onLogin: (m: Miembro, token: string)
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Error al verificar");
+        setError(data.error || "No pudimos verificar tus datos. Revisa tu código y WhatsApp.");
         setSubmitting(false);
         return;
       }
       onLogin(data.miembro, data.session_token);
     } catch {
-      setError("Error de conexión. Intenta de nuevo.");
+      setError("No pudimos conectar. Intenta de nuevo en unos segundos.");
       setSubmitting(false);
     }
   }
@@ -782,14 +782,14 @@ function ReservaFlow({
         } else if (data.error?.includes("llenarse") || data.error?.includes("quedan")) {
           setError(data.error);
         } else {
-          setError(data.error || "Error al confirmar la reserva");
+          setError(data.error || "No pudimos confirmar tu reserva. Intenta nuevamente en unos segundos.");
         }
         setSaving(false);
         return;
       }
       setSuccess(true);
     } catch {
-      setError("Error de conexión");
+      setError("No pudimos confirmar tu reserva. Intenta nuevamente en unos segundos.");
       setSaving(false);
     }
   }
@@ -990,6 +990,28 @@ function ReservaFlow({
                 );
               })}
             </div>
+
+            {deliveryDays.length > 0 && deliveryDays.every((d) => d.disponible === false || getAvailability(d.value) === "completo") && (
+              <div className="rounded-2xl p-4 flex items-start gap-3" style={{ background: "rgba(184,134,11,0.05)", border: "1px solid rgba(184,134,11,0.12)" }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(184,134,11,0.1)" }}>
+                  <ClockIcon size={14} color={TROPICAL} />
+                </div>
+                <div>
+                  <p className="font-inter text-[0.8rem] font-medium" style={{ color: "#1A1A1A" }}>Los próximos días ya están completos.</p>
+                  <p className="font-inter text-[0.75rem] mt-0.5" style={{ color: "#8A8A7A" }}>
+                    Escríbenos por WhatsApp y te avisamos en cuanto haya cupo.{" "}
+                    <a
+                      href={buildWhatsAppUrl(LUMO_WHATSAPP, "Hola LUMO 🍃 Me gustaría saber cuándo hay cupo disponible para reservar.")}
+                      target="_blank"
+                      rel="noopener"
+                      style={{ color: VERDE, textDecoration: "underline" }}
+                    >
+                      Escribir
+                    </a>
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Dates */}
             <div className="flex flex-col gap-2.5">
@@ -1655,6 +1677,19 @@ function ConciergeSection({ miembro, pedidos, formulas, onReservar }: {
   );
 }
 
+/* ── Shared empty state for historial sections ── */
+function HistorialEmpty({ icon, title, sub }: { icon: React.ReactNode; title: string; sub: string }) {
+  return (
+    <div className="rounded-2xl p-7 text-center" style={{ background: "#fff", boxShadow: "0 1px 10px rgba(0,0,0,0.03)" }}>
+      <div className="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style={{ background: "rgba(74,94,58,0.05)" }}>
+        {icon}
+      </div>
+      <p className="font-cormorant font-light text-lg mb-1.5" style={{ color: "#1A1A1A" }}>{title}</p>
+      <p className="font-inter text-xs leading-relaxed" style={{ color: "#9A9A8A" }}>{sub}</p>
+    </div>
+  );
+}
+
 /* ── Historial tab ── */
 function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedido[]; movimientos: Movimiento[]; feedbackTokens: Set<string> }) {
   const [section, setSection] = useState<"entregas" | "balance">("entregas");
@@ -1664,8 +1699,12 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
 
   if (!hasPedidos && !hasMovimientos) {
     return (
-      <div className="mx-5 rounded-2xl p-6 text-center" style={{ background: "#fff" }}>
-        <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Aún no hay actividad.</p>
+      <div className="mx-5">
+        <HistorialEmpty
+          icon={<BottleIcon size={18} color={`${VERDE}80`} />}
+          title="Aún no hay actividad."
+          sub="Tus entregas y movimientos de balance aparecerán aquí."
+        />
       </div>
     );
   }
@@ -1705,9 +1744,11 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
       <div className="flex flex-col gap-2" style={{ animation: "lumoFadeIn 0.25s ease both" }} key={section}>
         {section === "entregas" && (
           pedidos.length === 0 ? (
-            <div className="rounded-xl p-4 text-center" style={{ background: "#fff" }}>
-              <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Aún no hay entregas.</p>
-            </div>
+            <HistorialEmpty
+              icon={<BottleIcon size={18} color={`${VERDE}80`} />}
+              title="Aún no tienes entregas registradas."
+              sub="Cuando recibas tu primer LUMO, aparecerá aquí."
+            />
           ) : pedidos.slice(0, 30).map((p) => (
             <Link key={p.id} href={p.token ? `/mi-pedido/${p.token}` : "#"} className="rounded-xl p-3.5 spring-press block" style={{ background: "#fff" }}>
               <div className="flex items-center gap-3">
@@ -1752,9 +1793,11 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
 
         {section === "balance" && (
           movimientos.length === 0 ? (
-            <div className="rounded-xl p-4 text-center" style={{ background: "#fff" }}>
-              <p className="font-inter text-sm" style={{ color: "#8A8A7A" }}>Sin movimientos aún.</p>
-            </div>
+            <HistorialEmpty
+              icon={<DropIcon size={18} color={`${ACCENT}80`} />}
+              title="Aún no hay movimientos en tu balance."
+              sub="Cada recarga y cada reserva quedarán registradas aquí."
+            />
           ) : movimientos.slice(0, 30).map((m) => (
             <div key={m.id} className="rounded-xl p-3 flex items-center gap-3" style={{ background: "#fff" }}>
               <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: m.monto > 0 ? "rgba(109,191,103,0.1)" : "rgba(0,0,0,0.04)" }}>
