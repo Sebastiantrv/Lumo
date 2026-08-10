@@ -759,9 +759,9 @@ const PACKS_OCASION: { id: string; nombre: string; frase: string; composicion: {
     nombre: "Semana ligera",
     frase: "Tres perfiles distintos para acompañar tu semana sin complicarla.",
     composicion: [
-      { slug: "verde-fresco", cantidad: 1 },
-      { slug: "rojo-vital", cantidad: 1 },
-      { slug: "tropical-hydrate", cantidad: 1 },
+      { slug: "verde", cantidad: 1 },
+      { slug: "rojo", cantidad: 1 },
+      { slug: "tropical", cantidad: 1 },
     ],
   },
   {
@@ -769,8 +769,8 @@ const PACKS_OCASION: { id: string; nombre: string; frase: string; composicion: {
     nombre: "Rutina oficina",
     frase: "Una selección fresca y práctica para acompañar tus mañanas de oficina.",
     composicion: [
-      { slug: "verde-fresco", cantidad: 2 },
-      { slug: "tropical-hydrate", cantidad: 1 },
+      { slug: "verde", cantidad: 2 },
+      { slug: "tropical", cantidad: 1 },
     ],
   },
   {
@@ -778,15 +778,15 @@ const PACKS_OCASION: { id: string; nombre: string; frase: string; composicion: {
     nombre: "Pre-entreno",
     frase: "Una selección pensada para acompañar tu rutina antes de entrenar, con un perfil fresco y frutal.",
     composicion: [
-      { slug: "rojo-vital", cantidad: 1 },
-      { slug: "tropical-hydrate", cantidad: 1 },
+      { slug: "rojo", cantidad: 1 },
+      { slug: "tropical", cantidad: 1 },
     ],
   },
   {
     id: "manana-fresca",
     nombre: "Mañana fresca",
     frase: "Para quienes ya encontraron en Verde Fresco su ritual de mañana.",
-    composicion: [{ slug: "verde-fresco", cantidad: 2 }],
+    composicion: [{ slug: "verde", cantidad: 2 }],
   },
 ];
 
