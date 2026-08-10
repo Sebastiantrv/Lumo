@@ -4,7 +4,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import { LUMO_WHATSAPP } from "@/lib/constants";
+import { CONFIG_DEFAULTS, fetchConfig } from "@/lib/config";
+import { useConfig } from "@/lib/use-config";
 import { todayStr } from "@/lib/dates";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import Navbar from "@/components/Navbar";
@@ -697,19 +698,17 @@ function ReservaFlow({
   const [success, setSuccess] = useState(false);
   const [showRecarga, setShowRecarga] = useState(false);
   const [capacidadDiaria, setCapacidadDiaria] = useState<number | null>(null);
+  const [whatsappLumo, setWhatsappLumo] = useState(CONFIG_DEFAULTS.whatsappLumo);
   const [diasActivos, setDiasActivos] = useState<number[] | undefined>(undefined);
   const [pedidosPorDia, setPedidosPorDia] = useState<Record<string, number>>({});
 
   useEffect(() => {
     (async () => {
-      const { data: confs } = await supabase.from("configuracion").select("clave, valor");
-      let parsedDias: number[] | undefined;
-      for (const c of confs ?? []) {
-        if (c.clave === "capacidad_diaria") setCapacidadDiaria(parseInt(c.valor));
-        if (c.clave === "dias_entrega") {
-          try { parsedDias = JSON.parse(c.valor); setDiasActivos(parsedDias); } catch { /* ignore */ }
-        }
-      }
+      const conf = await fetchConfig();
+      setCapacidadDiaria(conf.capacidadDiaria);
+      setDiasActivos(conf.diasEntrega);
+      setWhatsappLumo(conf.whatsappLumo);
+      const parsedDias: number[] | undefined = conf.diasEntrega;
 
       const deliveryDays = getNextDeliveryDays(parsedDias);
       const disponibles = deliveryDays.filter((d) => d.disponible);
@@ -1001,7 +1000,7 @@ function ReservaFlow({
                   <p className="font-inter text-[0.75rem] mt-0.5" style={{ color: "#8A8A7A" }}>
                     Escríbenos por WhatsApp y te avisamos en cuanto haya cupo.{" "}
                     <a
-                      href={buildWhatsAppUrl(LUMO_WHATSAPP, "Hola LUMO 🍃 Me gustaría saber cuándo hay cupo disponible para reservar.")}
+                      href={buildWhatsAppUrl(whatsappLumo, "Hola LUMO 🍃 Me gustaría saber cuándo hay cupo disponible para reservar.")}
                       target="_blank"
                       rel="noopener"
                       style={{ color: VERDE, textDecoration: "underline" }}
@@ -1312,6 +1311,7 @@ const MONTOS_RAPIDOS = [
 ];
 
 function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => void }) {
+  const { config } = useConfig();
   const [selected, setSelected] = useState<number | "otro" | null>(null);
   const [otroMonto, setOtroMonto] = useState("");
   const [sent, setSent] = useState(false);
@@ -1332,7 +1332,7 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
       "",
       "Quedo pendiente para confirmar la recarga.",
     ].join("\n");
-    window.open(buildWhatsAppUrl(LUMO_WHATSAPP, mensaje), "_blank", "noopener");
+    window.open(buildWhatsAppUrl(config.whatsappLumo, mensaje), "_blank", "noopener");
     setSent(true);
   }
 
@@ -1820,6 +1820,7 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
 
 /* ── Perfil tab ── */
 function PerfilTab({ miembro, pedidos, onLogout }: { miembro: Miembro; pedidos: Pedido[]; onLogout: () => void }) {
+  const { config } = useConfig();
   const cambioMsg = encodeURIComponent(`Hola LUMO 🍃 Soy ${miembro.nombre} (${miembro.codigo_miembro}). Me gustaría actualizar mis datos de miembro.`);
 
   return (
@@ -1834,7 +1835,7 @@ function PerfilTab({ miembro, pedidos, onLogout }: { miembro: Miembro; pedidos: 
           {miembro.empresa && <InfoRow label="Empresa" value={miembro.empresa} />}
         </div>
         <a
-          href={`https://wa.me/${LUMO_WHATSAPP}?text=${cambioMsg}`}
+          href={`https://wa.me/${config.whatsappLumo}?text=${cambioMsg}`}
           target="_blank"
           rel="noopener"
           className="flex items-center justify-center gap-2 w-full mt-4 rounded-xl py-3 font-inter text-sm spring-press"

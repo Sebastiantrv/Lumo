@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { adminWrite } from "@/lib/admin-api";
-import { DELIVERY_RANGES, LUMO_DOMAIN, WHATSAPP_BATCH_DELAY_MS } from "@/lib/constants";
+import { LUMO_DOMAIN, WHATSAPP_BATCH_DELAY_MS } from "@/lib/constants";
+import { useConfig } from "@/lib/use-config";
 import { todayStr, localStr, formatDateLabel, formatHora, greeting } from "@/lib/dates";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { fmtGramos } from "@/lib/format";
@@ -34,6 +35,7 @@ type Receta = {
 };
 
 export default function AdminHoy() {
+  const { config } = useConfig();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [recetas, setRecetas] = useState<Receta[]>([]);
   const [loading, setLoading] = useState(true);
@@ -513,7 +515,7 @@ export default function AdminHoy() {
                   >
                     <p className="font-inter text-xs mb-2.5" style={{ color: "#8A8A8A" }}>Hora estimada de entrega:</p>
                     <div className="flex gap-2 flex-wrap">
-                      {DELIVERY_RANGES.map((range) => (
+                      {config.rangosEntrega.map((range) => (
                         <button
                           key={range}
                           onClick={() => confirmarEnvasadoGroup(group.ids, range)}

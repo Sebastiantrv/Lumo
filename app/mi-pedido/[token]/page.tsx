@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { LUMO_WHATSAPP, POLL_INTERVAL_MS } from "@/lib/constants";
+import { POLL_INTERVAL_MS } from "@/lib/constants";
+import { useConfig } from "@/lib/use-config";
 import { formatDateLabel, formatHora, formatCreatedDate, capitalize, isCutoffPassed } from "@/lib/dates";
 
 /* ---------- types ---------- */
@@ -615,6 +616,7 @@ export default function MiPedidoPage({
 }: {
   params: { token: string } | Promise<{ token: string }>;
 }) {
+  const { config } = useConfig();
   const [token, setToken] = useState<string | null>(null);
   const [pedidos, setPedidos] = useState<Pedido[] | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -747,7 +749,7 @@ export default function MiPedidoPage({
   const nombre = p.clientes?.nombre ?? "amigo";
   const multiFormula = pedidos.length > 1;
   const accentColor = multiFormula ? "#4A5E3A" : (p.formulas?.color_acento ?? "#4A5E3A");
-  const lumoWhatsApp = LUMO_WHATSAPP;
+  const lumoWhatsApp = config.whatsappLumo;
   const orderLabel = p.numero_pedido ? `#${p.numero_pedido}` : p.token.slice(0, 8).toUpperCase();
   const isCancelado = pedidos.some((ped) => ped.estado === "cancelado");
   const globalEstado = isCancelado ? "cancelado" : pedidos.reduce((worst, ped) => {
@@ -756,7 +758,7 @@ export default function MiPedidoPage({
   }, "entregado");
 
   const canAdjust = !isCancelado && globalEstado !== "entregado" && globalEstado !== "preparado";
-  const cutoffPassed = !p.dia_entrega || isCutoffPassed(p.dia_entrega);
+  const cutoffPassed = !p.dia_entrega || isCutoffPassed(p.dia_entrega, config.horaLimiteCambios);
 
   return (
     <main

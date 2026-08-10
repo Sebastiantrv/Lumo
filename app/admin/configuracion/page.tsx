@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { DELIVERY_RANGES, LUMO_WHATSAPP, SESSION_MAX_AGE_MS } from "@/lib/constants";
+import { useCallback, useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { adminWrite } from "@/lib/admin-api";
+import { LUMO_DOMAIN, POLL_INTERVAL_MS, SESSION_MAX_AGE_MS } from "@/lib/constants";
+import { CONFIG_DEFAULTS, CONFIG_KEYS, LumoConfig, fetchConfig, formatHoraLimite } from "@/lib/config";
 
 /**
- * Configuración operativa de LUMO.
+ * Consola de configuración de LUMO.
  *
- * Lee y escribe contra /api/admin/configuracion (tabla `configuracion`), la
- * misma fuente que ya usaban el bloque de Entregas en /admin y el chequeo de
- * capacidad en /api/mi-lumo/pedido. Las claves y sus formatos se respetan tal
- * cual: `capacidad_diaria` (número como texto) y `dias_entrega` (array JSON de
- * días 1-6, lunes a sábado).
+ * Escribe en la tabla `configuracion` vía /api/admin/configuracion (protegida
+ * por el middleware) y en `formulas.precio` vía adminWrite. Lo que sigue en
+ * código aparece en "Sistema" con el motivo: no es pereza, son valores que el
+ * código ramifica o que definen una frontera de seguridad.
  */
 
 const DIAS = [
@@ -23,44 +24,35 @@ const DIAS = [
   { value: 6, label: "Sáb" },
 ];
 
+type Formula = { id: string; nombre: string; slug: string; color_acento: string; precio: number };
+
+type Seccion = "capacidad" | "dias" | "hora" | "rangos" | "whatsapp" | "precios";
+
 export default function ConfiguracionPage() {
-  const [capacidad, setCapacidad] = useState("");
-  const [diasActivos, setDiasActivos] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [config, setConfig] = useState<LumoConfig>(CONFIG_DEFAULTS);
+  const [formulas, setFormulas] = useState<Formula[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editando, setEditando] = useState<"capacidad" | "dias" | null>(null);
+  const [editando, setEditando] = useState<Seccion | null>(null);
   const [guardando, setGuardando] = useState(false);
-  const [guardado, setGuardado] = useState<string | null>(null);
+  const [guardado, setGuardado] = useState<Seccion | null>(null);
 
-  // Borradores: no tocan el valor mostrado hasta que se guarda.
-  const [draftCapacidad, setDraftCapacidad] = useState("");
-  const [draftDias, setDraftDias] = useState<number[]>([]);
-
-  async function load() {
-    try {
-      const res = await fetch("/api/admin/configuracion");
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      setCapacidad(data.capacidad_diaria ?? "");
-      if (data.dias_entrega) {
-        try {
-          const parsed = JSON.parse(data.dias_entrega);
-          if (Array.isArray(parsed)) setDiasActivos(parsed);
-        } catch {
-          /* valor corrupto: se conservan los días por defecto */
-        }
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "No se pudo cargar la configuración");
-    }
+  const load = useCallback(async () => {
+    const [conf, formulasRes] = await Promise.all([
+      fetchConfig(),
+      supabase.from("formulas").select("id, nombre, slug, color_acento, precio").order("nombre"),
+    ]);
+    setConfig(conf);
+    setFormulas((formulasRes.data ?? []) as Formula[]);
     setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
-  async function guardar(clave: string, valor: string) {
+  /** Guarda una clave de `configuracion` y refresca desde la fuente. */
+  async function guardarClave(clave: string, valor: string, seccion: Seccion) {
     setGuardando(true);
     setError(null);
     try {
@@ -71,34 +63,42 @@ export default function ConfiguracionPage() {
       });
       const data = await res.json();
       if (data.error) throw new Error(data.error);
-      setGuardado(clave);
-      setTimeout(() => setGuardado(null), 2000);
+      setConfig(await fetchConfig());
       setEditando(null);
-      return true;
+      setGuardado(seccion);
+      setTimeout(() => setGuardado(null), 2000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar");
-      return false;
     } finally {
       setGuardando(false);
     }
   }
 
-  async function guardarCapacidad() {
-    const n = parseInt(draftCapacidad, 10);
-    if (!Number.isFinite(n) || n < 1) {
-      setError("La capacidad debe ser un número mayor a cero.");
-      return;
+  async function guardarPrecios(precios: Record<string, number>) {
+    setGuardando(true);
+    setError(null);
+    try {
+      const results = await Promise.all(
+        Object.entries(precios).map(([id, precio]) =>
+          adminWrite("formulas", "update", { precio }, [{ column: "id", value: id }])
+        )
+      );
+      const fallo = results.find((r) => !r.ok);
+      if (fallo) throw new Error(fallo.error ?? "No se pudieron guardar los precios");
+      await load();
+      setEditando(null);
+      setGuardado("precios");
+      setTimeout(() => setGuardado(null), 2000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo guardar");
+    } finally {
+      setGuardando(false);
     }
-    if (await guardar("capacidad_diaria", String(n))) setCapacidad(String(n));
   }
 
-  async function guardarDias() {
-    if (draftDias.length === 0) {
-      setError("Debe haber al menos un día de entrega activo.");
-      return;
-    }
-    const ordenados = [...draftDias].sort((a, b) => a - b);
-    if (await guardar("dias_entrega", JSON.stringify(ordenados))) setDiasActivos(ordenados);
+  function abrir(seccion: Seccion) {
+    setError(null);
+    setEditando(seccion);
   }
 
   if (loading) return <PageLoader />;
@@ -113,7 +113,7 @@ export default function ConfiguracionPage() {
           Reglas operativas
         </h1>
         <p className="font-inter text-sm mt-1.5" style={{ color: "#8A8A8A" }}>
-          Lo que rige la operación diaria de LUMO. Lo que todavía vive en código aparece como solo lectura.
+          Todo lo que define cómo opera LUMO, en un solo lugar.
         </p>
       </div>
 
@@ -130,165 +130,463 @@ export default function ConfiguracionPage() {
       <Seccion titulo="Entregas">
         <Card
           titulo="Capacidad diaria"
-          descripcion="Máximo de botellas por día. El flujo de reserva de Mi LUMO rechaza pedidos que superen este número."
-          accion={
-            editando === "capacidad" ? (
-              <BotonSecundario onClick={() => setEditando(null)} label="Cancelar" />
-            ) : (
-              <BotonSecundario
-                onClick={() => {
-                  setDraftCapacidad(capacidad);
-                  setError(null);
-                  setEditando("capacidad");
-                }}
-                label="Editar"
-              />
-            )
-          }
-          guardado={guardado === "capacidad_diaria"}
+          descripcion="Máximo de botellas por día. Mi LUMO rechaza reservas que superen este número."
+          editando={editando === "capacidad"}
+          guardado={guardado === "capacidad"}
+          onEditar={() => abrir("capacidad")}
+          onCancelar={() => setEditando(null)}
+          valor={config.capacidadDiaria ? `${config.capacidadDiaria} botellas` : "Sin límite"}
         >
-          {editando === "capacidad" ? (
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="number"
-                min={1}
-                value={draftCapacidad}
-                onChange={(e) => setDraftCapacidad(e.target.value)}
-                className="w-28 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
-              />
-              <span className="font-inter text-xs" style={{ color: "#555" }}>botellas</span>
-              <BotonGuardar onClick={guardarCapacidad} disabled={guardando} />
-            </div>
-          ) : (
-            <p className="font-cormorant text-2xl" style={{ color: "#F5F0E8" }}>
-              {capacidad ? `${capacidad} botellas` : "Sin configurar"}
-            </p>
-          )}
+          <EditorCapacidad
+            inicial={config.capacidadDiaria}
+            guardando={guardando}
+            onError={setError}
+            onGuardar={(v) => guardarClave(CONFIG_KEYS.capacidadDiaria, v, "capacidad")}
+          />
         </Card>
 
         <Card
           titulo="Días activos de entrega"
-          descripcion="Días en los que LUMO entrega. Las vistas de Semana y Compras siempre muestran lunes a sábado."
-          accion={
-            editando === "dias" ? (
-              <BotonSecundario onClick={() => setEditando(null)} label="Cancelar" />
-            ) : (
-              <BotonSecundario
-                onClick={() => {
-                  setDraftDias(diasActivos);
-                  setError(null);
-                  setEditando("dias");
-                }}
-                label="Editar"
-              />
-            )
-          }
-          guardado={guardado === "dias_entrega"}
+          descripcion="Días en los que LUMO entrega. Define qué fechas ofrece Mi LUMO al reservar."
+          editando={editando === "dias"}
+          guardado={guardado === "dias"}
+          onEditar={() => abrir("dias")}
+          onCancelar={() => setEditando(null)}
+          valorNodo={<ChipsDias activos={config.diasEntrega} />}
         >
-          {editando === "dias" ? (
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap gap-2">
-                {DIAS.map((d) => {
-                  const activo = draftDias.includes(d.value);
-                  return (
-                    <button
-                      key={d.value}
-                      onClick={() =>
-                        setDraftDias((prev) =>
-                          prev.includes(d.value) ? prev.filter((x) => x !== d.value) : [...prev, d.value]
-                        )
-                      }
-                      className="w-11 h-11 rounded-xl font-inter text-xs font-medium transition-all"
-                      style={{
-                        background: activo ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.04)",
-                        color: activo ? "#6DBF67" : "#555",
-                        border: activo ? "1px solid rgba(74,94,58,0.5)" : "1px solid rgba(255,255,255,0.08)",
-                      }}
-                    >
-                      {d.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <BotonGuardar onClick={guardarDias} disabled={guardando} />
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {DIAS.map((d) => {
-                const activo = diasActivos.includes(d.value);
-                return (
-                  <span
-                    key={d.value}
-                    className="rounded-lg px-3 py-1.5 font-inter text-xs"
-                    style={{
-                      background: activo ? "rgba(74,94,58,0.2)" : "rgba(255,255,255,0.03)",
-                      color: activo ? "#6DBF67" : "#555",
-                      border: activo ? "1px solid rgba(74,94,58,0.4)" : "1px solid rgba(255,255,255,0.07)",
-                    }}
-                  >
-                    {d.label}
-                  </span>
-                );
-              })}
-            </div>
-          )}
+          <EditorDias
+            inicial={config.diasEntrega}
+            guardando={guardando}
+            onError={setError}
+            onGuardar={(v) => guardarClave(CONFIG_KEYS.diasEntrega, JSON.stringify(v), "dias")}
+          />
         </Card>
 
-        <CardLectura
+        <Card
           titulo="Hora límite de cambios"
-          descripcion="Los clientes pueden cancelar o mover pedidos hasta esta hora del día anterior."
-          valor="8:00 PM"
-          nota="Este valor se administra desde código por ahora (isCutoffPassed en lib/dates.ts). Moverlo a configuración requiere volver asíncrona una función que hoy se evalúa de forma síncrona en Mi LUMO."
-        />
+          descripcion="Hasta esta hora del día anterior, el cliente puede cancelar o mover su pedido desde el seguimiento."
+          editando={editando === "hora"}
+          guardado={guardado === "hora"}
+          onEditar={() => abrir("hora")}
+          onCancelar={() => setEditando(null)}
+          valor={formatHoraLimite(config.horaLimiteCambios)}
+        >
+          <EditorHora
+            inicial={config.horaLimiteCambios}
+            guardando={guardando}
+            onGuardar={(v) => guardarClave(CONFIG_KEYS.horaLimiteCambios, String(v), "hora")}
+          />
+        </Card>
 
-        <CardLectura
+        <Card
           titulo="Rangos de entrega"
-          descripcion="Opciones de hora estimada al marcar un pedido como envasado."
-          valor={DELIVERY_RANGES.join(" · ")}
-          nota="Este valor se administra desde código por ahora (DELIVERY_RANGES en lib/constants.ts)."
-        />
+          descripcion="Opciones de hora estimada que aparecen al marcar un pedido como envasado."
+          editando={editando === "rangos"}
+          guardado={guardado === "rangos"}
+          onEditar={() => abrir("rangos")}
+          onCancelar={() => setEditando(null)}
+          valorNodo={
+            <div className="flex flex-wrap gap-2">
+              {config.rangosEntrega.map((r) => (
+                <span
+                  key={r}
+                  className="rounded-lg px-3 py-1.5 font-inter text-xs"
+                  style={{ background: "rgba(74,94,58,0.15)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.3)" }}
+                >
+                  {r}
+                </span>
+              ))}
+            </div>
+          }
+        >
+          <EditorRangos
+            inicial={config.rangosEntrega}
+            guardando={guardando}
+            onError={setError}
+            onGuardar={(v) => guardarClave(CONFIG_KEYS.rangosEntrega, JSON.stringify(v), "rangos")}
+          />
+        </Card>
+      </Seccion>
+
+      {/* ── Precios ── */}
+      <Seccion titulo="Precios">
+        <Card
+          titulo="Precio por fórmula"
+          descripcion="Precio unitario de cada botella. Finanzas lo usa para calcular ingresos."
+          editando={editando === "precios"}
+          guardado={guardado === "precios"}
+          onEditar={() => abrir("precios")}
+          onCancelar={() => setEditando(null)}
+          valorNodo={
+            formulas.length === 0 ? (
+              <p className="font-inter text-sm" style={{ color: "#555" }}>Sin fórmulas registradas.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {formulas.map((f) => (
+                  <div key={f.id} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: f.color_acento }} />
+                      <span className="font-inter text-sm truncate" style={{ color: "#F5F0E8" }}>{f.nombre}</span>
+                    </div>
+                    <span className="font-cormorant text-lg shrink-0 ml-3" style={{ color: f.color_acento }}>
+                      ${f.precio}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )
+          }
+        >
+          <EditorPrecios formulas={formulas} guardando={guardando} onError={setError} onGuardar={guardarPrecios} />
+        </Card>
       </Seccion>
 
       {/* ── Contacto ── */}
       <Seccion titulo="Contacto">
-        <CardLectura
+        <Card
           titulo="WhatsApp de LUMO"
           descripcion="Número al que escriben los clientes desde Mi LUMO y desde el seguimiento de pedido."
-          valor={`+${LUMO_WHATSAPP}`}
-          nota="Este valor se administra desde código por ahora (LUMO_WHATSAPP en lib/constants.ts). Moverlo a Supabase implica un fallback en las páginas públicas: pendiente de decidir."
-        />
+          editando={editando === "whatsapp"}
+          guardado={guardado === "whatsapp"}
+          onEditar={() => abrir("whatsapp")}
+          onCancelar={() => setEditando(null)}
+          valor={`+${config.whatsappLumo}`}
+        >
+          <EditorWhatsApp
+            inicial={config.whatsappLumo}
+            guardando={guardando}
+            onError={setError}
+            onGuardar={(v) => guardarClave(CONFIG_KEYS.whatsappLumo, v, "whatsapp")}
+          />
+        </Card>
       </Seccion>
 
       {/* ── Sistema ── */}
       <Seccion titulo="Sistema">
-        <CardLectura
-          titulo="Precios por fórmula"
-          descripcion="El precio de cada fórmula ya se edita en Finanzas."
-          enlace={{ href: "/admin/finanzas", label: "Ir a Finanzas" }}
-        />
-        <CardLectura
-          titulo="Recetas y gramaje"
-          descripcion="El gramaje por botella se edita en Recetas y alimenta el desglose de Hoy y la lista de Compras."
-          enlace={{ href: "/admin/recetas", label: "Ir a Recetas" }}
-        />
-        <CardLectura
-          titulo="Duración de sesión Mi LUMO"
-          descripcion="Cuánto tiempo permanece válida la sesión de un cliente."
+        <p className="font-inter text-xs mb-1 -mt-1 leading-relaxed" style={{ color: "#555" }}>
+          Estos valores viven en código a propósito: el código ramifica sobre ellos o definen
+          una frontera de seguridad, así que cambiarlos en caliente rompería comportamiento en
+          vez de ajustarlo.
+        </p>
+        <CardSistema
+          titulo="Duración de sesión de Mi LUMO"
           valor={`${SESSION_MAX_AGE_MS / (24 * 60 * 60 * 1000)} días`}
-          nota="Este valor se administra desde código por ahora (SESSION_MAX_AGE_MS en lib/constants.ts). Es compartido con la verificación de token del servidor."
+          motivo="Frontera de autenticación: la comparte la verificación de token del servidor. Editarla desde el panel permitiría extender sesiones sin pasar por despliegue."
+          donde="SESSION_MAX_AGE_MS · lib/constants.ts"
         />
-        <CardLectura
+        <CardSistema
           titulo="Estados de pedido"
-          descripcion="pendiente → confirmado → preparado (envasado) → entregado. Cancelado y eliminado se muestran en Hoy pero no cuentan para producción."
-          nota="Este valor se administra desde código por ahora (ESTADOS en lib/constants.ts)."
+          valor="pendiente → confirmado → preparado → entregado"
+          motivo="El código ramifica sobre estos valores exactos. Agregar o renombrar uno requiere tocar las transiciones, no solo la configuración."
+          donde="ESTADOS · lib/constants.ts"
+        />
+        <CardSistema
+          titulo="Dominio público"
+          valor={LUMO_DOMAIN}
+          motivo="Va en los enlaces de seguimiento que se mandan por WhatsApp. Depende del despliegue, no de la operación."
+          donde="LUMO_DOMAIN · lib/constants.ts"
+        />
+        <CardSistema
+          titulo="Frecuencia de actualización"
+          valor={`${POLL_INTERVAL_MS / 1000} s`}
+          motivo="Cada cuánto refresca el seguimiento de pedido. Es ajuste de rendimiento, no una regla de negocio."
+          donde="POLL_INTERVAL_MS · lib/constants.ts"
         />
       </Seccion>
     </div>
   );
 }
 
-/* ── Bloques ── */
+/* ── Editores ── */
+
+function EditorCapacidad({
+  inicial,
+  guardando,
+  onError,
+  onGuardar,
+}: {
+  inicial: number | null;
+  guardando: boolean;
+  onError: (e: string) => void;
+  onGuardar: (v: string) => void;
+}) {
+  const [valor, setValor] = useState(inicial ? String(inicial) : "");
+
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <input
+        type="number"
+        min={1}
+        value={valor}
+        onChange={(e) => setValor(e.target.value)}
+        className="w-28 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
+        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
+      />
+      <span className="font-inter text-xs" style={{ color: "#555" }}>botellas por día</span>
+      <BotonGuardar
+        guardando={guardando}
+        onClick={() => {
+          const n = parseInt(valor, 10);
+          if (!Number.isFinite(n) || n < 1) {
+            onError("La capacidad debe ser un número mayor a cero.");
+            return;
+          }
+          onGuardar(String(n));
+        }}
+      />
+    </div>
+  );
+}
+
+function EditorDias({
+  inicial,
+  guardando,
+  onError,
+  onGuardar,
+}: {
+  inicial: number[];
+  guardando: boolean;
+  onError: (e: string) => void;
+  onGuardar: (v: number[]) => void;
+}) {
+  const [dias, setDias] = useState<number[]>(inicial);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        {DIAS.map((d) => {
+          const activo = dias.includes(d.value);
+          return (
+            <button
+              key={d.value}
+              onClick={() =>
+                setDias((prev) => (prev.includes(d.value) ? prev.filter((x) => x !== d.value) : [...prev, d.value]))
+              }
+              className="w-11 h-11 rounded-xl font-inter text-xs font-medium transition-all"
+              style={{
+                background: activo ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.04)",
+                color: activo ? "#6DBF67" : "#555",
+                border: activo ? "1px solid rgba(74,94,58,0.5)" : "1px solid rgba(255,255,255,0.08)",
+              }}
+            >
+              {d.label}
+            </button>
+          );
+        })}
+      </div>
+      <BotonGuardar
+        guardando={guardando}
+        onClick={() => {
+          if (dias.length === 0) {
+            onError("Debe haber al menos un día de entrega activo.");
+            return;
+          }
+          onGuardar([...dias].sort((a, b) => a - b));
+        }}
+      />
+    </div>
+  );
+}
+
+function EditorHora({
+  inicial,
+  guardando,
+  onGuardar,
+}: {
+  inicial: number;
+  guardando: boolean;
+  onGuardar: (v: number) => void;
+}) {
+  const [hora, setHora] = useState(inicial);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap gap-2">
+        {[16, 17, 18, 19, 20, 21, 22].map((h) => (
+          <button
+            key={h}
+            onClick={() => setHora(h)}
+            className="rounded-xl px-3 py-2.5 font-inter text-xs font-medium transition-all"
+            style={{
+              background: hora === h ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.04)",
+              color: hora === h ? "#6DBF67" : "#8A8A8A",
+              border: hora === h ? "1px solid rgba(74,94,58,0.5)" : "1px solid rgba(255,255,255,0.08)",
+            }}
+          >
+            {formatHoraLimite(h)}
+          </button>
+        ))}
+      </div>
+      <p className="font-inter text-xs" style={{ color: "#555" }}>
+        Se aplica al día anterior a la entrega, hora de Ciudad de México.
+      </p>
+      <BotonGuardar guardando={guardando} onClick={() => onGuardar(hora)} />
+    </div>
+  );
+}
+
+function EditorRangos({
+  inicial,
+  guardando,
+  onError,
+  onGuardar,
+}: {
+  inicial: string[];
+  guardando: boolean;
+  onError: (e: string) => void;
+  onGuardar: (v: string[]) => void;
+}) {
+  const [rangos, setRangos] = useState<string[]>(inicial);
+
+  function actualizar(i: number, v: string) {
+    setRangos((prev) => prev.map((r, idx) => (idx === i ? v : r)));
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2">
+        {rangos.map((r, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              value={r}
+              onChange={(e) => actualizar(i, e.target.value)}
+              placeholder="6:30 - 7:00"
+              className="flex-1 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
+            />
+            <button
+              onClick={() => setRangos((prev) => prev.filter((_, idx) => idx !== i))}
+              aria-label={`Quitar rango ${r || i + 1}`}
+              className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+              style={{ background: "rgba(122,32,48,0.1)", border: "1px solid rgba(122,32,48,0.2)", color: "#7A2030" }}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={() => setRangos((prev) => [...prev, ""])}
+        className="self-start rounded-lg px-3 py-2 font-inter text-xs"
+        style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#C0B8AE" }}
+      >
+        + Agregar rango
+      </button>
+      <BotonGuardar
+        guardando={guardando}
+        onClick={() => {
+          const limpios = rangos.map((r) => r.trim()).filter(Boolean);
+          if (limpios.length === 0) {
+            onError("Debe quedar al menos un rango de entrega.");
+            return;
+          }
+          onGuardar(limpios);
+        }}
+      />
+    </div>
+  );
+}
+
+function EditorWhatsApp({
+  inicial,
+  guardando,
+  onError,
+  onGuardar,
+}: {
+  inicial: string;
+  guardando: boolean;
+  onError: (e: string) => void;
+  onGuardar: (v: string) => void;
+}) {
+  const [valor, setValor] = useState(inicial);
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          value={valor}
+          onChange={(e) => setValor(e.target.value)}
+          placeholder="5215542779362"
+          inputMode="tel"
+          className="flex-1 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
+          style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8", minWidth: "12rem" }}
+        />
+        <BotonGuardar
+          guardando={guardando}
+          onClick={() => {
+            const digitos = valor.replace(/\D/g, "");
+            if (digitos.length < 10) {
+              onError("El número debe incluir lada y país, por ejemplo 5215542779362.");
+              return;
+            }
+            onGuardar(digitos);
+          }}
+        />
+      </div>
+      <p className="font-inter text-xs" style={{ color: "#555" }}>
+        Formato internacional sin símbolos. Si queda vacío o inválido, se usa el número de código.
+      </p>
+    </div>
+  );
+}
+
+function EditorPrecios({
+  formulas,
+  guardando,
+  onError,
+  onGuardar,
+}: {
+  formulas: Formula[];
+  guardando: boolean;
+  onError: (e: string) => void;
+  onGuardar: (precios: Record<string, number>) => void;
+}) {
+  const [precios, setPrecios] = useState<Record<string, string>>(
+    Object.fromEntries(formulas.map((f) => [f.id, String(f.precio ?? 0)]))
+  );
+
+  return (
+    <div className="flex flex-col gap-3">
+      {formulas.map((f) => (
+        <div key={f.id} className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: f.color_acento }} />
+            <span className="font-inter text-sm truncate" style={{ color: "#F5F0E8" }}>{f.nombre}</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="font-inter text-sm" style={{ color: "#8A8A8A" }}>$</span>
+            <input
+              type="number"
+              min={0}
+              step="1"
+              value={precios[f.id] ?? ""}
+              onChange={(e) => setPrecios((prev) => ({ ...prev, [f.id]: e.target.value }))}
+              className="w-24 rounded-xl px-3 py-2.5 font-inter text-sm outline-none"
+              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
+            />
+          </div>
+        </div>
+      ))}
+      <BotonGuardar
+        guardando={guardando}
+        onClick={() => {
+          const parsed: Record<string, number> = {};
+          for (const f of formulas) {
+            const n = Number(precios[f.id]);
+            if (!Number.isFinite(n) || n < 0) {
+              onError(`El precio de ${f.nombre} no es válido.`);
+              return;
+            }
+            parsed[f.id] = n;
+          }
+          onGuardar(parsed);
+        }}
+      />
+    </div>
+  );
+}
+
+/* ── Presentación ── */
 
 function Seccion({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
@@ -304,14 +602,22 @@ function Seccion({ titulo, children }: { titulo: string; children: React.ReactNo
 function Card({
   titulo,
   descripcion,
-  accion,
+  valor,
+  valorNodo,
+  editando,
   guardado,
+  onEditar,
+  onCancelar,
   children,
 }: {
   titulo: string;
   descripcion: string;
-  accion?: React.ReactNode;
-  guardado?: boolean;
+  valor?: string;
+  valorNodo?: React.ReactNode;
+  editando: boolean;
+  guardado: boolean;
+  onEditar: () => void;
+  onCancelar: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -323,33 +629,40 @@ function Card({
         <div className="min-w-0 flex-1" style={{ minWidth: "min(100%, 15rem)" }}>
           <div className="flex items-center gap-2 flex-wrap">
             <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>{titulo}</p>
-            {guardado && (
-              <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>✓ Guardado</span>
-            )}
+            {guardado && <span className="font-inter text-xs" style={{ color: "#6DBF67" }}>✓ Guardado</span>}
           </div>
-          <p className="font-inter text-xs mt-1 leading-relaxed" style={{ color: "#8A8A8A" }}>
-            {descripcion}
-          </p>
+          <p className="font-inter text-xs mt-1 leading-relaxed" style={{ color: "#8A8A8A" }}>{descripcion}</p>
         </div>
-        {accion}
+        <button
+          onClick={editando ? onCancelar : onEditar}
+          className="rounded-lg px-3 py-2 font-inter text-xs whitespace-nowrap"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#C0B8AE" }}
+        >
+          {editando ? "Cancelar" : "Editar"}
+        </button>
       </div>
-      {children}
+
+      {editando ? (
+        children
+      ) : valorNodo ? (
+        valorNodo
+      ) : (
+        <p className="font-cormorant text-2xl" style={{ color: "#F5F0E8" }}>{valor}</p>
+      )}
     </article>
   );
 }
 
-function CardLectura({
+function CardSistema({
   titulo,
-  descripcion,
   valor,
-  nota,
-  enlace,
+  motivo,
+  donde,
 }: {
   titulo: string;
-  descripcion: string;
-  valor?: string;
-  nota?: string;
-  enlace?: { href: string; label: string };
+  valor: string;
+  motivo: string;
+  donde: string;
 }) {
   return (
     <article
@@ -359,60 +672,53 @@ function CardLectura({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1" style={{ minWidth: "min(100%, 15rem)" }}>
           <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>{titulo}</p>
-          <p className="font-inter text-xs mt-1 leading-relaxed" style={{ color: "#8A8A8A" }}>
-            {descripcion}
-          </p>
+          <p className="font-inter text-sm mt-1" style={{ color: "#C0B8AE" }}>{valor}</p>
         </div>
-        {enlace ? (
-          <Link
-            href={enlace.href}
-            className="rounded-lg px-3 py-2 font-inter text-xs whitespace-nowrap"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#C0B8AE" }}
-          >
-            {enlace.label}
-          </Link>
-        ) : (
-          <span className="font-inter text-xs whitespace-nowrap" style={{ color: "#555" }}>
-            Solo lectura
-          </span>
-        )}
+        <span className="font-inter text-xs whitespace-nowrap" style={{ color: "#555" }}>En código</span>
       </div>
-      {valor && (
-        <p className="font-cormorant text-2xl mt-3" style={{ color: "#F5F0E8" }}>{valor}</p>
-      )}
-      {nota && (
-        <p className="font-inter text-xs mt-2.5 leading-relaxed" style={{ color: "#555" }}>{nota}</p>
-      )}
+      <p className="font-inter text-xs mt-2.5 leading-relaxed" style={{ color: "#8A8A8A" }}>{motivo}</p>
+      <p className="font-inter text-xs mt-1.5" style={{ color: "#444" }}>{donde}</p>
     </article>
   );
 }
 
-function BotonSecundario({ onClick, label }: { onClick: () => void; label: string }) {
+function ChipsDias({ activos }: { activos: number[] }) {
   return (
-    <button
-      onClick={onClick}
-      className="rounded-lg px-3 py-2 font-inter text-xs whitespace-nowrap"
-      style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#C0B8AE" }}
-    >
-      {label}
-    </button>
+    <div className="flex flex-wrap gap-2">
+      {DIAS.map((d) => {
+        const activo = activos.includes(d.value);
+        return (
+          <span
+            key={d.value}
+            className="rounded-lg px-3 py-1.5 font-inter text-xs"
+            style={{
+              background: activo ? "rgba(74,94,58,0.2)" : "rgba(255,255,255,0.03)",
+              color: activo ? "#6DBF67" : "#555",
+              border: activo ? "1px solid rgba(74,94,58,0.4)" : "1px solid rgba(255,255,255,0.07)",
+            }}
+          >
+            {d.label}
+          </span>
+        );
+      })}
+    </div>
   );
 }
 
-function BotonGuardar({ onClick, disabled }: { onClick: () => void; disabled?: boolean }) {
+function BotonGuardar({ onClick, guardando }: { onClick: () => void; guardando: boolean }) {
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
+      disabled={guardando}
       className="rounded-lg px-4 py-2.5 font-inter text-xs font-medium self-start"
       style={{
         background: "rgba(74,94,58,0.2)",
         color: "#6DBF67",
         border: "1px solid rgba(74,94,58,0.4)",
-        opacity: disabled ? 0.5 : 1,
+        opacity: guardando ? 0.5 : 1,
       }}
     >
-      {disabled ? "Guardando..." : "Guardar"}
+      {guardando ? "Guardando..." : "Guardar"}
     </button>
   );
 }

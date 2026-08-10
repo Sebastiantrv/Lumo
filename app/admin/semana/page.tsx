@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { adminWrite } from "@/lib/admin-api";
 import { localStr, getWeekDays, formatDateShort } from "@/lib/dates";
-import { DELIVERY_RANGES } from "@/lib/constants";
+import { useConfig } from "@/lib/use-config";
 
 type Pedido = {
   id: string;
@@ -28,6 +28,7 @@ type Pedido = {
 type Formula = { id: string; nombre: string; slug: string; color_acento: string };
 
 export default function SemanaPage() {
+  const { config } = useConfig();
   const [pedidos, setPedidos] = useState<Pedido[]>([]);
   const [formulas, setFormulas] = useState<Formula[]>([]);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -248,6 +249,7 @@ function PedidoRow({
   onOpenMover: () => void;
   onCloseMover: () => void;
 }) {
+  const { config } = useConfig();
   const [showDeliveryPicker, setShowDeliveryPicker] = useState(false);
   const [showEstadoMenu, setShowEstadoMenu] = useState(false);
   const first = group[0];
@@ -473,7 +475,7 @@ function PedidoRow({
         <div className="flex flex-col gap-2 mt-1">
           <p className="font-inter text-xs" style={{ color: "#8A8A8A" }}>Hora de entrega estimada:</p>
           <div className="flex flex-wrap gap-1.5">
-            {DELIVERY_RANGES.map((range) => (
+            {config.rangosEntrega.map((range) => (
               <button
                 key={range}
                 onClick={() => { setShowDeliveryPicker(false); setShowEstadoMenu(false); onAvanzarEstado(range); }}

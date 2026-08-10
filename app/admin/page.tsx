@@ -7,6 +7,7 @@ import { adminWrite } from "@/lib/admin-api";
 import { SORPRESA_ID } from "@/lib/constants";
 import { todayStr, addDays, formatDateLabel, greeting, getWeekRange, getTipoPedido, localStr } from "@/lib/dates";
 import { fmtGramos } from "@/lib/format";
+import { LumoConfig, fetchConfig, formatHoraLimite } from "@/lib/config";
 
 type ClienteOption = { id: string; nombre: string };
 type FormulaOption = { id: string; nombre: string };
@@ -398,10 +399,12 @@ function Empty({ texto }: { texto: string }) {
  * Resumen de las reglas de entrega. La edición vive en /admin/configuracion
  * para no tener dos formularios escribiendo las mismas claves.
  */
+/**
+ * Resumen de las reglas de entrega. La edición vive en /admin/configuracion
+ * para no tener dos formularios escribiendo las mismas claves.
+ */
 function CapacidadDiariaCard() {
-  const [capacidad, setCapacidad] = useState<string | null>(null);
-  const [diasActivos, setDiasActivos] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState<LumoConfig | null>(null);
 
   const diasSemana = [
     { value: 1, label: "Lun" },
@@ -413,19 +416,7 @@ function CapacidadDiariaCard() {
   ];
 
   useEffect(() => {
-    fetch("/api/admin/configuracion")
-      .then((r) => r.json())
-      .then((data) => {
-        setCapacidad(data.capacidad_diaria ?? null);
-        if (data.dias_entrega) {
-          try {
-            const parsed = JSON.parse(data.dias_entrega);
-            if (Array.isArray(parsed)) setDiasActivos(parsed);
-          } catch { /* keep defaults */ }
-        }
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetchConfig().then(setConfig);
   }, []);
 
   return (
@@ -433,7 +424,7 @@ function CapacidadDiariaCard() {
       <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
         <div>
           <h2 className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#8A8A8A" }}>Entregas</h2>
-          <p className="font-inter text-xs" style={{ color: "#555" }}>Capacidad y días activos.</p>
+          <p className="font-inter text-xs" style={{ color: "#555" }}>Capacidad, días activos y hora límite.</p>
         </div>
         <Link
           href="/admin/configuracion"
@@ -443,21 +434,29 @@ function CapacidadDiariaCard() {
           Configurar
         </Link>
       </div>
-      {loading ? (
+      {!config ? (
         <Empty texto="Cargando..." />
       ) : (
         <div className="flex flex-col gap-4">
-          <div>
-            <p className="font-inter text-xs mb-1.5" style={{ color: "#8A8A8A" }}>Botellas por día</p>
-            <p className="font-cormorant text-2xl" style={{ color: "#F5F0E8" }}>
-              {capacidad ? `${capacidad} botellas` : "Sin configurar"}
-            </p>
+          <div className="flex flex-wrap gap-8">
+            <div>
+              <p className="font-inter text-xs mb-1.5" style={{ color: "#8A8A8A" }}>Botellas por día</p>
+              <p className="font-cormorant text-2xl" style={{ color: "#F5F0E8" }}>
+                {config.capacidadDiaria ? `${config.capacidadDiaria} botellas` : "Sin límite"}
+              </p>
+            </div>
+            <div>
+              <p className="font-inter text-xs mb-1.5" style={{ color: "#8A8A8A" }}>Hora límite de cambios</p>
+              <p className="font-cormorant text-2xl" style={{ color: "#F5F0E8" }}>
+                {formatHoraLimite(config.horaLimiteCambios)}
+              </p>
+            </div>
           </div>
           <div>
             <p className="font-inter text-xs mb-2" style={{ color: "#8A8A8A" }}>Días de entrega</p>
             <div className="flex flex-wrap gap-2">
               {diasSemana.map((dia) => {
-                const activo = diasActivos.includes(dia.value);
+                const activo = config.diasEntrega.includes(dia.value);
                 return (
                   <span
                     key={dia.value}

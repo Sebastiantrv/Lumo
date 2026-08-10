@@ -94,12 +94,19 @@ export function capitalize(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-export function isCutoffPassed(diaEntrega: string): boolean {
+/**
+ * ¿Ya pasó la hora límite para cambiar un pedido?
+ *
+ * `horaLimite` es la hora (0-23) del día ANTERIOR a la entrega. Por defecto 20
+ * (8 PM), el valor histórico: quien tenga la configuración cargada puede pasar
+ * el valor administrado sin que esta función deje de ser síncrona.
+ */
+export function isCutoffPassed(diaEntrega: string, horaLimite = 20): boolean {
   const now = new Date();
   const mexicoOffset = -6;
   const utcNow = now.getTime() + now.getTimezoneOffset() * 60000;
   const mexicoNow = new Date(utcNow + mexicoOffset * 3600000);
   const [y, m, d] = diaEntrega.split("-").map(Number);
-  const cutoff = new Date(y, m - 1, d - 1, 20, 0, 0, 0);
+  const cutoff = new Date(y, m - 1, d - 1, horaLimite, 0, 0, 0);
   return mexicoNow >= cutoff;
 }

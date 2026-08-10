@@ -128,3 +128,22 @@ from formulas f, ingredientes i
 where f.slug = 'tropical'
   and i.nombre in ('Piña','Pepino','Limón','Jengibre')
 on conflict do nothing;
+
+-- ── Configuración operativa (clave/valor) ────────────────────
+-- Editable desde /admin/configuracion. Los valores se leen con lib/config.ts,
+-- que aplica un default de código a cualquier clave ausente o mal formada.
+--
+--   capacidad_diaria     '20'                    máximo de botellas por día
+--   dias_entrega         '[1,2,3,4,5,6]'         1 = lunes … 6 = sábado
+--   hora_limite_cambios  '20'                    hora (0-23) del día anterior
+--   rangos_entrega       '["6:30 - 7:00", ...]'  opciones de hora estimada
+--   whatsapp_lumo        '5215542779362'         solo dígitos
+--
+-- Sin filas sembradas a propósito: una clave ausente cae al default de
+-- lib/config.ts, y sembrarla aquí cambiaría el comportamiento de una
+-- instalación que ya está corriendo.
+create table if not exists configuracion (
+  clave text primary key,
+  valor text,
+  updated_at timestamptz default now()
+);
