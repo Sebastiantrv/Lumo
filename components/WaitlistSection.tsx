@@ -118,6 +118,11 @@ export default function WaitlistSection() {
         body: JSON.stringify(payload),
       });
       const json = await res.json();
+      if (!res.ok || json.error) {
+        setSubmitError(json.error || "No pudimos completar tu registro. Intenta de nuevo.");
+        setSubmitting(false);
+        return;
+      }
       if (json.codigo_miembro) setCodigoMiembro(json.codigo_miembro);
     } catch {
       setSubmitError("No pudimos completar tu registro. Verifica tu conexión e intenta de nuevo.");

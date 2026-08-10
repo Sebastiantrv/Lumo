@@ -39,7 +39,18 @@ export async function POST(req: NextRequest) {
   const telefonoClean = telefono.replace(/\D/g, "");
   const clienteTelClean = (cliente.telefono ?? "").replace(/\D/g, "");
 
-  if (!clienteTelClean || !telefonoClean.endsWith(clienteTelClean.slice(-10)) && !clienteTelClean.endsWith(telefonoClean.slice(-10))) {
+  // Comparamos solo los últimos 10 dígitos para tolerar diferencias de
+  // lada/país (+52 vs. nacional), pero exigimos que AMBOS números tengan al
+  // menos 10 dígitos antes de comparar. Sin ese mínimo, un teléfono de 1-2
+  // dígitos hacía `endsWith` trivialmente verdadero contra cualquier cliente
+  // cuyo número terminara igual — bypass total de login con solo el código.
+  const MIN_PHONE_DIGITS = 10;
+  const telefonosCoinciden =
+    clienteTelClean.length >= MIN_PHONE_DIGITS &&
+    telefonoClean.length >= MIN_PHONE_DIGITS &&
+    clienteTelClean.slice(-10) === telefonoClean.slice(-10);
+
+  if (!telefonosCoinciden) {
     return NextResponse.json({ error: "No encontramos una membresía con esos datos." }, { status: 404 });
   }
 

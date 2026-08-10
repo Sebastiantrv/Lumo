@@ -625,6 +625,7 @@ export default function MiPedidoPage({
   const [adjustDate, setAdjustDate] = useState("");
   const [adjustSending, setAdjustSending] = useState(false);
   const [adjustSent, setAdjustSent] = useState(false);
+  const [adjustError, setAdjustError] = useState("");
   const [hasFeedback, setHasFeedback] = useState(false);
   const [showFicha, setShowFicha] = useState(false);
 
@@ -1183,7 +1184,7 @@ export default function MiPedidoPage({
           {/* Adjust button */}
           {canAdjust && !cutoffPassed && (
             <button
-              onClick={() => { setShowAdjustModal(true); setAdjustStep("choose"); }}
+              onClick={() => { setShowAdjustModal(true); setAdjustStep("choose"); setAdjustError(""); }}
               className="font-inter"
               style={{
                 padding: "10px 20px",
@@ -1323,19 +1324,30 @@ export default function MiPedidoPage({
                   onClick={async () => {
                     if (!adjustDate) return;
                     setAdjustSending(true);
-                    await fetch("/api/ajuste", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        pedido_id: p.id,
-                        token: p.token,
-                        adjustment_type: "date_change",
-                        requested_date: adjustDate,
-                      }),
-                    });
+                    setAdjustError("");
+                    try {
+                      const res = await fetch("/api/ajuste", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          pedido_id: p.id,
+                          token: p.token,
+                          adjustment_type: "date_change",
+                          requested_date: adjustDate,
+                        }),
+                      });
+                      if (!res.ok) {
+                        const json = await res.json().catch(() => ({}));
+                        setAdjustError(json.error || "No pudimos enviar tu solicitud. Intenta de nuevo.");
+                        setAdjustSending(false);
+                        return;
+                      }
+                      setAdjustSent(true);
+                      setAdjustStep("sent");
+                    } catch {
+                      setAdjustError("No pudimos enviar tu solicitud. Verifica tu conexión e intenta de nuevo.");
+                    }
                     setAdjustSending(false);
-                    setAdjustSent(true);
-                    setAdjustStep("sent");
                   }}
                   disabled={!adjustDate || adjustSending}
                   className="font-inter"
@@ -1353,6 +1365,11 @@ export default function MiPedidoPage({
                 >
                   {adjustSending ? "Enviando..." : "Confirmar cambio"}
                 </button>
+                {adjustError && (
+                  <p className="font-inter" style={{ fontSize: 12, color: "#7A2030", textAlign: "center", marginTop: 10 }} role="alert">
+                    {adjustError}
+                  </p>
+                )}
                 <button
                   onClick={() => setAdjustStep("choose")}
                   className="font-inter"
@@ -1377,19 +1394,30 @@ export default function MiPedidoPage({
                 <button
                   onClick={async () => {
                     setAdjustSending(true);
-                    await fetch("/api/ajuste", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        pedido_id: p.id,
-                        token: p.token,
-                        adjustment_type: "credit_request",
-                        credit_validity_days: 30,
-                      }),
-                    });
+                    setAdjustError("");
+                    try {
+                      const res = await fetch("/api/ajuste", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          pedido_id: p.id,
+                          token: p.token,
+                          adjustment_type: "credit_request",
+                          credit_validity_days: 30,
+                        }),
+                      });
+                      if (!res.ok) {
+                        const json = await res.json().catch(() => ({}));
+                        setAdjustError(json.error || "No pudimos enviar tu solicitud. Intenta de nuevo.");
+                        setAdjustSending(false);
+                        return;
+                      }
+                      setAdjustSent(true);
+                      setAdjustStep("sent");
+                    } catch {
+                      setAdjustError("No pudimos enviar tu solicitud. Verifica tu conexión e intenta de nuevo.");
+                    }
                     setAdjustSending(false);
-                    setAdjustSent(true);
-                    setAdjustStep("sent");
                   }}
                   disabled={adjustSending}
                   className="font-inter"
@@ -1407,6 +1435,11 @@ export default function MiPedidoPage({
                 >
                   {adjustSending ? "Enviando..." : "Convertir en Balance LUMO"}
                 </button>
+                {adjustError && (
+                  <p className="font-inter" style={{ fontSize: 12, color: "#7A2030", textAlign: "center", marginTop: 10 }} role="alert">
+                    {adjustError}
+                  </p>
+                )}
                 <button
                   onClick={() => setAdjustStep("choose")}
                   className="font-inter"

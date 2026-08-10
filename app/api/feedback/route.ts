@@ -39,7 +39,45 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const pedidoToken = typeof body.pedido_token === "string" ? body.pedido_token.trim() : "";
+
   try {
+    // Si viene ligado a un pedido, confirmamos en servidor que existe, que
+    // ya fue entregado, y que no tiene feedback previo. La UI ya lo hace,
+    // pero este endpoint es alcanzable directo sin pasar por ella.
+    if (pedidoToken) {
+      const { data: pedido } = await supabase
+        .from("pedidos")
+        .select("estado")
+        .eq("token", pedidoToken)
+        .limit(1)
+        .maybeSingle();
+
+      if (!pedido) {
+        return NextResponse.json({ error: "No encontramos ese pedido." }, { status: 404 });
+      }
+      if (pedido.estado !== "entregado") {
+        return NextResponse.json(
+          { error: "Solo se puede dejar retroalimentación de un pedido ya entregado." },
+          { status: 400 }
+        );
+      }
+
+      const { data: existing } = await supabase
+        .from("feedback")
+        .select("id")
+        .eq("pedido_token", pedidoToken)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing) {
+        return NextResponse.json(
+          { error: "Ya recibimos tu retroalimentación para este pedido." },
+          { status: 409 }
+        );
+      }
+    }
+
     const { error } = await supabase.from("feedback").insert({
       nombre,
       sabor_rating: saborRating,
@@ -50,7 +88,7 @@ export async function POST(req: NextRequest) {
       precio_justo: body.precio_justo ?? "",
       razon_adopcion: body.razon_adopcion ?? "",
       mejora_abierta: body.mejora_abierta || null,
-      pedido_token: body.pedido_token || null,
+      pedido_token: pedidoToken || null,
       numero_pedido: body.numero_pedido || null,
       submitted_at: body.submitted_at ?? new Date().toISOString(),
     });

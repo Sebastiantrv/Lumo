@@ -296,6 +296,15 @@ function MiembroCard({ cliente, stats, balance, onOpenFicha, onPedido, onEditar 
               {cliente.restricciones && (
                 <span className="font-inter text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: "rgba(224,80,112,0.1)", color: "#E05070" }}>Restricciones</span>
               )}
+              {!cliente.telefono && (
+                <span
+                  className="font-inter text-xs px-2 py-0.5 rounded-full shrink-0"
+                  style={{ background: "rgba(184,134,11,0.15)", color: "#B8860B" }}
+                  title="Sin teléfono, no puede iniciar sesión en Mi LUMO"
+                >
+                  Sin teléfono
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-3 mt-0.5">
               {stats ? (
@@ -535,13 +544,19 @@ function NuevoMiembroModal({ clientes, onClose, onSaved }: { clientes: Cliente[]
   const [empresa, setEmpresa] = useState(""); const [restricciones, setRestricciones] = useState(""); const [notas, setNotas] = useState("");
   const [categoria, setCategoria] = useState("amigo");
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setSaving(true);
+    e.preventDefault(); setSaving(true); setSaveError("");
     const existingCodes = clientes.map((c) => c.codigo_miembro).filter(Boolean) as string[];
     let codigo = generarCodigoMiembro(); let attempts = 0;
     while (existingCodes.includes(codigo) && attempts < 50) { codigo = generarCodigoMiembro(); attempts++; }
-    await adminWrite("clientes", "insert", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, activo: true, codigo_miembro: codigo, categoria });
+    const res = await adminWrite("clientes", "insert", { nombre, telefono, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, activo: true, codigo_miembro: codigo, categoria });
+    if (!res.ok) {
+      setSaveError(res.error || "No se pudo guardar el miembro. Intenta de nuevo.");
+      setSaving(false);
+      return;
+    }
     onSaved();
   }
 
@@ -552,11 +567,19 @@ function NuevoMiembroModal({ clientes, onClose, onSaved }: { clientes: Cliente[]
           <CategoriaSelector value={categoria} onChange={setCategoria} />
         </Field>
         <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
-        <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
+        <Field label="Teléfono / WhatsApp" required>
+          <Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" required />
+        </Field>
+        <p className="font-inter text-xs -mt-2.5" style={{ color: "#555" }}>
+          Sin teléfono el miembro no podrá iniciar sesión en Mi LUMO.
+        </p>
         <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
         <Field label={categoria === "vecino" ? "Colonia / Zona" : "Empresa"}><Input value={empresa} onChange={setEmpresa} placeholder={categoria === "vecino" ? "Ej. Col. Roma Norte" : "Ej. Deloitte, WeWork Roma..."} /></Field>
         <Field label="Restricciones / Alergias"><Input value={restricciones} onChange={setRestricciones} placeholder="Ej. Sin apio, sin jengibre..." /></Field>
         <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Observaciones internas..." /></Field>
+        {saveError && (
+          <p className="font-inter text-xs" style={{ color: "#E05070" }} role="alert">{saveError}</p>
+        )}
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>{saving ? "Registrando..." : "Registrar miembro"}</button>
       </form>
@@ -570,10 +593,16 @@ function EditarMiembroModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
   const [restricciones, setRestricciones] = useState(cliente.restricciones ?? ""); const [notas, setNotas] = useState(cliente.notas ?? "");
   const [categoria, setCategoria] = useState(cliente.categoria ?? (cliente.empresa ? "empresa" : "amigo"));
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault(); setSaving(true);
-    await adminWrite("clientes", "update", { nombre, telefono: telefono || null, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, categoria }, [{ column: "id", value: cliente.id }]);
+    e.preventDefault(); setSaving(true); setSaveError("");
+    const res = await adminWrite("clientes", "update", { nombre, telefono, email: email || null, empresa: empresa || null, restricciones: restricciones || null, notas: notas || null, categoria }, [{ column: "id", value: cliente.id }]);
+    if (!res.ok) {
+      setSaveError(res.error || "No se pudo guardar el cambio. Intenta de nuevo.");
+      setSaving(false);
+      return;
+    }
     onSaved();
   }
 
@@ -584,11 +613,19 @@ function EditarMiembroModal({ cliente, onClose, onSaved }: { cliente: Cliente; o
           <CategoriaSelector value={categoria} onChange={setCategoria} />
         </Field>
         <Field label="Nombre" required><Input value={nombre} onChange={setNombre} placeholder="Ej. María García" required /></Field>
-        <Field label="Teléfono / WhatsApp"><Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" /></Field>
+        <Field label="Teléfono / WhatsApp" required>
+          <Input value={telefono} onChange={setTelefono} placeholder="+52 55 1234 5678" required />
+        </Field>
+        <p className="font-inter text-xs -mt-2.5" style={{ color: "#555" }}>
+          Sin teléfono el miembro no podrá iniciar sesión en Mi LUMO.
+        </p>
         <Field label="Email"><Input value={email} onChange={setEmail} placeholder="correo@ejemplo.com" /></Field>
         <Field label={categoria === "vecino" ? "Colonia / Zona" : "Empresa"}><Input value={empresa} onChange={setEmpresa} placeholder={categoria === "vecino" ? "Ej. Col. Roma Norte" : "Ej. Deloitte, WeWork Roma..."} /></Field>
         <Field label="Restricciones / Alergias"><Input value={restricciones} onChange={setRestricciones} placeholder="Ej. Sin apio, sin jengibre..." /></Field>
         <Field label="Notas"><Input value={notas} onChange={setNotas} placeholder="Observaciones internas..." /></Field>
+        {saveError && (
+          <p className="font-inter text-xs" style={{ color: "#E05070" }} role="alert">{saveError}</p>
+        )}
         <button type="submit" disabled={saving} className="w-full rounded-xl py-3 font-inter text-sm font-medium mt-2"
           style={{ background: "#F5F0E8", color: "#0D0D0D", opacity: saving ? 0.6 : 1 }}>{saving ? "Guardando..." : "Guardar cambios"}</button>
       </form>

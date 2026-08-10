@@ -58,6 +58,10 @@ export default function FinanzasPage() {
         .select("*, clientes(nombre), formulas(nombre, color_acento, precio)")
         .gte("dia_entrega", inicio)
         .lte("dia_entrega", fin)
+        // Igual que en /admin/hoy: cancelado/eliminado no cuentan como
+        // producción ni como ingreso real.
+        .neq("estado", "cancelado")
+        .neq("estado", "eliminado")
         .order("dia_entrega"),
     ]);
     setFormulas(f ?? []);

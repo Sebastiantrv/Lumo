@@ -89,6 +89,7 @@ function FeedbackContent() {
   const [existingFeedback, setExistingFeedback] = useState(false);
   const [addendum, setAddendum] = useState("");
   const [addendumSent, setAddendumSent] = useState(false);
+  const [addendumError, setAddendumError] = useState("");
   const [data, setData] = useState<FormData>({
     nombre: "",
     sabor_rating: 0,
@@ -181,11 +182,16 @@ function FeedbackContent() {
     };
     setSubmitError("");
     try {
-      await fetch("/api/feedback", {
+      const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setSubmitError(json.error || "No pudimos enviar tu información. Intenta de nuevo.");
+        return;
+      }
     } catch {
       setSubmitError("No pudimos enviar tu información. Verifica tu conexión e intenta de nuevo.");
       return;
@@ -266,16 +272,28 @@ function FeedbackContent() {
                     value={addendum}
                     onChange={setAddendum}
                   />
+                  {addendumError && (
+                    <p className="font-inter text-xs" style={{ color: T.error }} role="alert">{addendumError}</p>
+                  )}
                   <button
                     onClick={async () => {
                       if (!addendum.trim()) return;
+                      setAddendumError("");
                       try {
-                        await fetch("/api/feedback", {
+                        const res = await fetch("/api/feedback", {
                           method: "PATCH",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({ pedido_token: pedidoToken, addendum: addendum.trim() }),
                         });
-                      } catch {}
+                        if (!res.ok) {
+                          const json = await res.json().catch(() => ({}));
+                          setAddendumError(json.error || "No pudimos enviar tu comentario. Intenta de nuevo.");
+                          return;
+                        }
+                      } catch {
+                        setAddendumError("No pudimos enviar tu comentario. Verifica tu conexión e intenta de nuevo.");
+                        return;
+                      }
                       setAddendumSent(true);
                     }}
                     disabled={!addendum.trim()}

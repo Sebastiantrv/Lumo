@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isCutoffPassed } from "@/lib/dates";
+import { fetchConfig } from "@/lib/config";
+
+// Estados en los que un pedido ya no admite cancelar/mover — mismo criterio
+// que la UI de seguimiento de pedido (`canAdjust` en mi-pedido/[token]).
+const NO_AJUSTABLE = ["cancelado", "eliminado", "entregado", "preparado"];
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +39,7 @@ export async function POST(req: NextRequest) {
   try {
     const { data: pedidos, error: fetchError } = await supabase
       .from("pedidos")
-      .select("id")
+      .select("id, estado, dia_entrega")
       .eq("token", token)
       .limit(1);
 
@@ -41,7 +47,27 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pedido not found" }, { status: 404 });
     }
 
-    const pedido_id = pedidos[0].id;
+    const pedido = pedidos[0];
+
+    // La UI ya oculta el botón de ajuste en estos casos; esto lo aplica en
+    // servidor, porque el token es público (va en enlaces de WhatsApp) y
+    // cualquiera puede llamar a este endpoint directo sin pasar por la UI.
+    if (NO_AJUSTABLE.includes(pedido.estado)) {
+      return NextResponse.json(
+        { error: "Este pedido ya no admite cambios." },
+        { status: 400 }
+      );
+    }
+
+    const config = await fetchConfig();
+    if (pedido.dia_entrega && isCutoffPassed(pedido.dia_entrega, config.horaLimiteCambios)) {
+      return NextResponse.json(
+        { error: "El horario límite para hacer cambios en este pedido ya pasó." },
+        { status: 400 }
+      );
+    }
+
+    const pedido_id = pedido.id;
 
     await supabase
       .from("ajustes_pedido")
