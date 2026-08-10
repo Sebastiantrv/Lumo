@@ -299,6 +299,8 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   const [balance, setBalance] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showReserva, setShowReserva] = useState(false);
+  const [reservaPrefill, setReservaPrefill] = useState<ReservaLinea[] | null>(null);
+  const [repetirAviso, setRepetirAviso] = useState("");
   const [showRecarga, setShowRecarga] = useState(false);
   const [tab, setTab] = useState<"historial" | "perfil">("historial");
   const [refreshing, setRefreshing] = useState(false);
@@ -399,6 +401,34 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
     year: "numeric",
   });
 
+  // El último pedido del miembro, sin importar su estado final: un pedido
+  // cancelado también se puede repetir mientras sus fórmulas sigan activas.
+  const ultimoGrupo = groupByToken(pedidosVisibles).sort((a, b) =>
+    b.diaEntrega.localeCompare(a.diaEntrega)
+  )[0] ?? null;
+
+  /** Prellena ReservaFlow con las líneas de un pedido anterior y lleva al
+   *  usuario al paso de fecha. No arrastra fecha ni estado del pedido: el
+   *  flujo valida disponibilidad, capacidad y balance como siempre. */
+  function repetirPedido(grupo: PedidoGroup) {
+    const lineas: ReservaLinea[] = [];
+    for (const l of grupo.lineas) {
+      if (!formulas.some((f) => f.id === l.formulaId)) {
+        setRepetirAviso(
+          "Este pedido ya no puede repetirse completo porque una de sus fórmulas no está disponible."
+        );
+        return;
+      }
+      const existente = lineas.find((x) => x.formulaId === l.formulaId);
+      if (existente) existente.cantidad += l.cantidad;
+      else lineas.push({ formulaId: l.formulaId, cantidad: l.cantidad });
+    }
+    if (lineas.length === 0) return;
+    setRepetirAviso("");
+    setReservaPrefill(lineas);
+    setShowReserva(true);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: CREAM }}>
@@ -415,12 +445,14 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
   if (showReserva) {
     return (
       <ReservaFlow
+        key={reservaPrefill ? `repetir-${reservaPrefill.map((l) => `${l.formulaId}x${l.cantidad}`).join("-")}` : "nueva"}
         miembro={miembro}
         clienteId={miembro.id}
         formulas={formulas}
         balance={balance}
-        onClose={() => setShowReserva(false)}
-        onSuccess={() => { setShowReserva(false); load(); }}
+        prefill={reservaPrefill}
+        onClose={() => { setShowReserva(false); setReservaPrefill(null); }}
+        onSuccess={() => { setShowReserva(false); setReservaPrefill(null); load(); }}
       />
     );
   }
@@ -538,6 +570,11 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
           </button>
         </div>
 
+          {/* ── Tu último LUMO — repetir pedido ── */}
+        {ultimoGrupo && (
+          <UltimoLumoCard grupo={ultimoGrupo} onRepetir={() => repetirPedido(ultimoGrupo)} />
+        )}
+
         {/* ── Active orders ── */}
         {groupedActivos.length > 0 && (
           <section className="mx-5 mb-7" style={{ animation: "lumoFadeUp 0.5s ease both", animationDelay: "0.45s" }}>
@@ -650,7 +687,15 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
 
         <div style={{ animation: "lumoFadeIn 0.3s ease both" }} key={tab}>
           {tab === "historial" && (
-            <HistorialTab pedidos={pedidosHistorial} movimientos={movimientos} feedbackTokens={feedbackTokens} />
+            <HistorialTab
+              pedidos={pedidosHistorial}
+              movimientos={movimientos}
+              feedbackTokens={feedbackTokens}
+              onRepetir={(token) => {
+                const grupo = groupByToken(pedidosVisibles.filter((p) => (p.token ?? p.id) === token))[0];
+                if (grupo) repetirPedido(grupo);
+              }}
+            />
           )}
 
           {tab === "perfil" && (
@@ -660,6 +705,32 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
       </main>
 
       <MiLumoFooter />
+
+      {/* Aviso al repetir un pedido cuya fórmula ya no está disponible */}
+      {repetirAviso && (
+        <div className="fixed inset-x-0 bottom-0 z-50 px-5 pb-5 flex justify-center pointer-events-none">
+          <div
+            className="w-full max-w-md rounded-2xl px-4 py-3.5 flex items-start gap-3 pointer-events-auto"
+            style={{
+              background: "#fff",
+              border: "1px solid rgba(184,134,11,0.16)",
+              boxShadow: "0 4px 24px rgba(0,0,0,0.08)",
+              animation: "lumoSlideUp 0.4s var(--spring) both",
+            }}
+          >
+            <p className="font-inter text-[0.78rem] leading-relaxed flex-1" style={{ color: "#6B6B5E" }}>
+              {repetirAviso}
+            </p>
+            <button
+              onClick={() => setRepetirAviso("")}
+              className="font-inter text-[0.75rem] spring-press flex-shrink-0"
+              style={{ color: VERDE }}
+            >
+              Entendido
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Añadir Balance — solicitud por WhatsApp */}
       {showRecarga && (
@@ -680,6 +751,7 @@ function ReservaFlow({
   clienteId,
   formulas,
   balance,
+  prefill,
   onClose,
   onSuccess,
 }: {
@@ -687,11 +759,15 @@ function ReservaFlow({
   clienteId: string;
   formulas: FormulaWithIngredients[];
   balance: number;
+  /** Líneas precargadas al repetir un pedido anterior. Solo define el
+   *  punto de partida: el flujo sigue siendo el mismo y el usuario puede
+   *  volver al paso 1 y editarlo todo. Nunca precarga la fecha. */
+  prefill?: ReservaLinea[] | null;
   onClose: () => void;
   onSuccess: () => void;
 }) {
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [lineas, setLineas] = useState<ReservaLinea[]>([]);
+  const [step, setStep] = useState<1 | 2 | 3>(prefill && prefill.length > 0 ? 2 : 1);
+  const [lineas, setLineas] = useState<ReservaLinea[]>(prefill ?? []);
   const [diaEntrega, setDiaEntrega] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -1304,10 +1380,13 @@ function FormulaCard({ formula, cantidad, delay, onAdd, onRemove }: {
 // quick-pick UX helper, not a computed price.
 const PRECIO_LUMO_REFERENCIA = 85;
 
-const MONTOS_RAPIDOS = [
-  { amount: 255, botellas: 3 },
-  { amount: 425, botellas: 5 },
-  { amount: 850, botellas: 10 },
+// Packs de Balance LUMO: solo presentación. No son planes ni suscripciones,
+// no prometen descuento y no generan ningún movimiento_balance por sí solos —
+// siguen siendo una solicitud de recarga que se confirma por WhatsApp.
+const PACKS_BALANCE = [
+  { nombre: "Pack 3", amount: 255, botellas: 3, frase: "Para probar la semana" },
+  { nombre: "Pack 5", amount: 425, botellas: 5, frase: "Para mantener tu ritmo" },
+  { nombre: "Pack 10", amount: 850, botellas: 10, frase: "Para tener LUMO listo" },
 ];
 
 function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => void }) {
@@ -1323,11 +1402,13 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
 
   function solicitar() {
     if (!montoValido || !montoFinal) return;
+    const pack = PACKS_BALANCE.find((pk) => pk.amount === selected);
     const mensaje = [
       "Hola, quiero añadir Balance LUMO.",
       "",
       `Nombre: ${miembro.nombre}`,
       `Código LUMO: ${miembro.codigo_miembro}`,
+      ...(pack ? [`Pack: ${pack.nombre}`] : []),
       `Monto solicitado: $${montoFinal.toLocaleString("es-MX")}`,
       "",
       "Quedo pendiente para confirmar la recarga.",
@@ -1349,17 +1430,17 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
             </svg>
           </div>
           <h2 className="font-cormorant font-light text-xl mb-2" style={{ color: "#2D2D2D" }}>
-            Tu solicitud está en camino
+            Solicitud enviada
           </h2>
           <p className="font-inter text-xs leading-relaxed mb-6" style={{ color: "#8A8A7A" }}>
-            Tu balance se actualizará cuando confirmemos la recarga.
+            Te responderemos por WhatsApp para confirmar la recarga.
           </p>
           <button
             onClick={onClose}
-            className="w-full rounded-xl py-3 font-inter text-sm font-medium spring-press"
-            style={{ background: VERDE, color: CREAM }}
+            className="w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press"
+            style={{ background: VERDE, color: CREAM, minHeight: 44 }}
           >
-            Entendido
+            Cerrar
           </button>
         </div>
       </ModalOverlay>
@@ -1376,28 +1457,51 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
           Añadir Balance LUMO
         </h2>
         <p className="font-inter text-xs leading-relaxed" style={{ color: "#8A8A7A" }}>
-          Por ahora, las recargas se confirman personalmente por WhatsApp para mantener el control del piloto y asegurar que cada saldo quede registrado correctamente.
+          Elige un monto para solicitar tu recarga por WhatsApp. Tu balance se actualizará cuando confirmemos la operación.
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 mb-2">
-        {MONTOS_RAPIDOS.map(({ amount, botellas }) => {
-          const active = selected === amount;
+      <div className="flex flex-col gap-2.5 mb-2">
+        {PACKS_BALANCE.map((pack, i) => {
+          const active = selected === pack.amount;
           return (
             <button
-              key={amount}
-              onClick={() => setSelected(amount)}
-              className="rounded-xl p-4 flex items-center justify-between spring-press transition-all"
+              key={pack.amount}
+              onClick={() => setSelected(pack.amount)}
+              className="rounded-2xl p-4 flex items-center justify-between text-left spring-press"
               style={{
-                background: active ? `${VERDE}10` : "#fff",
-                border: active ? `1.5px solid ${VERDE}` : "1px solid rgba(0,0,0,0.06)",
+                background: active ? "rgba(74,94,58,0.06)" : "#fff",
+                border: active ? `1px solid ${VERDE}55` : "1px solid rgba(0,0,0,0.06)",
+                minHeight: 44,
+                transition: "background 220ms ease-out, border-color 220ms ease-out",
+                animation: "lumoFadeUp 0.5s ease both",
+                animationDelay: `${0.04 * i}s`,
               }}
             >
-              <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
-                ${amount.toLocaleString("es-MX")}
-              </span>
-              <span className="font-inter text-xs" style={{ color: active ? VERDE : "#A0A090" }}>
-                {botellas} LUMO
+              <div className="min-w-0">
+                <p className="font-inter text-[0.7rem] tracking-[0.1em] uppercase mb-1" style={{ color: active ? VERDE : "#A0A090" }}>
+                  {pack.nombre}
+                </p>
+                <p className="font-cormorant font-light text-[1.6rem] leading-none mb-1.5" style={{ color: "#1A1A1A" }}>
+                  ${pack.amount.toLocaleString("es-MX")}
+                </p>
+                <p className="font-inter text-[0.72rem]" style={{ color: "#8A8A7A" }}>
+                  {pack.botellas} LUMO · {pack.frase}
+                </p>
+              </div>
+              <span
+                className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ml-4"
+                style={{
+                  border: `1px solid ${active ? VERDE : "rgba(0,0,0,0.10)"}`,
+                  background: active ? VERDE : "transparent",
+                  transition: "background 220ms ease-out, border-color 220ms ease-out",
+                }}
+              >
+                {active && (
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke={CREAM} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12" style={{ strokeDasharray: 20, strokeDashoffset: 20, animation: "checkStroke 0.35s ease forwards" }} />
+                  </svg>
+                )}
               </span>
             </button>
           );
@@ -1405,16 +1509,18 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
 
         <button
           onClick={() => setSelected("otro")}
-          className="rounded-xl p-4 flex items-center justify-between spring-press transition-all"
+          className="rounded-xl px-4 py-3 flex items-center justify-between spring-press mt-1"
           style={{
-            background: selected === "otro" ? `${VERDE}10` : "#fff",
-            border: selected === "otro" ? `1.5px solid ${VERDE}` : "1px solid rgba(0,0,0,0.06)",
+            background: "transparent",
+            border: selected === "otro" ? `1px solid ${VERDE}33` : "1px solid rgba(0,0,0,0.05)",
+            minHeight: 44,
+            transition: "border-color 220ms ease-out",
           }}
         >
-          <span className="font-cormorant font-semibold text-lg" style={{ color: "#2D2D2D" }}>
-            Otro monto
+          <span className="font-inter text-[0.8rem]" style={{ color: selected === "otro" ? VERDE : "#8A8A7A" }}>
+            Otra cantidad
           </span>
-          <span className="font-inter text-xs" style={{ color: "#A0A090" }}>→</span>
+          <span className="font-inter text-xs" style={{ color: selected === "otro" ? VERDE : "#B5B5A5" }}>→</span>
         </button>
       </div>
 
@@ -1438,8 +1544,8 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
             />
           </div>
           {otroNoMultiplo && (
-            <p className="font-inter text-xs mt-1.5" style={{ color: "#B8860B" }}>
-              Los LUMO cuestan ${PRECIO_LUMO_REFERENCIA} c/u — considera ${255}, ${425} o ${850}.
+            <p className="font-inter text-xs mt-1.5" style={{ color: "#8A8A7A" }}>
+              Sugerencia: los packs suelen calcularse en múltiplos de ${PRECIO_LUMO_REFERENCIA}.
             </p>
           )}
         </div>
@@ -1454,6 +1560,7 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
         disabled={!montoValido}
         className="flex items-center justify-center gap-2 w-full rounded-xl py-3.5 font-inter text-sm font-medium spring-press transition-opacity"
         style={{
+          minHeight: 44,
           background: montoValido ? VERDE : "rgba(0,0,0,0.06)",
           color: montoValido ? CREAM : "#A0A090",
           cursor: montoValido ? "pointer" : "default",
@@ -1463,6 +1570,97 @@ function RecargaModal({ miembro, onClose }: { miembro: Miembro; onClose: () => v
         Solicitar recarga
       </button>
     </ModalOverlay>
+  );
+}
+
+/* ══════════════════════════════════════════════
+   TU ÚLTIMO LUMO — repetir pedido
+   ══════════════════════════════════════════════ */
+function UltimoLumoCard({ grupo, onRepetir }: { grupo: PedidoGroup; onRepetir: () => void }) {
+  const [hover, setHover] = useState(false);
+  const estadoLabels: Record<string, string> = {
+    pendiente: "Pendiente",
+    confirmado: "Confirmado",
+    preparado: "Listo para entrega",
+    entregado: "Entregado",
+    cancelado: "Cancelado",
+  };
+
+  return (
+    <section
+      className="mx-5 mb-7"
+      style={{ animation: "lumoFadeUp 0.6s ease both", animationDelay: "0.42s" }}
+    >
+      <div
+        className="rounded-2xl p-6 md:p-7 flex flex-col md:flex-row md:items-center md:gap-8"
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          background: "#fff",
+          border: `1px solid ${hover ? `${VERDE}22` : "rgba(74,94,58,0.10)"}`,
+          boxShadow: hover ? "0 4px 20px rgba(0,0,0,0.045)" : "0 1px 10px rgba(0,0,0,0.03)",
+          transform: hover ? "translateY(-1px)" : "none",
+          transition: "border-color 220ms ease-out, box-shadow 220ms ease-out, transform 220ms ease-out",
+        }}
+      >
+        {/* Izquierda: título, apoyo, fórmulas */}
+        <div className="flex-1 min-w-0">
+          <h2
+            className="font-cormorant font-light text-[1.35rem] mb-1.5"
+            style={{ color: "#1A1A1A", letterSpacing: "-0.01em" }}
+          >
+            Tu último LUMO
+          </h2>
+          <p className="font-inter text-[0.78rem] leading-relaxed mb-4" style={{ color: "#8A8A7A" }}>
+            Repite tus fórmulas anteriores y elige una nueva fecha.
+          </p>
+
+          <div className="flex flex-wrap gap-2 mb-3">
+            {grupo.lineas.map((l, i) => (
+              <span
+                key={`${l.formulaId}-${i}`}
+                className="flex items-center gap-1.5 font-inter text-[0.75rem] px-2.5 py-1 rounded-full"
+                style={{ background: `${l.color}0D`, color: "#2D2D2D", border: `1px solid ${l.color}1A` }}
+              >
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: l.color }} />
+                {l.cantidad}x {l.formula}
+              </span>
+            ))}
+          </div>
+
+          <p className="font-inter text-[0.7rem] flex items-center gap-1.5 flex-wrap" style={{ color: "#B5B5A5" }}>
+            <CalendarIcon size={11} color="#B5B5A5" />
+            {formatDate(grupo.diaEntrega)}
+            {estadoLabels[grupo.estado] && (
+              <>
+                <span style={{ color: "#D8D8C8" }}>·</span>
+                <span>{estadoLabels[grupo.estado]}</span>
+              </>
+            )}
+          </p>
+        </div>
+
+        {/* Derecha: total y CTA */}
+        <div className="mt-5 md:mt-0 md:text-right flex flex-col md:items-end gap-3 md:flex-shrink-0">
+          <p className="font-inter text-[0.7rem] hidden md:block" style={{ color: "#A0A090" }}>
+            <span className="font-cormorant font-light text-[1.6rem]" style={{ color: "#1A1A1A" }}>
+              {grupo.totalBotellas}
+            </span>{" "}
+            {grupo.totalBotellas === 1 ? "botella" : "botellas"}
+          </p>
+          <button
+            onClick={onRepetir}
+            className="w-full md:w-auto rounded-2xl md:rounded-xl py-3.5 md:py-3 md:px-6 font-inter text-sm font-medium spring-press transition-all"
+            style={{ background: `${VERDE}0A`, color: VERDE, border: `1px solid ${VERDE}22`, minHeight: 44 }}
+          >
+            Repetir pedido
+          </button>
+          <p className="font-inter text-[0.68rem] leading-relaxed md:max-w-[15rem]" style={{ color: "#B5B5A5" }}>
+            Usaremos las mismas fórmulas y cantidades. Solo elige una nueva fecha.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1691,8 +1889,18 @@ function HistorialEmpty({ icon, title, sub }: { icon: React.ReactNode; title: st
 }
 
 /* ── Historial tab ── */
-function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedido[]; movimientos: Movimiento[]; feedbackTokens: Set<string> }) {
+function HistorialTab({ pedidos, movimientos, feedbackTokens, onRepetir }: { pedidos: Pedido[]; movimientos: Movimiento[]; feedbackTokens: Set<string>; onRepetir: (token: string) => void }) {
   const [section, setSection] = useState<"entregas" | "balance">("entregas");
+  // Un pedido multifórmula ocupa varias filas del historial pero se repite
+  // completo, así que el CTA aparece solo en la primera fila de cada pedido.
+  const primeraFilaPorPedido = new Set<string>();
+  {
+    const vistos = new Set<string>();
+    for (const p of pedidos.slice(0, 30)) {
+      const key = p.token ?? p.id;
+      if (!vistos.has(key)) { vistos.add(key); primeraFilaPorPedido.add(p.id); }
+    }
+  }
 
   const hasPedidos = pedidos.length > 0;
   const hasMovimientos = movimientos.length > 0;
@@ -1750,7 +1958,8 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
               sub="Cuando recibas tu primer LUMO, aparecerá aquí."
             />
           ) : pedidos.slice(0, 30).map((p) => (
-            <Link key={p.id} href={p.token ? `/mi-pedido/${p.token}` : "#"} className="rounded-xl p-3.5 spring-press block" style={{ background: "#fff" }}>
+            <div key={p.id} className="rounded-xl overflow-hidden" style={{ background: "#fff" }}>
+            <Link href={p.token ? `/mi-pedido/${p.token}` : "#"} className="rounded-xl p-3.5 spring-press block">
               <div className="flex items-center gap-3">
                 <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.formulas?.color_acento ?? VERDE }} />
                 <div className="flex-1 min-w-0">
@@ -1788,6 +1997,21 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
                 </div>
               )}
             </Link>
+            {primeraFilaPorPedido.has(p.id) && (
+              <div className="px-3.5 pb-3">
+                <button
+                  onClick={() => onRepetir(p.token ?? p.id)}
+                  className="font-inter text-xs spring-press flex items-center gap-1.5 py-2"
+                  style={{ color: "#8A8A7A", minHeight: 44 }}
+                >
+                  <svg width={11} height={11} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                  </svg>
+                  Repetir pedido
+                </button>
+              </div>
+            )}
+            </div>
           ))
         )}
 
@@ -1917,7 +2141,7 @@ type PedidoGroup = {
   numeroPedido: number | null;
   estado: string;
   diaEntrega: string;
-  lineas: { cantidad: number; formula: string; color: string }[];
+  lineas: { cantidad: number; formulaId: string; formula: string; color: string }[];
   totalBotellas: number;
 };
 
@@ -1927,7 +2151,7 @@ function groupByToken(pedidos: Pedido[]): PedidoGroup[] {
     const key = p.token ?? p.id;
     const existing = map.get(key);
     if (existing) {
-      existing.lineas.push({ cantidad: p.cantidad, formula: p.formulas?.nombre ?? "Fórmula", color: p.formulas?.color_acento ?? VERDE });
+      existing.lineas.push({ cantidad: p.cantidad, formulaId: p.formula_id, formula: p.formulas?.nombre ?? "Fórmula", color: p.formulas?.color_acento ?? VERDE });
       existing.totalBotellas += p.cantidad;
       if (p.numero_pedido && !existing.numeroPedido) existing.numeroPedido = p.numero_pedido;
     } else {
@@ -1936,7 +2160,7 @@ function groupByToken(pedidos: Pedido[]): PedidoGroup[] {
         numeroPedido: p.numero_pedido,
         estado: p.estado,
         diaEntrega: p.dia_entrega,
-        lineas: [{ cantidad: p.cantidad, formula: p.formulas?.nombre ?? "Fórmula", color: p.formulas?.color_acento ?? VERDE }],
+        lineas: [{ cantidad: p.cantidad, formulaId: p.formula_id, formula: p.formulas?.nombre ?? "Fórmula", color: p.formulas?.color_acento ?? VERDE }],
         totalBotellas: p.cantidad,
       });
     }
