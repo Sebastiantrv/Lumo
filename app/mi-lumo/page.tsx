@@ -794,6 +794,43 @@ const MOMENTOS_LUMO: {
   },
 ];
 
+function MomentoIcon({ id, size, color }: { id: string; size: number; color: string }) {
+  const common = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.6, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+  if (id === "manana-fresca") {
+    // Sol naciente
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="13" r="3.5" /><line x1="12" y1="5" x2="12" y2="7" />
+        <line x1="5.6" y1="7.6" x2="7" y2="9" /><line x1="18.4" y1="7.6" x2="17" y2="9" />
+        <line x1="3" y1="18" x2="21" y2="18" />
+      </svg>
+    );
+  }
+  if (id === "antes-de-entrenar") {
+    // Pesa
+    return (
+      <svg {...common}>
+        <line x1="3" y1="12" x2="21" y2="12" />
+        <rect x="5" y="8.5" width="3" height="7" rx="1" /><rect x="16" y="8.5" width="3" height="7" rx="1" />
+      </svg>
+    );
+  }
+  if (id === "perfil-tropical") {
+    // Gota
+    return (
+      <svg {...common}>
+        <path d="M12 3.5c3.2 3.6 5.5 6.4 5.5 9.2a5.5 5.5 0 0 1-11 0c0-2.8 2.3-5.6 5.5-9.2z" />
+      </svg>
+    );
+  }
+  // Trío: tres círculos
+  return (
+    <svg {...common}>
+      <circle cx="8" cy="14" r="3.2" /><circle cx="16" cy="14" r="3.2" /><circle cx="12" cy="8" r="3.2" />
+    </svg>
+  );
+}
+
 function MomentosLumoSection({
   formulas,
   onElegir,
@@ -801,11 +838,12 @@ function MomentosLumoSection({
   formulas: FormulaWithIngredients[];
   onElegir: (lineas: ReservaLinea[]) => void;
 }) {
-  // Estado "elegido" puramente visual: marca la card durante ~180ms antes
-  // de avanzar al paso de fecha, para que el tap se sienta confirmado.
-  const [elegido, setElegido] = useState<string | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
+  // Secundario respecto a las cards de fórmula: la fila arranca colapsada y
+  // solo al abrir un momento se revela la sugerencia. Tres de los cuatro
+  // momentos son una sola botella, así que aquí aportan encuadre, no una
+  // opción distinta a la de arriba; el trío sí suma algo nuevo y por eso
+  // ocupa la fila completa.
+  const [abierto, setAbierto] = useState<string | null>(null);
 
   const resueltos = MOMENTOS_LUMO.map((momento) => {
     const items = momento.composicion.map((c) => ({
@@ -820,160 +858,116 @@ function MomentosLumoSection({
     return { momento, items, disponible, totalBotellas, total };
   }).filter((r) => r.disponible);
 
-  if (resueltos.length === 0) {
+  if (resueltos.length === 0) return null;
+
+  const simples = resueltos.filter((r) => r.items.length === 1);
+  const trio = resueltos.find((r) => r.items.length > 1) ?? null;
+  const activo = resueltos.find((r) => r.momento.id === abierto) ?? null;
+
+  function Pildora({ r, destacado }: { r: (typeof resueltos)[number]; destacado?: boolean }) {
+    const abiertoEste = abierto === r.momento.id;
+    const acento = r.items[0].formula!.color_acento;
     return (
-      <div className="mb-6">
-        <p className="font-inter text-[0.78rem]" style={{ color: "#8A8A7A" }}>
-          Por ahora no hay sugerencias disponibles.
-        </p>
-        <p className="font-inter text-[0.78rem]" style={{ color: "#B5B5A5" }}>
-          Puedes armar tu pedido manualmente.
-        </p>
-      </div>
+      <button
+        onClick={() => setAbierto(abiertoEste ? null : r.momento.id)}
+        aria-expanded={abiertoEste}
+        className={`rounded-xl px-3 py-2.5 flex items-center gap-2 spring-press ${destacado ? "w-full justify-center" : "flex-1 justify-center"}`}
+        style={{
+          background: abiertoEste ? `${acento}0A` : "#fff",
+          border: `1px solid ${abiertoEste ? `${acento}40` : "rgba(0,0,0,0.05)"}`,
+          minHeight: 44,
+          transition: "background 200ms ease-out, border-color 200ms ease-out",
+        }}
+      >
+        <MomentoIcon id={r.momento.id} size={15} color={abiertoEste ? acento : "#A0A090"} />
+        <span
+          className="font-inter text-[0.72rem] truncate"
+          style={{ color: abiertoEste ? "#1A1A1A" : "#8A8A7A" }}
+        >
+          {r.momento.nombre}
+        </span>
+      </button>
     );
   }
 
-  function seleccionar(r: (typeof resueltos)[number]) {
-    if (elegido) return;
-    setElegido(r.momento.id);
-    const lineas = r.items.map((it) => ({ formulaId: it.formula!.id, cantidad: it.cantidad }));
-    timer.current = setTimeout(() => onElegir(lineas), 180);
-  }
-
   return (
-    <div className="mb-8">
-      <h3 className="font-cormorant font-light text-[1.15rem]" style={{ color: "#1A1A1A" }}>
+    <div className="mt-8">
+      <div className="h-px mb-5" style={{ background: "linear-gradient(90deg, transparent, rgba(0,0,0,0.06), transparent)" }} />
+
+      <p className="font-inter text-[0.65rem] tracking-[0.1em] uppercase mb-1" style={{ color: "#B5B5A5" }}>
         Elige por momento
-      </h3>
-      <p className="font-inter text-[0.75rem] mb-4" style={{ color: "#9A9A8A" }}>
+      </p>
+      <p className="font-inter text-[0.75rem] mb-3.5" style={{ color: "#9A9A8A" }}>
         Sugerencias simples para elegir tu próximo LUMO.
       </p>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {resueltos.map((r, i) => (
-          <MomentoCard
-            key={r.momento.id}
-            resuelto={r}
-            delay={i * 0.06}
-            elegido={elegido === r.momento.id}
-            atenuado={elegido !== null && elegido !== r.momento.id}
-            onSeleccionar={() => seleccionar(r)}
-          />
-        ))}
-      </div>
-
-      <p className="font-inter text-[0.72rem] mt-4" style={{ color: "#B5B5A5" }}>
-        ¿Prefieres elegir fórmula por fórmula?{" "}
-        <a
-          href="#armar-manual"
-          onClick={(e) => {
-            e.preventDefault();
-            const el = document.getElementById("armar-manual");
-            const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-            el?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
-          }}
-          style={{ color: VERDE, textDecoration: "underline", textUnderlineOffset: "3px" }}
-        >
-          Armar mi pedido
-        </a>
-      </p>
-    </div>
-  );
-}
-
-function MomentoCard({
-  resuelto,
-  delay,
-  elegido,
-  atenuado,
-  onSeleccionar,
-}: {
-  resuelto: {
-    momento: (typeof MOMENTOS_LUMO)[number];
-    items: { cantidad: number; formula: FormulaWithIngredients | null }[];
-    totalBotellas: number;
-    total: number;
-  };
-  delay: number;
-  elegido: boolean;
-  atenuado: boolean;
-  onSeleccionar: () => void;
-}) {
-  const [hover, setHover] = useState(false);
-  const { momento, items, totalBotellas, total } = resuelto;
-  const acentos = items.map((it) => it.formula!.color_acento);
-  const acento = acentos[0];
-  const esTrio = items.length > 1;
-
-  return (
-    <button
-      onClick={onSeleccionar}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      className="rounded-2xl overflow-hidden text-left flex flex-col spring-press w-full"
-      style={{
-        background: elegido ? `${acento}08` : "#fff",
-        border: `1px solid ${elegido ? `${acento}45` : hover ? `${acento}30` : "rgba(0,0,0,0.05)"}`,
-        boxShadow: hover || elegido ? "0 4px 18px rgba(0,0,0,0.05)" : "0 1px 6px rgba(0,0,0,0.03)",
-        transform: hover && !elegido ? "translateY(-1px)" : "none",
-        opacity: atenuado ? 0.5 : 1,
-        transition:
-          "border-color 200ms ease-out, box-shadow 200ms ease-out, transform 200ms ease-out, background 200ms ease-out, opacity 200ms ease-out",
-        animation: "lumoFadeUp 0.45s ease both",
-        animationDelay: `${delay}s`,
-      }}
-    >
-      {/* Marca visual: hilo de color con el acento de la(s) fórmula(s) */}
-      <div
-        className="h-[2px] w-full"
-        style={{
-          background: esTrio
-            ? `linear-gradient(90deg, ${acentos[0]}55, ${acentos[1]}55, ${acentos[2]}55)`
-            : `linear-gradient(90deg, ${acento}18, ${acento}55, ${acento}18)`,
-        }}
-      />
-
-      <div className="p-5 flex flex-col flex-1">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: acento }} />
-          <p className="font-cormorant font-light text-[1.25rem] leading-tight" style={{ color: "#1A1A1A" }}>
-            {momento.nombre}
-          </p>
+      {trio && (
+        <div className="mb-2.5">
+          <Pildora r={trio} destacado />
         </div>
+      )}
 
-        <p className="font-inter text-[0.72rem] mb-3" style={{ color: acento }}>
-          {items.map((it) => it.formula!.nombre).join(" · ")}
-        </p>
+      {simples.length > 0 && (
+        <div className="flex gap-2">
+          {simples.map((r) => (
+            <Pildora key={r.momento.id} r={r} />
+          ))}
+        </div>
+      )}
 
-        <p className="font-inter text-[0.75rem] leading-relaxed mb-4" style={{ color: "#8A8A7A" }}>
-          {momento.copy}
-        </p>
-
-        <p className="font-inter text-[0.75rem] mt-auto mb-3" style={{ color: "#1A1A1A" }}>
-          {totalBotellas} LUMO · ${total.toLocaleString("es-MX")}
-          {esTrio && (
-            <span className="font-inter text-[0.7rem] block mt-0.5" style={{ color: "#B5B5A5" }}>
-              En una sola entrega
-            </span>
-          )}
-        </p>
-
-        <span
-          className="w-full rounded-xl py-3 font-inter text-[0.78rem] font-medium text-center transition-all"
+      {activo && (
+        <div
+          className="rounded-2xl mt-2.5 overflow-hidden"
           style={{
-            background: `${acento}0A`,
-            color: acento,
-            border: `1px solid ${acento}22`,
-            minHeight: 44,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            background: "#fff",
+            border: `1px solid ${activo.items[0].formula!.color_acento}22`,
+            animation: "lumoFadeUp 0.3s ease both",
           }}
         >
-          {momento.cta}
-        </span>
-      </div>
-    </button>
+          <div
+            className="h-[2px] w-full"
+            style={{
+              background:
+                activo.items.length > 1
+                  ? `linear-gradient(90deg, ${activo.items.map((it) => `${it.formula!.color_acento}55`).join(", ")})`
+                  : `linear-gradient(90deg, ${activo.items[0].formula!.color_acento}18, ${activo.items[0].formula!.color_acento}55, ${activo.items[0].formula!.color_acento}18)`,
+            }}
+          />
+          <div className="p-5">
+            <p className="font-inter text-[0.72rem] mb-2" style={{ color: activo.items[0].formula!.color_acento }}>
+              {activo.items.map((it) => it.formula!.nombre).join(" · ")}
+            </p>
+            <p className="font-inter text-[0.78rem] leading-relaxed mb-4" style={{ color: "#8A8A7A" }}>
+              {activo.momento.copy}
+            </p>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <p className="font-inter text-[0.75rem]" style={{ color: "#1A1A1A" }}>
+                {activo.totalBotellas} LUMO · ${activo.total.toLocaleString("es-MX")}
+                {activo.items.length > 1 && (
+                  <span className="block font-inter text-[0.7rem] mt-0.5" style={{ color: "#B5B5A5" }}>
+                    En una sola entrega
+                  </span>
+                )}
+              </p>
+              <button
+                onClick={() =>
+                  onElegir(activo.items.map((it) => ({ formulaId: it.formula!.id, cantidad: it.cantidad })))
+                }
+                className="rounded-xl px-5 font-inter text-[0.78rem] font-medium spring-press flex-1 sm:flex-none"
+                style={{
+                  background: `${activo.items[0].formula!.color_acento}0A`,
+                  color: activo.items[0].formula!.color_acento,
+                  border: `1px solid ${activo.items[0].formula!.color_acento}22`,
+                  minHeight: 44,
+                }}
+              >
+                {activo.momento.cta}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -1249,8 +1243,7 @@ function ReservaFlow({
       <div className="flex-1 px-5 pb-8">
         {step === 1 && (
           <div className="pt-4" style={{ animation: "lumoFadeUp 0.4s ease both" }}>
-          <MomentosLumoSection formulas={formulas} onElegir={elegirPack} />
-          <div id="armar-manual" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {formulas.map((f, i) => {
               const lineaCant = lineas.find((l) => l.formulaId === f.id)?.cantidad ?? 0;
               return (
@@ -1285,6 +1278,8 @@ function ReservaFlow({
               </div>
             )}
           </div>
+
+          <MomentosLumoSection formulas={formulas} onElegir={elegirPack} />
           </div>
         )}
 
