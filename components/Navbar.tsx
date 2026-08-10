@@ -73,7 +73,8 @@ export default function Navbar({ theme = "dark", sticky, onLogout }: { theme?: "
 
         <button
           onClick={openMenu}
-          className="flex flex-col gap-[5px] p-2 spring-press rounded-lg"
+          className="flex flex-col items-center justify-center gap-[5px] spring-press rounded-lg"
+          style={{ width: 44, height: 44, margin: "-10px" }}
           aria-label="Abrir menú"
           aria-expanded={menuOpen}
         >

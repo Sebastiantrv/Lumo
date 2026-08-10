@@ -626,6 +626,19 @@ export default function MiPedidoPage({
   const [hasFeedback, setHasFeedback] = useState(false);
   const [showFicha, setShowFicha] = useState(false);
 
+  // Escape closes whichever modal is open, matching the pattern already
+  // used in Mi LUMO and the landing's prensado modal.
+  useEffect(() => {
+    if (!showAdjustModal && !showFicha) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setShowAdjustModal(false);
+      setShowFicha(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showAdjustModal, showFicha]);
+
   useEffect(() => {
     document.documentElement.style.backgroundColor = "#F4EFE7";
     document.body.style.backgroundColor = "#F4EFE7";
@@ -767,7 +780,7 @@ export default function MiPedidoPage({
             else window.location.href = "/mi-lumo";
           }}
           className="font-inter spring-press flex items-center gap-1.5 mb-4"
-          style={{ fontSize: 13, color: "#9A9490" }}
+          style={{ fontSize: 13, color: "#9A9490", padding: "14px 4px", margin: "-14px -4px 4px" }}
         >
           <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
             <polyline points="15 18 9 12 15 6" />
@@ -917,10 +930,16 @@ export default function MiPedidoPage({
 
         {/* Ficha LUMO CTA */}
         {globalEstado !== "cancelado" && (
-          <div
-            onClick={globalEstado !== "pendiente" ? () => setShowFicha(true) : undefined}
+          <button
+            type="button"
+            onClick={() => setShowFicha(true)}
+            disabled={globalEstado === "pendiente"}
+            className="spring-press"
             style={{
+              width: "100%",
+              textAlign: "left",
               background: "rgba(74,94,58,0.06)",
+              border: "none",
               borderRadius: 14,
               padding: "14px 16px",
               margin: "16px 0 12px",
@@ -944,7 +963,7 @@ export default function MiPedidoPage({
                 Ver ficha →
               </span>
             )}
-          </div>
+          </button>
         )}
 
         {/* Timeline */}

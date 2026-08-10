@@ -506,7 +506,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
               </span>
               <button
                 onClick={() => setShowRecarga(true)}
-                className="font-inter text-xs px-4 py-2 rounded-full spring-press transition-all"
+                className="font-inter text-xs px-4 py-3.5 rounded-full spring-press transition-all"
                 style={{ background: "rgba(74,94,58,0.06)", color: VERDE, border: "1px solid rgba(74,94,58,0.1)" }}
               >
                 Añadir balance
@@ -635,7 +635,7 @@ function Dashboard({ miembro, onLogout }: { miembro: Miembro; onLogout: () => vo
             <button
               key={t}
               onClick={() => setTab(t)}
-              className="flex-1 rounded-lg py-2.5 font-inter text-xs font-medium transition-all duration-200"
+              className="flex-1 rounded-lg py-3.5 font-inter text-xs font-medium transition-all duration-200"
               style={{
                 background: tab === t ? "#fff" : "transparent",
                 color: tab === t ? "#1A1A1A" : "#9A9A8A",
@@ -1626,7 +1626,7 @@ function ConciergeSection({ miembro, pedidos, formulas, onReservar }: {
             </p>
             <button
               onClick={() => onReservar(recommendation.formula.id)}
-              className="font-inter text-[0.75rem] font-medium px-5 py-2.5 rounded-xl spring-press transition-all"
+              className="font-inter text-[0.75rem] font-medium px-5 py-3.5 rounded-xl spring-press transition-all"
               style={{
                 background: `${recommendation.formula.color_acento}08`,
                 color: recommendation.formula.color_acento,
@@ -1717,7 +1717,7 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
       <div className="flex gap-1 rounded-xl p-1 mb-4" style={{ background: "rgba(74,94,58,0.04)" }}>
         <button
           onClick={() => setSection("entregas")}
-          className="flex-1 rounded-lg py-2 font-inter text-xs font-medium transition-all flex items-center justify-center gap-1.5"
+          className="flex-1 rounded-lg py-3.5 font-inter text-xs font-medium transition-all flex items-center justify-center gap-1.5"
           style={{
             background: section === "entregas" ? "#fff" : "transparent",
             color: section === "entregas" ? "#2D2D2D" : "#8A8A7A",
@@ -1729,7 +1729,7 @@ function HistorialTab({ pedidos, movimientos, feedbackTokens }: { pedidos: Pedid
         </button>
         <button
           onClick={() => setSection("balance")}
-          className="flex-1 rounded-lg py-2 font-inter text-xs font-medium transition-all flex items-center justify-center gap-1.5"
+          className="flex-1 rounded-lg py-3.5 font-inter text-xs font-medium transition-all flex items-center justify-center gap-1.5"
           style={{
             background: section === "balance" ? "#fff" : "transparent",
             color: section === "balance" ? "#2D2D2D" : "#8A8A7A",
