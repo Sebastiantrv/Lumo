@@ -394,10 +394,13 @@ function Empty({ texto }: { texto: string }) {
   return <p className="font-inter text-sm py-2" style={{ color: "#555" }}>{texto}</p>;
 }
 
+/**
+ * Resumen de las reglas de entrega. La edición vive en /admin/configuracion
+ * para no tener dos formularios escribiendo las mismas claves.
+ */
 function CapacidadDiariaCard() {
-  const [capacidad, setCapacidad] = useState("");
+  const [capacidad, setCapacidad] = useState<string | null>(null);
   const [diasActivos, setDiasActivos] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const diasSemana = [
@@ -413,95 +416,64 @@ function CapacidadDiariaCard() {
     fetch("/api/admin/configuracion")
       .then((r) => r.json())
       .then((data) => {
-        setCapacidad(data.capacidad_diaria ?? "");
+        setCapacidad(data.capacidad_diaria ?? null);
         if (data.dias_entrega) {
-          try { setDiasActivos(JSON.parse(data.dias_entrega)); } catch { /* keep defaults */ }
+          try {
+            const parsed = JSON.parse(data.dias_entrega);
+            if (Array.isArray(parsed)) setDiasActivos(parsed);
+          } catch { /* keep defaults */ }
         }
         setLoading(false);
       })
       .catch(() => setLoading(false));
   }, []);
 
-  async function save() {
-    await Promise.all([
-      fetch("/api/admin/configuracion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clave: "capacidad_diaria", valor: capacidad }),
-      }),
-      fetch("/api/admin/configuracion", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ clave: "dias_entrega", valor: JSON.stringify(diasActivos) }),
-      }),
-    ]);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  function toggleDia(dia: number) {
-    setSaved(false);
-    setDiasActivos((prev) =>
-      prev.includes(dia) ? prev.filter((d) => d !== dia) : [...prev, dia].sort()
-    );
-  }
-
   return (
     <div className="rounded-2xl p-6" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-      <h2 className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#8A8A8A" }}>Entregas</h2>
-      <p className="font-inter text-xs mb-5" style={{ color: "#555" }}>
-        Configura capacidad y días de entrega para tus miembros.
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="font-inter text-xs uppercase tracking-widest mb-1" style={{ color: "#8A8A8A" }}>Entregas</h2>
+          <p className="font-inter text-xs" style={{ color: "#555" }}>Capacidad y días activos.</p>
+        </div>
+        <Link
+          href="/admin/configuracion"
+          className="rounded-lg px-3 py-2 font-inter text-xs whitespace-nowrap"
+          style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#C0B8AE" }}
+        >
+          Configurar
+        </Link>
+      </div>
       {loading ? (
         <Empty texto="Cargando..." />
       ) : (
-        <div className="flex flex-col gap-5">
-          {/* Capacidad */}
+        <div className="flex flex-col gap-4">
           <div>
-            <p className="font-inter text-xs mb-2" style={{ color: "#8A8A8A" }}>Botellas por día</p>
-            <div className="flex items-center gap-3">
-              <input
-                type="number"
-                value={capacidad}
-                onChange={(e) => { setCapacidad(e.target.value); setSaved(false); }}
-                placeholder="Ej. 20"
-                className="w-24 rounded-xl px-4 py-2.5 font-inter text-sm outline-none"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "#F5F0E8" }}
-              />
-              <span className="font-inter text-xs" style={{ color: "#555" }}>botellas</span>
-            </div>
+            <p className="font-inter text-xs mb-1.5" style={{ color: "#8A8A8A" }}>Botellas por día</p>
+            <p className="font-cormorant text-2xl" style={{ color: "#F5F0E8" }}>
+              {capacidad ? `${capacidad} botellas` : "Sin configurar"}
+            </p>
           </div>
-
-          {/* Días de entrega */}
           <div>
             <p className="font-inter text-xs mb-2" style={{ color: "#8A8A8A" }}>Días de entrega</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {diasSemana.map((dia) => {
                 const activo = diasActivos.includes(dia.value);
                 return (
-                  <button
+                  <span
                     key={dia.value}
-                    onClick={() => toggleDia(dia.value)}
-                    className="w-10 h-10 rounded-xl font-inter text-xs font-medium transition-all"
+                    className="rounded-lg px-3 py-1.5 font-inter text-xs font-medium"
                     style={{
-                      background: activo ? "rgba(74,94,58,0.25)" : "rgba(255,255,255,0.04)",
+                      background: activo ? "rgba(74,94,58,0.2)" : "rgba(255,255,255,0.03)",
                       color: activo ? "#6DBF67" : "#555",
-                      border: activo ? "1px solid rgba(74,94,58,0.5)" : "1px solid rgba(255,255,255,0.08)",
+                      border: activo ? "1px solid rgba(74,94,58,0.4)" : "1px solid rgba(255,255,255,0.07)",
                     }}
                   >
                     {dia.label}
-                  </button>
+                  </span>
                 );
               })}
             </div>
           </div>
-
-          {/* Guardar */}
-          <button onClick={save}
-            className="rounded-lg px-4 py-2 font-inter text-xs font-medium self-start"
-            style={{ background: saved ? "rgba(109,191,103,0.2)" : "rgba(74,94,58,0.2)", color: saved ? "#6DBF67" : "#4A5E3A", border: `1px solid ${saved ? "rgba(109,191,103,0.4)" : "rgba(74,94,58,0.4)"}` }}>
-            {saved ? "✓ Guardado" : "Guardar"}
-          </button>
         </div>
       )}
     </div>

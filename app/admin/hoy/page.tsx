@@ -156,7 +156,8 @@ export default function AdminHoy() {
     }));
   }
 
-  const pedidosActivos = pedidos.filter((p) => p.estado !== "cancelado");
+  // Cancelados y eliminados no se producen: quedan fuera de todos los totales.
+  const pedidosActivos = pedidos.filter((p) => p.estado !== "cancelado" && p.estado !== "eliminado");
 
   const resumen = pedidosActivos.reduce<Record<string, { nombre: string; color: string; total: number }>>(
     (acc, p) => {
@@ -182,6 +183,17 @@ export default function AdminHoy() {
 
   const totalBotellas = pedidosActivos.reduce((s, p) => s + p.cantidad, 0);
   const pendientes = pedidosActivos.filter((p) => p.estado !== "entregado").length;
+
+  // Progreso del día: "preparado" y "entregado" ya salieron de producción.
+  const botellasPreparadas = pedidosActivos
+    .filter((p) => p.estado === "preparado" || p.estado === "entregado")
+    .reduce((s, p) => s + p.cantidad, 0);
+  const porEntregar = pedidosActivos.filter((p) => p.estado === "preparado").length;
+  const progreso = totalBotellas > 0 ? (botellasPreparadas / totalBotellas) * 100 : 0;
+
+  const conteoEstados = (["pendiente", "confirmado", "preparado", "entregado"] as const)
+    .map((estado) => ({ estado, n: pedidosActivos.filter((p) => p.estado === estado).length }))
+    .filter((c) => c.n > 0);
 
   if (loading) return <PageLoader />;
 
@@ -224,6 +236,46 @@ export default function AdminHoy() {
               ) : (
                 <div className="rounded-full px-3 py-1.5" style={{ background: "rgba(184,134,11,0.15)" }}>
                   <span className="font-inter text-xs" style={{ color: "#B8860B" }}>{pendientes} pendiente{pendientes > 1 ? "s" : ""}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Progreso del día */}
+            <div className="mb-5">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-2">
+                <span className="font-inter text-xs" style={{ color: "#F5F0E8" }}>
+                  {botellasPreparadas} de {totalBotellas} botellas preparadas
+                </span>
+                <span className="font-inter text-xs" style={{ color: "#8A8A8A" }}>
+                  {porEntregar === 0
+                    ? "Sin entregas pendientes"
+                    : `${porEntregar} pendiente${porEntregar > 1 ? "s" : ""} de entrega`}
+                </span>
+              </div>
+              <div
+                className="h-1.5 w-full rounded-full overflow-hidden"
+                style={{ background: "rgba(255,255,255,0.07)" }}
+                role="progressbar"
+                aria-valuenow={Math.round(progreso)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{ width: `${progreso}%`, background: "#4A5E3A" }}
+                />
+              </div>
+              {conteoEstados.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {conteoEstados.map(({ estado, n }) => (
+                    <span
+                      key={estado}
+                      className="rounded-full px-2.5 py-1 font-inter text-xs whitespace-nowrap"
+                      style={estadoBadgeStyle(estado)}
+                    >
+                      {n} {estadoLabel(estado).toLowerCase()}
+                    </span>
+                  ))}
                 </div>
               )}
             </div>
@@ -276,7 +328,7 @@ export default function AdminHoy() {
               return (
               <div key={group.token}>
                 <div
-                  className="flex items-start justify-between rounded-xl px-4 py-3.5 transition-all"
+                  className="flex flex-wrap items-start justify-between gap-y-2.5 rounded-xl px-4 py-3.5 transition-all"
                   style={{
                     background: group.estado === "entregado"
                       ? "rgba(74,94,58,0.08)"
@@ -292,7 +344,7 @@ export default function AdminHoy() {
                     borderBottomRightRadius: (showDeliveryPicker === firstPed.id || showMoverPicker === firstPed.id) ? 0 : undefined,
                   }}
                 >
-                  <div className="flex-1 min-w-0 mr-3">
+                  <div className="flex-1 min-w-0 mr-3" style={{ minWidth: "min(100%, 11rem)" }}>
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-inter text-sm font-medium" style={{ color: "#F5F0E8" }}>
                         {group.cliente?.nombre ?? "Sin nombre"}
@@ -318,12 +370,14 @@ export default function AdminHoy() {
                       )}
                     </div>
                     {group.pedidos.map((p) => (
-                      <p key={p.id} className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
-                        {p.formulas?.nombre} x {p.cantidad}
+                      <div key={p.id}>
+                        <p className="font-inter text-xs mt-0.5" style={{ color: p.formulas?.color_acento ?? "#8A8A8A" }}>
+                          {p.formulas?.nombre} x {p.cantidad}
+                        </p>
                         {p.ingredientes_excluidos && p.ingredientes_excluidos.length > 0 && (
-                          <span style={{ color: "#E05070" }}> · Sin: {p.ingredientes_excluidos.join(", ")}</span>
+                          <Restriccion texto={`Sin ${p.ingredientes_excluidos.join(", ")}`} />
                         )}
-                      </p>
+                      </div>
                     ))}
                     {firstPed.notas && (
                       <p className="font-inter text-xs mt-0.5" style={{ color: "#8A8A8A" }}>
@@ -341,7 +395,7 @@ export default function AdminHoy() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
                     <button
                       onClick={() => toggleEstadoGroup(group.ids, group.estado)}
                       disabled={updating === firstPed.id}
@@ -357,7 +411,7 @@ export default function AdminHoy() {
                           const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} ha sido confirmado para el dia de manana.\n\nPuedes seguir tu entrega aqui:\n${LUMO_DOMAIN}/mi-pedido/${firstPed.token}`;
                           window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
-                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        className="flex items-center justify-center w-9 h-9 rounded-full transition-all"
                         style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
                         title="Enviar WhatsApp - Confirmado"
                       >
@@ -373,7 +427,7 @@ export default function AdminHoy() {
                           const msg = `Hola, ${group.cliente!.nombre}.\n\nTu ${jugoLabel} esta listo.\nHecho esta manana a las ${hora}.${entregaLine}\n\nPuedes seguir tu entrega aqui:\n${LUMO_DOMAIN}/mi-pedido/${firstPed.token}`;
                           window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
-                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        className="flex items-center justify-center w-9 h-9 rounded-full transition-all"
                         style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
                         title="Enviar WhatsApp - Listo"
                       >
@@ -386,7 +440,7 @@ export default function AdminHoy() {
                           const msg = `Hola, ${group.cliente!.nombre}.\n\nTu pedido LUMO ha sido entregado.\nEsperamos que lo disfrutes.\n\nCuentanos tu experiencia:\n${LUMO_DOMAIN}/feedback?pedido=${firstPed.token}`;
                           window.open(buildWhatsAppUrl(group.cliente!.telefono!, msg), "_blank");
                         }}
-                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        className="flex items-center justify-center w-9 h-9 rounded-full transition-all"
                         style={{ background: "rgba(37,211,102,0.15)", border: "1px solid rgba(37,211,102,0.3)" }}
                         title="Enviar WhatsApp - Entregado"
                       >
@@ -396,7 +450,7 @@ export default function AdminHoy() {
                     {group.estado !== "entregado" && group.estado !== "cancelado" && (
                       <button
                         onClick={() => setShowMoverPicker(showMoverPicker === firstPed.id ? null : firstPed.id)}
-                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        className="flex items-center justify-center w-9 h-9 rounded-full transition-all"
                         style={{
                           background: showMoverPicker === firstPed.id ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)",
                           border: "1px solid rgba(255,255,255,0.12)",
@@ -414,7 +468,7 @@ export default function AdminHoy() {
                     {group.estado !== "entregado" && group.estado !== "cancelado" && (
                       <button
                         onClick={() => cancelarGroup(group.ids)}
-                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        className="flex items-center justify-center w-9 h-9 rounded-full transition-all"
                         style={{ background: "rgba(122,32,48,0.1)", border: "1px solid rgba(122,32,48,0.2)" }}
                         title="Cancelar pedido"
                       >
@@ -427,7 +481,7 @@ export default function AdminHoy() {
                     {group.estado !== "eliminado" && (
                       <button
                         onClick={() => eliminarGroup(group.ids)}
-                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        className="flex items-center justify-center w-9 h-9 rounded-full transition-all"
                         style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
                         title="Eliminar (ocultar al cliente)"
                       >
@@ -438,7 +492,7 @@ export default function AdminHoy() {
                       <button
                         onClick={() => reactivarGroup(group.ids)}
                         disabled={updating === firstPed.id}
-                        className="flex items-center justify-center w-8 h-8 rounded-full transition-all"
+                        className="flex items-center justify-center w-9 h-9 rounded-full transition-all"
                         style={{ background: "rgba(74,94,58,0.15)", border: "1px solid rgba(74,94,58,0.3)" }}
                         title="Reactivar pedido"
                       >
@@ -579,14 +633,38 @@ function estadoBadgeStyle(estado: string): React.CSSProperties {
   return { background: "rgba(74,94,58,0.25)", color: "#6DBF67", border: "1px solid rgba(74,94,58,0.4)" };
 }
 
+/** Restricción alimentaria de un pedido: visible, pero sin tono de alarma. */
+function Restriccion({ texto }: { texto: string }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 mt-1 font-inter text-xs"
+      style={{
+        background: "rgba(184,134,11,0.12)",
+        border: "1px solid rgba(184,134,11,0.28)",
+        color: "#E6A800",
+      }}
+    >
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#E6A800" strokeWidth="2.2" strokeLinecap="round" className="shrink-0">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 16v-4M12 8h.01" />
+      </svg>
+      {texto}
+    </span>
+  );
+}
+
 function EmptyDay() {
   return (
     <div
-      className="rounded-2xl p-10 text-center"
+      className="rounded-2xl p-8 md:p-10 text-center"
       style={{ border: "1px dashed rgba(255,255,255,0.08)" }}
     >
-      <p className="font-cormorant text-2xl mb-2" style={{ color: "#F5F0E8" }}>Sin pedidos hoy</p>
-      <p className="font-inter text-sm" style={{ color: "#555" }}>Agrega pedidos desde la seccion Clientes.</p>
+      <p className="font-cormorant text-2xl mb-2" style={{ color: "#F5F0E8" }}>
+        Aún no hay producción programada para hoy.
+      </p>
+      <p className="font-inter text-sm" style={{ color: "#555" }}>
+        Cuando entren pedidos confirmados, aparecerán aquí.
+      </p>
     </div>
   );
 }
